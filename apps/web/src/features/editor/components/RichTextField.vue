@@ -9,16 +9,20 @@ const props = withDefaults(
     modelValue: string;
     disabled?: boolean;
     allowSelectionAi?: boolean;
+    blockId?: string;
   }>(),
   {
     disabled: false,
     allowSelectionAi: false,
+    blockId: undefined,
   },
 );
 
 const emit = defineEmits<{
   'update:modelValue': [value: string];
   'selection-action': [payload: { action: 'polish' | 'expand'; selectionText: string }];
+  'insert-after': [];
+  indent: [direction: 'in' | 'out'];
 }>();
 
 const rootElement = ref<HTMLElement | null>(null);
@@ -77,6 +81,24 @@ const editor = useEditor({
   extensions: [StarterKit, Underline],
   content: props.modelValue,
   editable: !props.disabled,
+  editorProps: {
+    handleKeyDown: (_view, event) => {
+      if (props.disabled) {
+        return false;
+      }
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        emit('indent', event.shiftKey ? 'out' : 'in');
+        return true;
+      }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        emit('insert-after');
+        return true;
+      }
+      return false;
+    },
+  },
   onUpdate: ({ editor: currentEditor }) => {
     emit('update:modelValue', currentEditor.getHTML());
     if (selectionText.value) {
@@ -148,7 +170,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="rootElement" class="rich-editor" :class="{ readonly: disabled }">
+  <div
+    ref="rootElement"
+    class="rich-editor"
+    :class="{ readonly: disabled }"
+    :data-block-id="blockId || null"
+  >
     <div v-if="showToolbar" class="floating-toolbar" :style="toolbarStyle" @mousedown.prevent>
       <button class="toolbar-button" type="button" @click="editor?.chain().focus().toggleBold().run()">
         B

@@ -145,6 +145,16 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
         f"/api/v1/documents/{updated_document['id']}",
         headers=auth_headers,
     ).json()
+    selection_pending = [
+        child
+        for child in current_document["content"]["blocks"][0]["children"]
+        if child["status"] == "pending"
+        and child["suggestion"]["kind"] == "replace"
+        and child["suggestion"]["action"] == "polish"
+    ]
+    assert selection_pending
+    assert selection_pending[0]["suggestion"]["mode"] == "selection"
+    assert selection_pending[0]["suggestion"]["selectionText"] == "原始段落内容"
 
     for index in range(11):
         content = current_document["content"]

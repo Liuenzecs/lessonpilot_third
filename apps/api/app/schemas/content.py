@@ -9,6 +9,8 @@ class BlockSuggestion(BaseModel):
     kind: Literal["append", "replace"]
     target_block_id: str | None = Field(default=None, alias="targetBlockId")
     action: Literal["rewrite", "polish", "expand"] | None = None
+    mode: Literal["block", "selection"] | None = None
+    selection_text: str | None = Field(default=None, alias="selectionText")
 
     model_config = {"populate_by_name": True}
 
@@ -19,9 +21,17 @@ class BlockSuggestion(BaseModel):
                 raise ValueError("replace suggestion requires targetBlockId")
             if self.action is None:
                 raise ValueError("replace suggestion requires action")
+            if self.mode is None:
+                self.mode = "block"
+            if self.mode == "selection" and not (self.selection_text or "").strip():
+                raise ValueError("selection replace suggestion requires selectionText")
+            if self.mode == "block":
+                self.selection_text = None
         if self.kind == "append":
             self.target_block_id = None
             self.action = None
+            self.mode = None
+            self.selection_text = None
         return self
 
 
@@ -37,11 +47,13 @@ class BlockBase(BaseModel):
 class ParagraphBlock(BlockBase):
     type: Literal["paragraph"] = "paragraph"
     content: str = ""
+    indent: int = Field(default=0, ge=0, le=6)
 
 
 class ListBlock(BlockBase):
     type: Literal["list"] = "list"
     items: list[str] = Field(default_factory=list)
+    indent: int = Field(default=0, ge=0, le=6)
 
 
 class ChoiceQuestionBlock(BlockBase):

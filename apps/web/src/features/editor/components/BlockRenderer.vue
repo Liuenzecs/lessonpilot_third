@@ -11,6 +11,7 @@ import type {
 } from '@lessonpilot/shared-types';
 
 import RichTextField from '@/features/editor/components/RichTextField.vue';
+import { getBlockIndent } from '@/shared/utils/content';
 
 const props = withDefaults(
   defineProps<{
@@ -25,6 +26,10 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:block': [block: Block];
   'selection-action': [payload: { action: 'polish' | 'expand'; selectionText: string }];
+  'insert-paragraph-after': [blockId: string];
+  'indent-block': [payload: { blockId: string; direction: 'in' | 'out' }];
+  'list-insert-item': [payload: { blockId: string; index: number }];
+  'list-exit-to-paragraph': [payload: { blockId: string; index: number }];
 }>();
 
 function emitBlock(nextBlock: Block) {
@@ -125,29 +130,70 @@ function updateArrayValue<T>(values: T[], index: number, nextValue: T): T[] {
   nextValues[index] = nextValue;
   return nextValues;
 }
+
+function getIndentStyle(block: Block): { marginLeft?: string } {
+  if (block.type !== 'paragraph' && block.type !== 'list') {
+    return {};
+  }
+  const indent = getBlockIndent(block);
+  return indent > 0 ? { marginLeft: `${indent * 24}px` } : {};
+}
+
+function handleListKeydown(index: number, event: KeyboardEvent) {
+  if (props.readonly || props.block.type !== 'list') {
+    return;
+  }
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    emit('indent-block', { blockId: props.block.id, direction: event.shiftKey ? 'out' : 'in' });
+    return;
+  }
+  if (event.key !== 'Enter') {
+    return;
+  }
+
+  event.preventDefault();
+  const currentValue = props.block.items[index] ?? '';
+  if (currentValue.trim()) {
+    emit('list-insert-item', { blockId: props.block.id, index });
+    return;
+  }
+  emit('list-exit-to-paragraph', { blockId: props.block.id, index });
+}
 </script>
 
 <template>
   <div class="block-content">
     <template v-if="block.type === 'paragraph'">
-      <RichTextField
-        :model-value="block.content"
-        :disabled="readonly"
-        allow-selection-ai
-        @update:model-value="updateParagraph"
-        @selection-action="$emit('selection-action', $event)"
-      />
+      <div :style="getIndentStyle(block)">
+        <RichTextField
+          :block-id="block.id"
+          :model-value="block.content"
+          :disabled="readonly"
+          allow-selection-ai
+          @update:model-value="updateParagraph"
+          @selection-action="$emit('selection-action', $event)"
+          @insert-after="$emit('insert-paragraph-after', block.id)"
+          @indent="$emit('indent-block', { blockId: block.id, direction: $event })"
+        />
+      </div>
     </template>
 
     <template v-else-if="block.type === 'list'">
-      <div class="list-editor">
+      <div class="list-editor" :style="getIndentStyle(block)">
         <div v-for="(item, index) in block.items" :key="`${block.id}-${index}`" class="list-item">
           <span>•</span>
           <template v-if="readonly">
             <div>{{ item }}</div>
           </template>
           <template v-else>
-            <input :value="item" type="text" @input="updateListItem(index, ($event.target as HTMLInputElement).value)" />
+            <input
+              :value="item"
+              :data-list-item-index="index"
+              type="text"
+              @input="updateListItem(index, ($event.target as HTMLInputElement).value)"
+              @keydown="handleListKeydown(index, $event)"
+            />
             <button class="button ghost" type="button" @click="removeListItem(index)">删除</button>
           </template>
         </div>

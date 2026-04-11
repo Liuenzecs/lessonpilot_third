@@ -12,6 +12,16 @@ defineProps<{
   noticeText: string;
   noticeTone: 'success' | 'info';
 }>();
+
+function getRewriteLabel(action: 'rewrite' | 'polish' | 'expand') {
+  if (action === 'polish') {
+    return '润色';
+  }
+  if (action === 'expand') {
+    return '扩写';
+  }
+  return '重写';
+}
 </script>
 
 <template>
@@ -26,7 +36,7 @@ defineProps<{
     </div>
 
     <div v-if="isRewriting" class="generation-banner secondary">
-      AI 正在{{ rewriteAction === 'rewrite' ? '重写' : rewriteAction === 'polish' ? '润色' : '扩写' }}当前内容
+      AI 正在{{ getRewriteLabel(rewriteAction) }}当前内容
     </div>
 
     <div v-if="isAppending" class="generation-banner secondary">

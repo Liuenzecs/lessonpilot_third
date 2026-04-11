@@ -6,6 +6,8 @@ export type SuggestionKind = 'append' | 'replace';
 
 export type SuggestionAction = 'rewrite' | 'polish' | 'expand';
 
+export type SuggestionMode = 'block' | 'selection';
+
 export type BlockType =
   | 'section'
   | 'paragraph'
@@ -20,6 +22,8 @@ export interface BlockSuggestion {
   kind: SuggestionKind;
   targetBlockId?: string;
   action?: SuggestionAction;
+  mode?: SuggestionMode;
+  selectionText?: string;
 }
 
 export interface BlockBase {
@@ -33,11 +37,13 @@ export interface BlockBase {
 export interface ParagraphBlock extends BlockBase {
   type: 'paragraph';
   content: string;
+  indent?: number;
 }
 
 export interface ListBlock extends BlockBase {
   type: 'list';
   items: string[];
+  indent?: number;
 }
 
 export interface ChoiceQuestionBlock extends BlockBase {

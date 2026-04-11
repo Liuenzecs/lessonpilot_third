@@ -20,7 +20,7 @@ defineEmits<{
 
 function formatSource(source: string): string {
   if (source === 'save') {
-    return '保存';
+    return '普通保存';
   }
   if (source === 'generation') {
     return 'AI 生成';
@@ -43,8 +43,8 @@ function formatSource(source: string): string {
     <aside class="history-drawer app-card">
       <div class="history-drawer-header">
         <div>
-          <h3 style="margin: 0">历史版本</h3>
-          <div class="muted">最近 10 个可恢复快照</div>
+          <h3 class="history-drawer-title">历史版本</h3>
+          <div class="muted">最近 10 个可恢复快照。恢复后会生成一个新的当前版本。</div>
         </div>
         <button class="button ghost" type="button" @click="$emit('close')">关闭</button>
       </div>
@@ -60,18 +60,19 @@ function formatSource(source: string): string {
             type="button"
             @click="$emit('select', item.id)"
           >
-            <div>v{{ item.version }}</div>
-            <div class="muted">{{ formatSource(item.source) }}</div>
-            <div class="muted">{{ new Date(item.created_at).toLocaleString() }}</div>
+            <div class="history-item-version">v{{ item.version }}</div>
+            <div class="history-item-source">{{ formatSource(item.source) }}</div>
+            <div class="history-item-time">{{ new Date(item.created_at).toLocaleString() }}</div>
           </button>
         </div>
 
         <div class="history-preview-panel">
           <div v-if="previewLoading" class="muted">正在加载快照预览...</div>
+
           <template v-else-if="previewSnapshot">
             <div class="history-preview-head">
               <div>
-                <div class="brand" style="font-size: 18px">版本 v{{ previewSnapshot.version }}</div>
+                <div class="history-preview-version">版本 v{{ previewSnapshot.version }}</div>
                 <div class="muted">{{ formatSource(previewSnapshot.source) }}</div>
               </div>
               <button class="button primary" type="button" @click="$emit('restore', previewSnapshot.id)">
@@ -87,7 +88,8 @@ function formatSource(source: string): string {
               />
             </div>
           </template>
-          <div v-else class="muted">选择左侧快照后即可预览和恢复。</div>
+
+          <div v-else class="preview-hint">先从左侧选择一个历史快照，再预览或恢复。</div>
         </div>
       </div>
     </aside>

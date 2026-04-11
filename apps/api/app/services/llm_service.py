@@ -68,8 +68,10 @@ def _normalize_block_payload(block: dict) -> dict:
 
     if normalized.get("type") == "paragraph":
         normalized.setdefault("content", "")
+        normalized.setdefault("indent", 0)
     elif normalized.get("type") == "list":
         normalized["items"] = [str(item) for item in (normalized.get("items") or [])]
+        normalized.setdefault("indent", 0)
     elif normalized.get("type") == "teaching_step":
         if "duration_minutes" in normalized and "durationMinutes" not in normalized:
             normalized["durationMinutes"] = normalized.pop("duration_minutes")
@@ -143,12 +145,18 @@ def apply_suggestion_metadata(
     kind: str,
     target_block_id: str | None = None,
     action: str | None = None,
+    mode: str | None = None,
+    selection_text: str | None = None,
 ) -> list[Block]:
     suggestion: dict[str, str] = {"kind": kind}
     if target_block_id:
         suggestion["targetBlockId"] = target_block_id
     if action:
         suggestion["action"] = action
+    if mode:
+        suggestion["mode"] = mode
+    if selection_text:
+        suggestion["selectionText"] = selection_text
 
     payload = {
         "blocks": [

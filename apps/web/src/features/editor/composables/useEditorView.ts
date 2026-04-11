@@ -23,21 +23,27 @@ import {
 import { useStartGenerationMutation, useTask } from '@/features/task/composables/useTasks';
 import {
   acceptPendingBlock,
+  adjustBlockIndent,
   appendBlockToContainer,
+  appendExistingBlockToContainer,
   canInsertChild,
   cloneContent,
   cloneSerializable,
   collectSections,
   convertBlockType,
+  createBlock,
   deleteBlock,
   findBlockLocation,
+  getBlockIndent,
   getConfirmedContent,
-  insertBlockAfter,
+  insertExistingBlockAfter,
   moveBlock,
   reorderBlockBefore,
   rejectPendingBlock,
   updateBlock,
 } from '@/shared/utils/content';
+
+const DEFAULT_SECTION_TITLES = ['教学目标', '教学重难点', '导入环节', '新授环节', '练习巩固', '课堂小结'];
 
 export function useEditorView() {
   const router = useRouter();
@@ -136,6 +142,21 @@ export function useEditorView() {
   const confirmedPreviewBlocks = computed(() =>
     draftDocument.value ? getConfirmedContent(draftDocument.value.content).blocks : [],
   );
+  const showInitialSkeleton = computed(() => {
+    if (draftDocument.value) {
+      return false;
+    }
+
+    if (taskQuery.isLoading.value || documentsQuery.isLoading.value) {
+      return true;
+    }
+
+    return Boolean(taskQuery.data.value) && !documentsQuery.data.value;
+  });
+  const skeletonSectionTitles = computed(() => {
+    const titles = sections.value.map((section) => section.title);
+    return titles.length ? titles : DEFAULT_SECTION_TITLES;
+  });
 
   watch(
     primaryDocument,
@@ -228,6 +249,41 @@ export function useEditorView() {
     noticeTimer = window.setTimeout(() => {
       notice.text = '';
     }, 3200);
+  }
+
+  function focusEditableElement(element: HTMLElement | null) {
+    if (!element) {
+      return;
+    }
+    element.focus();
+    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+      const length = element.value.length;
+      element.setSelectionRange(length, length);
+      return;
+    }
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function requestBlockFocus(blockId: string, listItemIndex?: number) {
+    void nextTick(() => {
+      const escapedBlockId =
+        typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(blockId) : blockId;
+      const target =
+        listItemIndex === undefined
+          ? document.querySelector<HTMLElement>(`[data-block-id="${escapedBlockId}"] .ProseMirror`)
+          : document.querySelector<HTMLElement>(
+              `[data-block-id="${escapedBlockId}"] [data-list-item-index="${listItemIndex}"]`,
+            );
+      focusEditableElement(target);
+    });
   }
 
   function destroySectionObserver() {
@@ -425,6 +481,77 @@ export function useEditorView() {
       return;
     }
     updateContent(rejectPendingBlock(draftDocument.value.content, blockId));
+  }
+
+  function handleIndentBlock(blockId: string, direction: 'in' | 'out') {
+    if (!draftDocument.value) {
+      return;
+    }
+    updateContent(adjustBlockIndent(draftDocument.value.content, blockId, direction));
+    requestBlockFocus(blockId);
+  }
+
+  function handleInsertParagraphAfter(blockId: string) {
+    if (!draftDocument.value) {
+      return;
+    }
+    const location = findBlockLocation(draftDocument.value.content, blockId);
+    if (!location || !canInsertChild(location.parentType, 'paragraph')) {
+      return;
+    }
+
+    const paragraph = createBlock('paragraph') as Extract<Block, { type: 'paragraph' }>;
+    if (location.block.type === 'paragraph' || location.block.type === 'list') {
+      paragraph.indent = getBlockIndent(location.block);
+    }
+    updateContent(insertExistingBlockAfter(draftDocument.value.content, blockId, paragraph));
+    activeBlockId.value = paragraph.id;
+    requestBlockFocus(paragraph.id);
+  }
+
+  function handleInsertListItem(blockId: string, index: number) {
+    if (!draftDocument.value) {
+      return;
+    }
+    updateContent(
+      updateBlock(draftDocument.value.content, blockId, (block) => {
+        if (block.type !== 'list') {
+          return block;
+        }
+        const items = [...block.items];
+        items.splice(index + 1, 0, '');
+        return { ...block, items };
+      }),
+    );
+    activeBlockId.value = blockId;
+    requestBlockFocus(blockId, index + 1);
+  }
+
+  function handleExitListToParagraph(blockId: string, index: number) {
+    if (!draftDocument.value) {
+      return;
+    }
+
+    const nextContent = cloneContent(draftDocument.value.content);
+    const location = findBlockLocation(nextContent, blockId);
+    if (!location || location.block.type !== 'list') {
+      return;
+    }
+
+    const paragraph = createBlock('paragraph') as Extract<Block, { type: 'paragraph' }>;
+    paragraph.indent = getBlockIndent(location.block);
+    const nextItems = location.block.items.filter((_, itemIndex) => itemIndex !== index);
+
+    if (nextItems.length) {
+      location.block.items = nextItems;
+      location.siblings.splice(location.index + 1, 0, paragraph);
+    } else {
+      location.siblings.splice(location.index, 1, paragraph);
+    }
+
+    updateContent(nextContent);
+    activeBlockId.value = paragraph.id;
+    requestBlockFocus(paragraph.id);
   }
 
   function scrollToSection(sectionId: string) {
@@ -652,21 +779,32 @@ export function useEditorView() {
     if (!location || !canInsertChild(location.parentType, type)) {
       return;
     }
-    updateContent(insertBlockAfter(draftDocument.value.content, activeBlockId.value, type));
+    const nextBlock = createBlock(type);
+    if ((type === 'paragraph' || type === 'list') && (location.block.type === 'paragraph' || location.block.type === 'list')) {
+      nextBlock.indent = getBlockIndent(location.block);
+    }
+    updateContent(insertExistingBlockAfter(draftDocument.value.content, activeBlockId.value, nextBlock));
+    activeBlockId.value = nextBlock.id;
+    requestBlockFocus(nextBlock.id, type === 'list' ? 0 : undefined);
   }
 
   function handleBottomAddParagraph() {
-    if (!currentSectionId.value) {
+    if (!draftDocument.value || !currentSectionId.value) {
       return;
     }
-    handleAppendToContainer(currentSectionId.value, 'paragraph');
+    const paragraph = createBlock('paragraph');
+    updateContent(appendExistingBlockToContainer(draftDocument.value.content, currentSectionId.value, paragraph));
+    activeBlockId.value = paragraph.id;
+    requestBlockFocus(paragraph.id);
   }
 
   function handleBottomAddExercise() {
-    if (!currentSectionId.value) {
+    if (!draftDocument.value || !currentSectionId.value) {
       return;
     }
-    handleAppendToContainer(currentSectionId.value, 'exercise_group');
+    const exerciseGroup = createBlock('exercise_group');
+    updateContent(appendExistingBlockToContainer(draftDocument.value.content, currentSectionId.value, exerciseGroup));
+    activeBlockId.value = exerciseGroup.id;
   }
 
   function toggleAppendComposer() {
@@ -765,7 +903,10 @@ export function useEditorView() {
     currentSectionTitle,
     highlightedSectionId,
     confirmedPreviewBlocks,
+    showInitialSkeleton,
+    skeletonSectionTitles,
     setSectionElement,
+    persistDocument,
     handleBlockUpdate,
     handleMove,
     handleDelete,
@@ -773,6 +914,10 @@ export function useEditorView() {
     handleReorder,
     handleAccept,
     handleReject,
+    handleIndentBlock,
+    handleInsertParagraphAfter,
+    handleInsertListItem,
+    handleExitListToParagraph,
     handleAppendToContainer,
     scrollToSection,
     isSectionShowingSkeleton,

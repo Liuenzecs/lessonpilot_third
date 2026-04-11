@@ -31,9 +31,18 @@ const emit = defineEmits<{
   reorder: [payload: { draggedId: string; targetId: string; parentId: string }];
   'add-child': [payload: { parentId: string; type: InsertableBlockType }];
   'selection-rewrite': [payload: { blockId: string; action: 'polish' | 'expand'; selectionText: string }];
+  'insert-paragraph-after': [blockId: string];
+  'indent-block': [payload: { blockId: string; direction: 'in' | 'out' }];
+  'list-insert-item': [payload: { blockId: string; index: number }];
+  'list-exit-to-paragraph': [payload: { blockId: string; index: number }];
   'accept-pending': [blockId: string];
   'reject-pending': [blockId: string];
-  'regenerate-pending': [payload: { targetBlockId: string; action: 'rewrite' | 'polish' | 'expand' }];
+  'regenerate-pending': [payload: {
+    targetBlockId: string;
+    action: 'rewrite' | 'polish' | 'expand';
+    mode: 'block' | 'selection';
+    selectionText?: string;
+  }];
 }>();
 
 const isActive = computed(() => props.activeBlockId === props.block.id);
@@ -87,21 +96,30 @@ function getChildActions(blockType: BlockType): Array<{ type: InsertableBlockTyp
   return [];
 }
 
-function getConvertTargets(blockType: BlockType): BlockType[] {
+function getConvertTargets(blockType: BlockType): Array<{ type: BlockType; label: string }> {
   if (blockType === 'paragraph') {
-    return ['list'];
+    return [{ type: 'list', label: '转换为列表' }];
   }
   if (blockType === 'list') {
-    return ['paragraph'];
+    return [{ type: 'paragraph', label: '转换为段落' }];
   }
   if (blockType === 'choice_question') {
-    return ['fill_blank_question', 'short_answer_question'];
+    return [
+      { type: 'fill_blank_question', label: '转换为填空题' },
+      { type: 'short_answer_question', label: '转换为简答题' },
+    ];
   }
   if (blockType === 'fill_blank_question') {
-    return ['choice_question', 'short_answer_question'];
+    return [
+      { type: 'choice_question', label: '转换为选择题' },
+      { type: 'short_answer_question', label: '转换为简答题' },
+    ];
   }
   if (blockType === 'short_answer_question') {
-    return ['choice_question', 'fill_blank_question'];
+    return [
+      { type: 'choice_question', label: '转换为选择题' },
+      { type: 'fill_blank_question', label: '转换为填空题' },
+    ];
   }
   return [];
 }
@@ -127,7 +145,9 @@ function onDragStart(event: DragEvent) {
     JSON.stringify({ blockId: props.block.id, parentId: props.parentId }),
   );
   event.dataTransfer?.setData('text/plain', props.block.id);
-  event.dataTransfer!.effectAllowed = 'move';
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+  }
 }
 
 function onDrop(event: DragEvent) {
@@ -141,6 +161,7 @@ function onDrop(event: DragEvent) {
     if (payload.parentId !== props.parentId || payload.blockId === props.block.id) {
       return;
     }
+
     emit('reorder', {
       draggedId: payload.blockId,
       targetId: props.block.id,
@@ -159,6 +180,7 @@ function updateContainerChild(nextChild: Block) {
   if (!('children' in props.block)) {
     return;
   }
+
   emit('update:block', {
     ...props.block,
     children: props.block.children.map((currentChild) =>
@@ -178,16 +200,23 @@ function updateContainerChild(nextChild: Block) {
     @drop.stop="onDrop"
   >
     <div class="block-handle-column">
-      <button class="drag-handle" type="button" draggable="true" @dragstart="onDragStart">⋮⋮</button>
+      <button class="drag-handle" type="button" draggable="true" @dragstart="onDragStart">⠿</button>
     </div>
 
-    <div class="block-shell-main">
+    <div class="block-shell-main" :data-block-id="block.id">
       <div class="block-shell-header">
-        <div class="block-kind">{{ getBlockLabel(block.type) }}</div>
+        <div class="block-shell-spacer" />
+
         <div class="block-shell-actions" :class="{ 'menu-open': menuOpen }">
-          <button class="icon-button" type="button" @click.stop="emit('toggle-menu', menuOpen ? null : block.id)">
+          <button
+            class="icon-button"
+            type="button"
+            :aria-label="`${getBlockLabel(block.type)}操作菜单`"
+            @click.stop="emit('toggle-menu', menuOpen ? null : block.id)"
+          >
             ⋯
           </button>
+
           <div v-if="menuOpen" class="block-menu">
             <button class="menu-button" type="button" @click="emit('rewrite', { blockId: block.id, action: 'rewrite' })">
               AI 重写
@@ -199,13 +228,13 @@ function updateContainerChild(nextChild: Block) {
               下移
             </button>
             <button
-              v-for="targetType in getConvertTargets(block.type)"
-              :key="`${block.id}-${targetType}`"
+              v-for="target in getConvertTargets(block.type)"
+              :key="`${block.id}-${target.type}`"
               class="menu-button"
               type="button"
-              @click="emit('convert', { blockId: block.id, targetType })"
+              @click="emit('convert', { blockId: block.id, targetType: target.type })"
             >
-              转为 {{ targetType.replaceAll('_', ' ') }}
+              {{ target.label }}
             </button>
             <button class="menu-button danger" type="button" @click="emit('delete', block.id)">删除</button>
           </div>
@@ -216,6 +245,10 @@ function updateContainerChild(nextChild: Block) {
         :block="block"
         @update:block="emit('update:block', $event)"
         @selection-action="emit('selection-rewrite', { blockId: block.id, ...$event })"
+        @insert-paragraph-after="emit('insert-paragraph-after', $event)"
+        @indent-block="emit('indent-block', $event)"
+        @list-insert-item="emit('list-insert-item', $event)"
+        @list-exit-to-paragraph="emit('list-exit-to-paragraph', $event)"
       />
 
       <div v-if="loadingTargetId === block.id" class="pending-skeleton-card">
@@ -226,7 +259,7 @@ function updateContainerChild(nextChild: Block) {
         v-for="pendingBlock in pendingSuggestions || []"
         :key="pendingBlock.id"
         :block="pendingBlock"
-        label="AI 替换建议"
+        label="AI 待确认"
         :can-regenerate="canRegenerate(pendingBlock)"
         @accept="emit('accept-pending', pendingBlock.id)"
         @reject="emit('reject-pending', pendingBlock.id)"
@@ -234,6 +267,8 @@ function updateContainerChild(nextChild: Block) {
           emit('regenerate-pending', {
             targetBlockId: pendingBlock.suggestion!.targetBlockId!,
             action: pendingBlock.suggestion!.action!,
+            mode: pendingBlock.suggestion?.mode ?? 'block',
+            selectionText: pendingBlock.suggestion?.selectionText,
           })
         "
       />
@@ -270,6 +305,10 @@ function updateContainerChild(nextChild: Block) {
           @reorder="emit('reorder', $event)"
           @add-child="emit('add-child', $event)"
           @selection-rewrite="emit('selection-rewrite', $event)"
+          @insert-paragraph-after="emit('insert-paragraph-after', $event)"
+          @indent-block="emit('indent-block', $event)"
+          @list-insert-item="emit('list-insert-item', $event)"
+          @list-exit-to-paragraph="emit('list-exit-to-paragraph', $event)"
           @accept-pending="emit('accept-pending', $event)"
           @reject-pending="emit('reject-pending', $event)"
           @regenerate-pending="emit('regenerate-pending', $event)"
@@ -279,6 +318,7 @@ function updateContainerChild(nextChild: Block) {
           v-for="pendingBlock in appendChildren"
           :key="pendingBlock.id"
           :block="pendingBlock"
+          label="AI 待确认"
           @accept="emit('accept-pending', pendingBlock.id)"
           @reject="emit('reject-pending', pendingBlock.id)"
         />

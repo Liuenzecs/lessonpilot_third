@@ -158,6 +158,8 @@ async def stream_rewrite(
             kind="replace",
             target_block_id=payload.target_block_id,
             action=payload.action,
+            mode=payload.mode,
+            selection_text=payload.selection_text,
         )[0]
         location.siblings.insert(location.index + 1, suggestion_block)
         document = save_document(session, document, content, snapshot_source="rewrite")

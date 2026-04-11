@@ -2,21 +2,50 @@
 import type { Block } from '@lessonpilot/shared-types';
 
 import { isContainerBlock } from '@lessonpilot/shared-types';
+import { computed } from 'vue';
+
+import { getBlockIndent } from '@/shared/utils/content';
 
 defineOptions({
   name: 'BlockPreview',
 });
 
-defineProps<{
+const props = defineProps<{
   block: Block;
 }>();
+
+const block = computed(() => props.block);
 
 function toText(value: string): string {
   return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function renderAnswers(value: string[] | string): string {
-  return Array.isArray(value) ? value.filter(Boolean).join('；') : value;
+  return Array.isArray(value) ? value.filter(Boolean).join('，') : value;
+}
+
+function getIndentStyle(block: Block): { marginLeft?: string } {
+  if (block.type !== 'paragraph' && block.type !== 'list') {
+    return {};
+  }
+
+  const indent = getBlockIndent(block);
+  return indent > 0 ? { marginLeft: `${indent * 24}px` } : {};
+}
+
+function getSuggestionHint(block: Block): string | null {
+  if (block.status !== 'pending') {
+    return null;
+  }
+
+  if (block.suggestion?.kind === 'replace' && block.suggestion.targetBlockId) {
+    if (block.suggestion.mode === 'selection') {
+      return '替换建议：基于原选中文本生成';
+    }
+    return '替换建议：将覆盖原有内容';
+  }
+
+  return 'AI 待确认';
 }
 </script>
 
@@ -38,11 +67,11 @@ function renderAnswers(value: string[] | string): string {
     </template>
 
     <template v-else-if="block.type === 'paragraph'">
-      <div class="preview-rich-text" v-html="block.content" />
+      <div class="preview-rich-text" :style="getIndentStyle(block)" v-html="block.content" />
     </template>
 
     <template v-else-if="block.type === 'list'">
-      <ul class="preview-list">
+      <ul class="preview-list" :style="getIndentStyle(block)">
         <li v-for="(item, index) in block.items" :key="`${block.id}-${index}`">
           {{ item }}
         </li>
@@ -82,22 +111,26 @@ function renderAnswers(value: string[] | string): string {
       </div>
     </template>
 
-    <div
-      v-if="block.status === 'pending' && block.suggestion?.kind === 'replace' && block.suggestion.targetBlockId"
-      class="muted"
-    >
-      替换建议，目标 Block：{{ block.suggestion.targetBlockId }}
+    <div v-if="getSuggestionHint(block)" class="preview-hint">
+      {{ getSuggestionHint(block) }}
     </div>
 
     <div
-      v-else-if="block.status === 'pending' && !isContainerBlock(block) && toText(block.type === 'paragraph' ? block.content : '')"
-      class="muted"
+      v-if="block.suggestion?.mode === 'selection' && block.suggestion.selectionText"
+      class="preview-selection-context"
     >
-      AI 待确认
+      原选中文本：{{ block.suggestion.selectionText }}
     </div>
 
     <div v-if="isContainerBlock(block)" class="preview-children">
       <BlockPreview v-for="child in block.children" :key="child.id" :block="child" />
+    </div>
+
+    <div
+      v-else-if="block.type === 'paragraph' && !toText(block.content)"
+      class="preview-hint"
+    >
+      暂无正文内容
     </div>
   </div>
 </template>

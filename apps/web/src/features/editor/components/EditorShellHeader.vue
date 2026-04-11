@@ -16,14 +16,28 @@ defineEmits<{
   export: [format: 'docx' | 'pdf'];
   'open-export-preview': [];
   refresh: [];
+  'retry-save': [];
 }>();
+
+function getSaveLabel(saveState: 'saved' | 'dirty' | 'saving' | 'conflict') {
+  if (saveState === 'saved') {
+    return '已保存';
+  }
+  if (saveState === 'saving') {
+    return '保存中...';
+  }
+  if (saveState === 'dirty') {
+    return '未保存的更改';
+  }
+  return '版本冲突';
+}
 </script>
 
 <template>
   <header class="editor-shell-header app-card">
     <div class="editor-shell-header-main">
-      <div class="button-row">
-        <button class="button ghost" type="button" @click="$emit('back')">返回备课台</button>
+      <div class="editor-shell-header-nav">
+        <button class="button ghost" type="button" @click="$emit('back')">返回</button>
         <button class="button ghost" type="button" @click="$emit('toggle-outline')">
           {{ outlineCollapsed ? '展开大纲' : '收起大纲' }}
         </button>
@@ -31,27 +45,32 @@ defineEmits<{
 
       <div class="editor-shell-title-group">
         <h1 class="editor-shell-title">{{ task?.title || '教案编辑器' }}</h1>
-        <div class="task-meta">
-          {{ task?.subject || '未设置学科' }} · {{ task?.grade || '未设置年级' }} · {{ task?.topic || '未设置主题' }}
+        <div class="editor-shell-meta">
+          <span>{{ task?.subject || '未设置学科' }}</span>
+          <span>·</span>
+          <span>{{ task?.grade || '未设置年级' }}</span>
+          <span>·</span>
+          <span>{{ task?.topic || '未设置主题' }}</span>
         </div>
       </div>
     </div>
 
-    <div class="header-actions">
-      <div class="save-indicator" :class="{ conflict: saveState === 'conflict' }">
-        <template v-if="saveState === 'saved'">已保存</template>
-        <template v-else-if="saveState === 'saving'">保存中...</template>
-        <template v-else-if="saveState === 'dirty'">未保存的更改</template>
-        <template v-else>保存冲突，请刷新或重试</template>
+    <div class="editor-shell-actions">
+      <div class="editor-save-stack">
+        <div class="save-indicator" :class="{ conflict: saveState === 'conflict' }">
+          {{ getSaveLabel(saveState) }}
+        </div>
+
+        <div v-if="saveState === 'conflict'" class="editor-conflict-actions">
+          <button class="button ghost" type="button" @click="$emit('refresh')">刷新最新版本</button>
+          <button class="button secondary" type="button" @click="$emit('retry-save')">重试保存</button>
+        </div>
       </div>
 
-      <button v-if="saveState === 'conflict'" class="button ghost" type="button" @click="$emit('refresh')">
-        刷新最新版本
-      </button>
       <button class="button secondary" type="button" @click="$emit('open-history')">历史版本</button>
 
       <div class="export-dropdown">
-        <button class="button primary" type="button" @click="$emit('toggle-export-menu')">导出</button>
+        <button class="button primary" type="button" @click="$emit('toggle-export-menu')">导出 ▾</button>
         <div v-if="exportMenuOpen" class="export-menu editor-export-menu">
           <div class="export-menu-title">导出为</div>
           <button class="menu-button" type="button" @click="$emit('export', 'docx')">Word 文档</button>

@@ -26,9 +26,18 @@ defineEmits<{
   reorder: [payload: { draggedId: string; targetId: string; parentId: string }];
   'add-child': [payload: { parentId: string; type: InsertableBlockType }];
   'selection-rewrite': [payload: { blockId: string; action: 'polish' | 'expand'; selectionText: string }];
+  'insert-paragraph-after': [blockId: string];
+  'indent-block': [payload: { blockId: string; direction: 'in' | 'out' }];
+  'list-insert-item': [payload: { blockId: string; index: number }];
+  'list-exit-to-paragraph': [payload: { blockId: string; index: number }];
   'accept-pending': [blockId: string];
   'reject-pending': [blockId: string];
-  'regenerate-pending': [payload: { targetBlockId: string; action: 'rewrite' | 'polish' | 'expand' }];
+  'regenerate-pending': [payload: {
+    targetBlockId: string;
+    action: 'rewrite' | 'polish' | 'expand';
+    mode: 'block' | 'selection';
+    selectionText?: string;
+  }];
   'regenerate-section': [sectionId: string];
 }>();
 
@@ -54,14 +63,11 @@ function getSectionTargetedPending(section: SectionBlock, targetBlockId: string)
 
 <template>
   <section class="section-card">
-    <div class="editor-toolbar">
-      <div>
-        <h2 style="margin: 0">{{ section.title }}</h2>
-        <div class="task-meta">
-          {{ getSectionConfirmedChildren(section).length }} 个已确认 Block，
-          {{ section.children.filter((child) => child.status === 'pending').length }} 个待确认 Block
-        </div>
+    <div class="section-card-head">
+      <div class="section-card-title-group">
+        <h2 class="section-card-title">{{ section.title }}</h2>
       </div>
+
       <div class="section-actions">
         <button class="button ghost" type="button" @click="$emit('add-child', { parentId: section.id, type: 'paragraph' })">
           添加段落
@@ -81,7 +87,11 @@ function getSectionTargetedPending(section: SectionBlock, targetBlockId: string)
       </div>
     </div>
 
-    <EditorSectionSkeleton v-if="showSkeleton && section.children.length === 0" :title="section.title" :is-current="isCurrentGenerating" />
+    <EditorSectionSkeleton
+      v-if="showSkeleton && section.children.length === 0"
+      :title="section.title"
+      :is-current="isCurrentGenerating"
+    />
 
     <template v-else>
       <DocumentBlockItem
@@ -103,6 +113,10 @@ function getSectionTargetedPending(section: SectionBlock, targetBlockId: string)
         @reorder="$emit('reorder', $event)"
         @add-child="$emit('add-child', $event)"
         @selection-rewrite="$emit('selection-rewrite', $event)"
+        @insert-paragraph-after="$emit('insert-paragraph-after', $event)"
+        @indent-block="$emit('indent-block', $event)"
+        @list-insert-item="$emit('list-insert-item', $event)"
+        @list-exit-to-paragraph="$emit('list-exit-to-paragraph', $event)"
         @accept-pending="$emit('accept-pending', $event)"
         @reject-pending="$emit('reject-pending', $event)"
         @regenerate-pending="$emit('regenerate-pending', $event)"
@@ -112,12 +126,13 @@ function getSectionTargetedPending(section: SectionBlock, targetBlockId: string)
         v-for="pendingBlock in getSectionAppendPending(section)"
         :key="pendingBlock.id"
         :block="pendingBlock"
+        label="AI 待确认"
         @accept="$emit('accept-pending', pendingBlock.id)"
         @reject="$emit('reject-pending', pendingBlock.id)"
       />
 
-      <div v-if="getSectionConfirmedChildren(section).length === 0 && section.children.length === 0" class="muted">
-        这一节还没有内容，你可以手动补充，或者使用 AI 生成。
+      <div v-if="getSectionConfirmedChildren(section).length === 0 && section.children.length === 0" class="section-empty">
+        这一节还没有内容。你可以先手动添加段落，也可以使用 AI 重新生成本节。
       </div>
     </template>
   </section>

@@ -29,16 +29,19 @@ defineEmits<{
       <button class="button secondary" type="button" :disabled="disabled" @click="$emit('add-exercise')">
         添加练习
       </button>
-      <div class="muted">当前追加位置：{{ currentSectionTitle || '未定位章节' }}</div>
+      <div class="editor-quick-actions-hint">
+        当前落点：{{ currentSectionTitle || '未定位章节' }}
+      </div>
     </div>
 
     <div v-if="appendOpen" class="append-composer">
       <input
         :value="appendInstruction"
         type="text"
-        placeholder="例如：补充一个更自然的导入活动，突出配方法"
+        placeholder="例如：补一个更自然的导入活动，突出配方法的应用场景。"
         @input="$emit('update:appendInstruction', ($event.target as HTMLInputElement).value)"
       />
+
       <div class="button-row">
         <button
           class="button primary"

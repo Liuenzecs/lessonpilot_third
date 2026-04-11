@@ -5,6 +5,7 @@ from html import escape, unescape
 from io import BytesIO
 
 from docx import Document as DocxDocument
+from docx.shared import Pt
 
 from app.models import Task
 from app.schemas.content import (
@@ -20,6 +21,14 @@ from app.schemas.content import (
 )
 
 HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+
+
+def _indent_points(level: int) -> Pt:
+    return Pt(max(level, 0) * 18)
+
+
+def _indent_px(level: int) -> int:
+    return max(level, 0) * 24
 
 
 def _to_plain_text(value: str) -> str:
@@ -62,14 +71,16 @@ def _render_docx_block(document: DocxDocument, block, level: int = 1) -> None:
     if isinstance(block, ParagraphBlock):
         text = _to_plain_text(block.content)
         if text:
-            document.add_paragraph(text)
+            paragraph = document.add_paragraph(text)
+            paragraph.paragraph_format.left_indent = _indent_points(block.indent)
         return
 
     if isinstance(block, ListBlock):
         for item in block.items:
             text = _to_plain_text(item)
             if text:
-                document.add_paragraph(text, style="List Bullet")
+                paragraph = document.add_paragraph(text, style="List Bullet")
+                paragraph.paragraph_format.left_indent = _indent_points(block.indent)
         return
 
     if isinstance(block, ChoiceQuestionBlock):
@@ -150,11 +161,15 @@ def _build_html_block(block, level: int = 1) -> str:
         )
 
     if isinstance(block, ParagraphBlock):
-        return block.content
+        margin_left = _indent_px(block.indent)
+        return f'<div style="margin-left: {margin_left}px">{block.content}</div>'
 
     if isinstance(block, ListBlock):
         items = "".join(f"<li>{item}</li>" for item in block.items if _to_plain_text(item))
-        return f"<ul>{items}</ul>" if items else ""
+        if not items:
+            return ""
+        margin_left = _indent_px(block.indent)
+        return f'<ul style="margin-left: {margin_left}px">{items}</ul>'
 
     if isinstance(block, ChoiceQuestionBlock):
         options = "".join(f"<li>{escape(_to_plain_text(option))}</li>" for option in block.options if option)
@@ -233,13 +248,13 @@ def _build_simple_pdf(task: Task, content: ContentDocument) -> bytes:
         if isinstance(block, ParagraphBlock):
             value = _to_plain_text(block.content)
             if value:
-                text_blocks.append(value)
+                text_blocks.append(f"{'  ' * max(block.indent, 0)}{value}")
             return
         if isinstance(block, ListBlock):
             for item in block.items:
                 value = _to_plain_text(item)
                 if value:
-                    text_blocks.append(f"- {value}")
+                    text_blocks.append(f"{'  ' * max(block.indent, 0)}- {value}")
             return
         if isinstance(block, ChoiceQuestionBlock):
             text_blocks.append(f"选择题：{_to_plain_text(block.prompt)}")

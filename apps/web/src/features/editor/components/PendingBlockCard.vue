@@ -25,10 +25,17 @@ defineEmits<{
 <template>
   <div class="pending-card">
     <div class="pending-card-head">
-      <div class="muted">{{ props.label }}</div>
+      <div>
+        <div class="pending-card-eyebrow">{{ props.label }}</div>
+        <div class="pending-card-title">
+          {{ block.suggestion?.kind === 'replace' ? 'AI 替换建议' : 'AI 新增内容' }}
+        </div>
+      </div>
       <div v-if="block.suggestion?.kind === 'replace'" class="pending-chip">替换建议</div>
     </div>
+
     <BlockPreview :block="block" />
+
     <div class="button-row">
       <button class="button primary" type="button" @click="$emit('accept')">接受</button>
       <button class="button ghost" type="button" @click="$emit('reject')">拒绝</button>

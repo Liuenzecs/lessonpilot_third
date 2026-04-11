@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EditorQuickActionsBar from '@/features/editor/components/EditorQuickActionsBar.vue';
 import EditorSectionCard from '@/features/editor/components/EditorSectionCard.vue';
+import EditorSectionSkeleton from '@/features/editor/components/EditorSectionSkeleton.vue';
 import EditorShellHeader from '@/features/editor/components/EditorShellHeader.vue';
 import EditorStatusBanner from '@/features/editor/components/EditorStatusBanner.vue';
 import ExportPreviewModal from '@/features/editor/components/ExportPreviewModal.vue';
@@ -12,7 +13,6 @@ import '@/features/editor/styles/editor.css';
 const {
   router,
   taskQuery,
-  documentsQuery,
   draftDocument,
   saveState,
   streamError,
@@ -37,7 +37,10 @@ const {
   currentSectionTitle,
   highlightedSectionId,
   confirmedPreviewBlocks,
+  showInitialSkeleton,
+  skeletonSectionTitles,
   setSectionElement,
+  persistDocument,
   handleBlockUpdate,
   handleMove,
   handleDelete,
@@ -45,6 +48,10 @@ const {
   handleReorder,
   handleAccept,
   handleReject,
+  handleIndentBlock,
+  handleInsertParagraphAfter,
+  handleInsertListItem,
+  handleExitListToParagraph,
   handleAppendToContainer,
   scrollToSection,
   isSectionShowingSkeleton,
@@ -76,49 +83,39 @@ const {
       @export="handleExport"
       @open-export-preview="openExportPreview"
       @refresh="refreshFromServer"
+      @retry-save="persistDocument"
     />
 
-    <div v-if="taskQuery.isLoading.value || documentsQuery.isLoading.value" class="app-card empty-state">
-      正在加载编辑器...
-    </div>
-
-    <div v-else-if="!draftDocument" class="app-card empty-state">没有找到教案文档。</div>
-
-    <div v-else class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
+    <div v-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
       <aside v-if="!outlineCollapsed" class="outline-panel app-card">
         <div class="outline-panel-head">
-          <div>
-            <h3 style="margin: 0">大纲导航</h3>
-            <div class="muted">让结构先于内容出现</div>
-          </div>
+          <h3 style="margin: 0">大纲导航</h3>
         </div>
 
         <div class="outline-list">
           <button
-            v-for="section in sections"
-            :key="section.id"
+            v-for="sectionTitle in showInitialSkeleton ? skeletonSectionTitles : sections.map((section) => section.title)"
+            :key="sectionTitle"
             class="outline-item"
-            :class="{ active: highlightedSectionId === section.id }"
+            :class="{
+              active:
+                !showInitialSkeleton &&
+                sections.find((section) => section.title === sectionTitle)?.id === highlightedSectionId,
+            }"
             type="button"
-            @click="scrollToSection(section.id)"
+            @click="
+              !showInitialSkeleton &&
+                sections.find((section) => section.title === sectionTitle) &&
+                scrollToSection(sections.find((section) => section.title === sectionTitle)!.id)
+            "
           >
             <span class="outline-dot" />
-            <span>{{ section.title }}</span>
+            <span>{{ sectionTitle }}</span>
           </button>
         </div>
       </aside>
 
       <main class="editor-panel app-card">
-        <div class="editor-panel-head">
-          <div>
-            <div class="editor-eyebrow">结构化教案编辑器</div>
-            <p class="subtitle editor-panel-subtitle">结构可见、AI 内联、操作极简，老师最后确认。</p>
-          </div>
-          <div class="button-row">
-            <button class="button ghost" type="button" @click="startGeneration()">重新生成整份教案</button>
-          </div>
-        </div>
-
         <EditorStatusBanner
           :is-generating="generationProgress.isGenerating"
           :completed="generationProgress.completed"
@@ -133,9 +130,23 @@ const {
           :notice-tone="notice.tone"
         />
 
+        <div v-if="showInitialSkeleton" class="generation-banner">
+          正在为你生成教案...
+        </div>
+
         <div class="section-stack">
+          <template v-if="showInitialSkeleton">
+            <EditorSectionSkeleton
+              v-for="sectionTitle in skeletonSectionTitles"
+              :key="sectionTitle"
+              :title="sectionTitle"
+              :is-current="generationProgress.currentSection === sectionTitle || !generationProgress.currentSection"
+            />
+          </template>
+
           <div
             v-for="section in sections"
+            v-else
             :id="`section-${section.id}`"
             :key="section.id"
             :data-section-id="section.id"
@@ -165,13 +176,18 @@ const {
                   selectionText: $event.selectionText,
                 })
               "
+              @insert-paragraph-after="handleInsertParagraphAfter"
+              @indent-block="handleIndentBlock($event.blockId, $event.direction)"
+              @list-insert-item="handleInsertListItem($event.blockId, $event.index)"
+              @list-exit-to-paragraph="handleExitListToParagraph($event.blockId, $event.index)"
               @accept-pending="handleAccept"
               @reject-pending="handleReject"
               @regenerate-pending="
                 startRewrite({
-                  mode: 'block',
+                  mode: $event.mode,
                   targetBlockId: $event.targetBlockId,
                   action: $event.action,
+                  selectionText: $event.selectionText,
                 })
               "
               @regenerate-section="startGeneration($event)"
@@ -180,6 +196,7 @@ const {
         </div>
 
         <EditorQuickActionsBar
+          v-if="draftDocument"
           :current-section-title="currentSectionTitle"
           :append-open="appendComposerOpen"
           :append-instruction="appendInstruction"
@@ -194,6 +211,8 @@ const {
         />
       </main>
     </div>
+
+    <div v-else class="app-card empty-state">没有找到教案文档。</div>
 
     <HistoryDrawer
       :open="historyOpen"

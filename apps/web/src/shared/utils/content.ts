@@ -45,6 +45,20 @@ export function findSection(content: ContentDocument, sectionId: string): Sectio
   return collectSections(content).find((section) => section.id === sectionId);
 }
 
+export function normalizeIndent(level: number | undefined | null): number {
+  if (!Number.isFinite(level)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(6, Math.trunc(level ?? 0)));
+}
+
+export function getBlockIndent(block: Block): number {
+  if (block.type === 'paragraph' || block.type === 'list') {
+    return normalizeIndent(block.indent);
+  }
+  return 0;
+}
+
 function getChildren(block: Block): Block[] | null {
   if (!isContainerBlock(block)) {
     return null;
@@ -156,7 +170,7 @@ export function findBlockLocation(content: ContentDocument, blockId: string): Bl
   return walk(content.blocks, null, null);
 }
 
-export function createBlock(type: InsertableBlockType): Block {
+export function createBlock<T extends InsertableBlockType>(type: T): Extract<Block, { type: T }> {
   const base = {
     id: crypto.randomUUID(),
     status: 'confirmed' as const,
@@ -169,13 +183,15 @@ export function createBlock(type: InsertableBlockType): Block {
         ...base,
         type,
         content: '<p></p>',
-      } satisfies ParagraphBlock;
+        indent: 0,
+      } satisfies ParagraphBlock as Extract<Block, { type: T }>;
     case 'list':
       return {
         ...base,
         type,
         items: [''],
-      } satisfies ListBlock;
+        indent: 0,
+      } satisfies ListBlock as Extract<Block, { type: T }>;
     case 'teaching_step':
       return {
         ...base,
@@ -183,14 +199,14 @@ export function createBlock(type: InsertableBlockType): Block {
         title: '新教学步骤',
         durationMinutes: null,
         children: [],
-      } satisfies TeachingStepBlock;
+      } satisfies TeachingStepBlock as Extract<Block, { type: T }>;
     case 'exercise_group':
       return {
         ...base,
         type,
         title: '新题组',
         children: [],
-      } satisfies ExerciseGroupBlock;
+      } satisfies ExerciseGroupBlock as Extract<Block, { type: T }>;
     case 'choice_question':
       return {
         ...base,
@@ -199,7 +215,7 @@ export function createBlock(type: InsertableBlockType): Block {
         options: ['选项 A', '选项 B', '选项 C', '选项 D'],
         answers: [],
         analysis: '<p></p>',
-      } satisfies ChoiceQuestionBlock;
+      } satisfies ChoiceQuestionBlock as Extract<Block, { type: T }>;
     case 'fill_blank_question':
       return {
         ...base,
@@ -207,7 +223,7 @@ export function createBlock(type: InsertableBlockType): Block {
         prompt: '<p></p>',
         answers: [''],
         analysis: '<p></p>',
-      } satisfies FillBlankQuestionBlock;
+      } satisfies FillBlankQuestionBlock as Extract<Block, { type: T }>;
     case 'short_answer_question':
       return {
         ...base,
@@ -215,13 +231,9 @@ export function createBlock(type: InsertableBlockType): Block {
         prompt: '<p></p>',
         referenceAnswer: '<p></p>',
         analysis: '<p></p>',
-      } satisfies ShortAnswerQuestionBlock;
+      } satisfies ShortAnswerQuestionBlock as Extract<Block, { type: T }>;
     default:
-      return {
-        ...base,
-        type: 'paragraph',
-        content: '<p></p>',
-      } satisfies ParagraphBlock;
+      throw new Error(`Unsupported block type: ${String(type)}`);
   }
 }
 
@@ -243,13 +255,26 @@ export function appendBlockToContainer(
   parentId: string,
   childType: InsertableBlockType,
 ): ContentDocument {
+  return appendExistingBlockToContainer(content, parentId, createBlock(childType));
+}
+
+export function appendExistingBlockToContainer(
+  content: ContentDocument,
+  parentId: string,
+  block: Block,
+): ContentDocument {
   const nextContent = cloneContent(content);
   const location = findBlockLocation(nextContent, parentId);
-  if (!location || !canInsertChild(location.block.type, childType) || !isContainerBlock(location.block)) {
+  if (
+    !location ||
+    block.type === 'section' ||
+    !canInsertChild(location.block.type, block.type) ||
+    !isContainerBlock(location.block)
+  ) {
     return nextContent;
   }
 
-  (location.block.children as Block[]).push(createBlock(childType));
+  (location.block.children as Block[]).push(block);
   return nextContent;
 }
 
@@ -258,13 +283,21 @@ export function insertBlockAfter(
   blockId: string,
   childType: InsertableBlockType,
 ): ContentDocument {
+  return insertExistingBlockAfter(content, blockId, createBlock(childType));
+}
+
+export function insertExistingBlockAfter(
+  content: ContentDocument,
+  blockId: string,
+  block: Block,
+): ContentDocument {
   const nextContent = cloneContent(content);
   const location = findBlockLocation(nextContent, blockId);
-  if (!location || !canInsertChild(location.parentType, childType)) {
+  if (!location || block.type === 'section' || !canInsertChild(location.parentType, block.type)) {
     return nextContent;
   }
 
-  location.siblings.splice(location.index + 1, 0, createBlock(childType));
+  location.siblings.splice(location.index + 1, 0, block);
   return nextContent;
 }
 
@@ -302,6 +335,23 @@ export function moveBlock(
   const [block] = location.siblings.splice(location.index, 1);
   location.siblings.splice(targetIndex, 0, block);
   return nextContent;
+}
+
+export function adjustBlockIndent(
+  content: ContentDocument,
+  blockId: string,
+  direction: 'in' | 'out',
+): ContentDocument {
+  return updateBlock(content, blockId, (block) => {
+    if (block.type !== 'paragraph' && block.type !== 'list') {
+      return block;
+    }
+
+    return {
+      ...block,
+      indent: normalizeIndent(getBlockIndent(block) + (direction === 'in' ? 1 : -1)),
+    };
+  });
 }
 
 export function reorderBlockBefore(
@@ -422,6 +472,7 @@ export function convertBlockType(
         status: block.status,
         source: block.source,
         suggestion: block.suggestion,
+        indent: getBlockIndent(block),
         items: items.length ? items : [''],
       } satisfies ListBlock;
     }
@@ -434,6 +485,7 @@ export function convertBlockType(
         source: block.source,
         suggestion: block.suggestion,
         content: buildParagraphsFromLines(block.items),
+        indent: getBlockIndent(block),
       } satisfies ParagraphBlock;
     }
 

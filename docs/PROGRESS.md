@@ -195,3 +195,45 @@
 - 验证结果：
   - 用户手动验收：passed
 - Status: DONE
+
+## [Phase 2] — 严格返工已重开
+- 完成日期：2026-04-11
+- 完成内容：
+  - 用户明确要求以 `docs/design/editor-ui.md` 为最高优先级重新返工，上一条 Phase 2 完成/验收记录不再代表当前状态
+  - 将 `GOAL.md` 中的 Phase 2 改回未完成状态，并将 `NEXT.md` 改写为新的严格验收清单
+  - 当前返工范围锁定为工作台、创建向导、编辑器三块体验，验收通过前不进入 Phase 3
+- 关键文件：
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+- 验证结果：
+  - 文档状态已纠正，等待本轮 Phase 2 严格返工完成后的手动验收
+- Status: REOPENED
+
+## [Phase 2] — 严格返工验收通过
+- 完成日期：2026-04-11
+- 完成内容：
+  - 工作台按设计稿重做为大 CTA、最近备课卡片、搜索和头像入口的结构，不再保留 dashboard 式布局
+  - 创建向导收口为 3 步一屏流程：学科、年级、课题主题，提交后直接进入编辑器
+  - 编辑器继续按 `docs/design/editor-ui.md` 收口：骨架逐段替换、可折叠大纲、hover 才出现的 block 操作、AI 待确认卡片、底部快捷栏、导出预览、历史抽屉、冲突恢复动作
+  - 补齐 paragraph/list 缩进持久化、selection rewrite 上下文保留以及相关导出与测试回归
+  - 用户已手动验收通过，本轮 Phase 2 可重新视为完成
+- 关键文件：
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/composables/useEditorView.ts`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/shared/styles/main.css`
+  - `apps/api/tests/api/test_documents_phase2.py`
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（存在既有 Vue 样式 warning，无 error）
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：17 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - 用户手动验收：passed
+- Status: DONE
