@@ -38,7 +38,6 @@ def get_session() -> Generator[Session, None, None]:
 
 
 def create_db_and_tables() -> None:
-    from app.models import Document, Task, User  # noqa: F401
+    from app.models import Document, DocumentSnapshot, Task, User  # noqa: F401
 
     SQLModel.metadata.create_all(get_engine())
-

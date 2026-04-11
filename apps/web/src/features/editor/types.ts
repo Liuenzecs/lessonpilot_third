@@ -21,3 +21,37 @@ export interface DocumentUpdatePayload {
   content: ContentDocument;
 }
 
+export interface DocumentRewritePayload {
+  document_version: number;
+  mode: 'block' | 'selection';
+  target_block_id: string;
+  action: 'rewrite' | 'polish' | 'expand';
+  selection_text?: string | null;
+}
+
+export interface DocumentRewriteStartResponse {
+  stream_url: string;
+}
+
+export interface DocumentAppendPayload {
+  document_version: number;
+  section_id: string;
+  instruction: string;
+}
+
+export interface DocumentAppendStartResponse {
+  stream_url: string;
+}
+
+export interface DocumentSnapshotRecord {
+  id: string;
+  document_id: string;
+  version: number;
+  content: ContentDocument;
+  source: string;
+  created_at: string;
+}
+
+export interface DocumentHistoryResponse {
+  items: DocumentSnapshotRecord[];
+}

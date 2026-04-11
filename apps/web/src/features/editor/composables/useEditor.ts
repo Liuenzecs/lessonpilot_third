@@ -1,6 +1,18 @@
+import type { ComputedRef, Ref } from 'vue';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 
-import type { DocumentListResponse, DocumentUpdatePayload, LessonDocument } from '@/features/editor/types';
+import type {
+  DocumentAppendPayload,
+  DocumentAppendStartResponse,
+  DocumentHistoryResponse,
+  DocumentRewritePayload,
+  DocumentRewriteStartResponse,
+  DocumentListResponse,
+  DocumentSnapshotRecord,
+  DocumentUpdatePayload,
+  LessonDocument,
+} from '@/features/editor/types';
 import { request } from '@/shared/api/client';
 
 export function useTaskDocuments(taskId: string) {
@@ -33,6 +45,71 @@ export function useUpdateDocumentMutation(
     onSuccess: (document) => {
       queryClient.setQueryData(['document', getDocumentId()], document);
       void queryClient.invalidateQueries({ queryKey: ['documents', getTaskId()] });
+    },
+  });
+}
+
+export function useStartDocumentRewriteMutation(getDocumentId: () => string) {
+  return useMutation({
+    mutationFn: (payload: DocumentRewritePayload) =>
+      request<DocumentRewriteStartResponse>(`/api/v1/documents/${getDocumentId()}/rewrite`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  });
+}
+
+export function useStartDocumentAppendMutation(getDocumentId: () => string) {
+  return useMutation({
+    mutationFn: (payload: DocumentAppendPayload) =>
+      request<DocumentAppendStartResponse>(`/api/v1/documents/${getDocumentId()}/append`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  });
+}
+
+export function useDocumentHistory(
+  documentId: Ref<string> | ComputedRef<string>,
+  enabled: Ref<boolean> | ComputedRef<boolean>,
+) {
+  return useQuery({
+    queryKey: ['document-history', documentId],
+    queryFn: () =>
+      request<DocumentHistoryResponse>(`/api/v1/documents/${documentId.value}/history?limit=10`),
+    enabled,
+  });
+}
+
+export function useDocumentSnapshot(
+  documentId: Ref<string> | ComputedRef<string>,
+  snapshotId: Ref<string> | ComputedRef<string>,
+  enabled: Ref<boolean> | ComputedRef<boolean>,
+) {
+  return useQuery({
+    queryKey: ['document-history', documentId, snapshotId],
+    queryFn: () =>
+      request<DocumentSnapshotRecord>(
+        `/api/v1/documents/${documentId.value}/history/${snapshotId.value}`,
+      ),
+    enabled,
+  });
+}
+
+export function useRestoreSnapshotMutation(
+  getDocumentId: () => string,
+  getTaskId: () => string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (snapshotId: string) =>
+      request<LessonDocument>(`/api/v1/documents/${getDocumentId()}/history/${snapshotId}/restore`, {
+        method: 'POST',
+      }),
+    onSuccess: (document) => {
+      queryClient.setQueryData(['document', getDocumentId()], document);
+      void queryClient.invalidateQueries({ queryKey: ['documents', getTaskId()] });
+      void queryClient.invalidateQueries({ queryKey: ['document-history', getDocumentId()] });
     },
   });
 }

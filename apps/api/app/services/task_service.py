@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.models import Document, Task
+from app.models import Document, DocumentSnapshot, Task
 from app.models.base import utcnow
 from app.schemas.content import ContentDocument, SectionBlock
 from app.schemas.task import TaskCreatePayload, TaskUpdatePayload
@@ -105,7 +105,11 @@ def update_task(session: Session, task: Task, payload: TaskUpdatePayload) -> Tas
 def delete_task(session: Session, task: Task) -> None:
     document = session.exec(select(Document).where(Document.task_id == task.id)).first()
     if document is not None:
+        snapshots = session.exec(
+            select(DocumentSnapshot).where(DocumentSnapshot.document_id == document.id)
+        ).all()
+        for snapshot in snapshots:
+            session.delete(snapshot)
         session.delete(document)
     session.delete(task)
     session.commit()
-

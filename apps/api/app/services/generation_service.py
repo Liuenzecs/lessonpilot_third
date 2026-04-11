@@ -9,22 +9,38 @@ from sqlmodel import Session, select
 from app.models import Document, Task
 from app.models.base import utcnow
 from app.schemas.content import ContentDocument, SectionBlock
-from app.services.document_service import load_content, save_document_snapshot, serialize_document
-from app.services.llm_service import SectionGenerationContext, get_provider
+from app.services.document_service import (
+    load_content,
+    record_current_snapshot,
+    save_document,
+    serialize_document,
+)
+from app.services.llm_service import (
+    SectionGenerationContext,
+    apply_suggestion_metadata,
+    get_provider,
+)
 
 
 def _format_sse(event: str, payload: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _find_target_sections(content: ContentDocument, section_id: str | None) -> list[SectionBlock]:
+def _find_target_section_ids(content: ContentDocument, section_id: str | None) -> list[str]:
     sections = [block for block in content.blocks if isinstance(block, SectionBlock)]
     if section_id is None:
-        return sections
-    matched = [block for block in sections if block.id == section_id]
+        return [block.id for block in sections]
+    matched = [block.id for block in sections if block.id == section_id]
     if not matched:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
     return matched
+
+
+def _find_section(content: ContentDocument, section_id: str) -> SectionBlock:
+    for block in content.blocks:
+        if isinstance(block, SectionBlock) and block.id == section_id:
+            return block
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
 
 
 def _replace_pending_children(section: SectionBlock, generated_children) -> None:
@@ -62,10 +78,12 @@ async def stream_generation(
 
     try:
         content = load_content(document)
-        target_sections = _find_target_sections(content, section_id)
-        total = len(target_sections)
+        target_section_ids = _find_target_section_ids(content, section_id)
+        total = len(target_section_ids)
 
-        for index, section in enumerate(target_sections, start=1):
+        for index, current_section_id in enumerate(target_section_ids, start=1):
+            content = load_content(document)
+            section = _find_section(content, current_section_id)
             generated_blocks = await provider.generate_section(
                 SectionGenerationContext(
                     subject=task.subject,
@@ -75,8 +93,9 @@ async def stream_generation(
                     section_title=section.title,
                 )
             )
-            _replace_pending_children(section, generated_blocks)
-            document = save_document_snapshot(session, document, content)
+            pending_blocks = apply_suggestion_metadata(generated_blocks, kind="append")
+            _replace_pending_children(section, pending_blocks)
+            document = save_document(session, document, content)
             yield _format_sse(
                 "progress",
                 {
@@ -90,7 +109,6 @@ async def stream_generation(
                 "document",
                 serialize_document(document).model_dump(mode="json", by_alias=True),
             )
-            content = load_content(document)
 
         task.status = "ready"
         task.updated_at = utcnow()
@@ -98,6 +116,7 @@ async def stream_generation(
         session.commit()
         session.refresh(task)
 
+        record_current_snapshot(session, document, "generation")
         yield _format_sse("status", {"state": "ready"})
         yield _format_sse("done", {"task_id": task.id, "document_id": document.id})
     except Exception as exc:
@@ -106,4 +125,3 @@ async def stream_generation(
         session.add(task)
         session.commit()
         yield _format_sse("error", {"message": str(exc)})
-

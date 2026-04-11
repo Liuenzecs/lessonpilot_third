@@ -4,7 +4,7 @@ export interface GenerationEventHandlers {
   onEvent: (event: string, payload: unknown) => void;
 }
 
-export async function consumeGenerationStream(
+export async function consumeEventStream(
   streamUrl: string,
   token: string,
   handlers: GenerationEventHandlers,
@@ -55,3 +55,26 @@ export async function consumeGenerationStream(
   }
 }
 
+export async function consumeGenerationStream(
+  streamUrl: string,
+  token: string,
+  handlers: GenerationEventHandlers,
+): Promise<void> {
+  await consumeEventStream(streamUrl, token, handlers);
+}
+
+export async function consumeRewriteStream(
+  streamUrl: string,
+  token: string,
+  handlers: GenerationEventHandlers,
+): Promise<void> {
+  await consumeEventStream(streamUrl, token, handlers);
+}
+
+export async function consumeAppendStream(
+  streamUrl: string,
+  token: string,
+  handlers: GenerationEventHandlers,
+): Promise<void> {
+  await consumeEventStream(streamUrl, token, handlers);
+}

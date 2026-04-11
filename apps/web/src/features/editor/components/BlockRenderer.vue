@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import type { Block, ListBlock, ParagraphBlock, TeachingStepBlock } from '@lessonpilot/shared-types';
+import type {
+  Block,
+  ChoiceQuestionBlock,
+  FillBlankQuestionBlock,
+  ListBlock,
+  ParagraphBlock,
+  ShortAnswerQuestionBlock,
+  TeachingStepBlock,
+  ExerciseGroupBlock,
+} from '@lessonpilot/shared-types';
 
 import RichTextField from '@/features/editor/components/RichTextField.vue';
 
@@ -15,6 +24,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:block': [block: Block];
+  'selection-action': [payload: { action: 'polish' | 'expand'; selectionText: string }];
 }>();
 
 function emitBlock(nextBlock: Block) {
@@ -32,7 +42,6 @@ function updateListItem(index: number, value: string) {
   if (props.block.type !== 'list') {
     return;
   }
-
   const items = [...props.block.items];
   items[index] = value;
   emitBlock({
@@ -45,7 +54,6 @@ function addListItem() {
   if (props.block.type !== 'list') {
     return;
   }
-
   emitBlock({
     ...props.block,
     items: [...props.block.items, ''],
@@ -56,7 +64,6 @@ function removeListItem(index: number) {
   if (props.block.type !== 'list') {
     return;
   }
-
   emitBlock({
     ...props.block,
     items: props.block.items.filter((_, itemIndex) => itemIndex !== index),
@@ -67,103 +74,84 @@ function updateTeachingStep(partial: Partial<TeachingStepBlock>) {
   if (props.block.type !== 'teaching_step') {
     return;
   }
-
   emitBlock({
     ...props.block,
     ...partial,
   } satisfies TeachingStepBlock);
 }
 
-function updateTeachingStepChild(index: number, child: Block) {
-  if (props.block.type !== 'teaching_step') {
+function updateExerciseGroup(partial: Partial<ExerciseGroupBlock>) {
+  if (props.block.type !== 'exercise_group') {
     return;
   }
-
-  const children = props.block.children.map((currentChild, currentIndex) =>
-    currentIndex === index ? child : currentChild,
-  );
-  updateTeachingStep({ children });
+  emitBlock({
+    ...props.block,
+    ...partial,
+  } satisfies ExerciseGroupBlock);
 }
 
-function addParagraphChild() {
-  if (props.block.type !== 'teaching_step') {
+function updateChoiceQuestion(partial: Partial<ChoiceQuestionBlock>) {
+  if (props.block.type !== 'choice_question') {
     return;
   }
-
-  updateTeachingStep({
-    children: [
-      ...props.block.children,
-      {
-        id: crypto.randomUUID(),
-        type: 'paragraph',
-        content: '<p></p>',
-        status: 'confirmed',
-        source: 'human',
-      },
-    ],
-  });
+  emitBlock({
+    ...props.block,
+    ...partial,
+  } satisfies ChoiceQuestionBlock);
 }
 
-function addListChild() {
-  if (props.block.type !== 'teaching_step') {
+function updateFillBlankQuestion(partial: Partial<FillBlankQuestionBlock>) {
+  if (props.block.type !== 'fill_blank_question') {
     return;
   }
+  emitBlock({
+    ...props.block,
+    ...partial,
+  } satisfies FillBlankQuestionBlock);
+}
 
-  updateTeachingStep({
-    children: [
-      ...props.block.children,
-      {
-        id: crypto.randomUUID(),
-        type: 'list',
-        items: [''],
-        status: 'confirmed',
-        source: 'human',
-      },
-    ],
-  });
+function updateShortAnswerQuestion(partial: Partial<ShortAnswerQuestionBlock>) {
+  if (props.block.type !== 'short_answer_question') {
+    return;
+  }
+  emitBlock({
+    ...props.block,
+    ...partial,
+  } satisfies ShortAnswerQuestionBlock);
+}
+
+function updateArrayValue<T>(values: T[], index: number, nextValue: T): T[] {
+  const nextValues = [...values];
+  nextValues[index] = nextValue;
+  return nextValues;
 }
 </script>
 
 <template>
-  <div class="block-card">
+  <div class="block-content">
     <template v-if="block.type === 'paragraph'">
       <RichTextField
         :model-value="block.content"
         :disabled="readonly"
+        allow-selection-ai
         @update:model-value="updateParagraph"
+        @selection-action="$emit('selection-action', $event)"
       />
     </template>
 
     <template v-else-if="block.type === 'list'">
       <div class="list-editor">
-        <div
-          v-for="(item, index) in block.items"
-          :key="`${block.id}-${index}`"
-          class="list-item"
-        >
+        <div v-for="(item, index) in block.items" :key="`${block.id}-${index}`" class="list-item">
           <span>•</span>
           <template v-if="readonly">
             <div>{{ item }}</div>
           </template>
           <template v-else>
-            <input
-              :value="item"
-              type="text"
-              @input="updateListItem(index, ($event.target as HTMLInputElement).value)"
-            />
-            <button class="button ghost" type="button" @click="removeListItem(index)">
-              删除
-            </button>
+            <input :value="item" type="text" @input="updateListItem(index, ($event.target as HTMLInputElement).value)" />
+            <button class="button ghost" type="button" @click="removeListItem(index)">删除</button>
           </template>
         </div>
-        <button
-          v-if="!readonly"
-          class="button secondary"
-          type="button"
-          @click="addListItem"
-        >
-          添加条目
-        </button>
+        <button v-if="!readonly" class="button secondary" type="button" @click="addListItem">添加条目</button>
       </div>
     </template>
 
@@ -191,22 +179,128 @@ function addListChild() {
           "
         />
       </div>
-      <div class="block-actions" v-if="!readonly">
-        <button class="button secondary" type="button" @click="addParagraphChild">
-          添加段落
-        </button>
-        <button class="button secondary" type="button" @click="addListChild">
-          添加列表
-        </button>
+    </template>
+
+    <template v-else-if="block.type === 'exercise_group'">
+      <div class="field">
+        <label>题组标题</label>
+        <input
+          :disabled="readonly"
+          :value="block.title"
+          type="text"
+          @input="updateExerciseGroup({ title: ($event.target as HTMLInputElement).value })"
+        />
       </div>
-      <BlockRenderer
-        v-for="(child, index) in block.children"
-        :key="child.id"
-        :block="child"
-        :readonly="readonly"
-        @update:block="updateTeachingStepChild(index, $event)"
-      />
+    </template>
+
+    <template v-else-if="block.type === 'choice_question'">
+      <div class="field">
+        <label>题干</label>
+        <RichTextField :model-value="block.prompt" :disabled="readonly" @update:model-value="updateChoiceQuestion({ prompt: $event })" />
+      </div>
+      <div class="field">
+        <label>选项</label>
+        <div class="stacked-fields">
+          <div v-for="(option, index) in block.options" :key="`${block.id}-option-${index}`" class="inline-input-row">
+            <input
+              :disabled="readonly"
+              :value="option"
+              type="text"
+              @input="
+                updateChoiceQuestion({
+                  options: updateArrayValue(block.options, index, ($event.target as HTMLInputElement).value),
+                })
+              "
+            />
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>答案（每行一个）</label>
+        <textarea
+          :disabled="readonly"
+          :value="block.answers.join('\n')"
+          rows="3"
+          @input="
+            updateChoiceQuestion({
+              answers: ($event.target as HTMLTextAreaElement).value
+                .split('\n')
+                .map((item) => item.trim())
+                .filter(Boolean),
+            })
+          "
+        />
+      </div>
+      <div class="field">
+        <label>解析</label>
+        <RichTextField
+          :model-value="block.analysis"
+          :disabled="readonly"
+          @update:model-value="updateChoiceQuestion({ analysis: $event })"
+        />
+      </div>
+    </template>
+
+    <template v-else-if="block.type === 'fill_blank_question'">
+      <div class="field">
+        <label>题干</label>
+        <RichTextField
+          :model-value="block.prompt"
+          :disabled="readonly"
+          @update:model-value="updateFillBlankQuestion({ prompt: $event })"
+        />
+      </div>
+      <div class="field">
+        <label>答案（每行一个）</label>
+        <textarea
+          :disabled="readonly"
+          :value="block.answers.join('\n')"
+          rows="3"
+          @input="
+            updateFillBlankQuestion({
+              answers: ($event.target as HTMLTextAreaElement).value
+                .split('\n')
+                .map((item) => item.trim())
+                .filter(Boolean),
+            })
+          "
+        />
+      </div>
+      <div class="field">
+        <label>解析</label>
+        <RichTextField
+          :model-value="block.analysis"
+          :disabled="readonly"
+          @update:model-value="updateFillBlankQuestion({ analysis: $event })"
+        />
+      </div>
+    </template>
+
+    <template v-else-if="block.type === 'short_answer_question'">
+      <div class="field">
+        <label>题干</label>
+        <RichTextField
+          :model-value="block.prompt"
+          :disabled="readonly"
+          @update:model-value="updateShortAnswerQuestion({ prompt: $event })"
+        />
+      </div>
+      <div class="field">
+        <label>参考答案</label>
+        <RichTextField
+          :model-value="block.referenceAnswer"
+          :disabled="readonly"
+          @update:model-value="updateShortAnswerQuestion({ referenceAnswer: $event })"
+        />
+      </div>
+      <div class="field">
+        <label>解析</label>
+        <RichTextField
+          :model-value="block.analysis"
+          :disabled="readonly"
+          @update:model-value="updateShortAnswerQuestion({ analysis: $event })"
+        />
+      </div>
     </template>
   </div>
 </template>
-

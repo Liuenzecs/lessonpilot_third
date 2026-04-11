@@ -37,7 +37,7 @@ AI 赋能的备课工具：**结构化教案编辑器 + AI 填充引擎**。
   - 目标：一个老师能完整走完"注册 → 创建任务 → AI 生成 → 编辑 → 导出 Word"
   - 后端：Auth（注册/登录/JWT）、Task CRUD、Document CRUD、AI 生成端点（SSE）、Word 导出
   - 前端：登录/注册页、任务创建向导（学科→年级→主题）、备课台列表页、编辑器基础版、AI 生成进度 UI、自动保存、Word 导出按钮
-- [ ] **Phase 2 — 编辑器深度完善（好用）**
+- [x] **Phase 2 — 编辑器深度完善（好用）**
   - 目标：编辑器真正好用，成为产品核心
   - 所有 Block 类型完整渲染、AI pending/confirm 流程、局部 AI 重写、Block 级操作、PDF 导出、键盘快捷键、版本历史
   - 参考 `docs/design/editor-ui.md` 全面落地
