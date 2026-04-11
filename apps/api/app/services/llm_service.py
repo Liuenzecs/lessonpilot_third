@@ -23,6 +23,47 @@ class SectionGenerationContext:
     section_title: str
 
 
+def _normalize_block_payload(block: dict) -> dict:
+    normalized = dict(block)
+    normalized.setdefault("id", str(uuid4()))
+    normalized.setdefault("status", "pending")
+    normalized.setdefault("source", "ai")
+
+    if normalized.get("type") in {"section", "teaching_step"}:
+        children = normalized.get("children") or []
+        normalized["children"] = [
+            _normalize_block_payload(child)
+            for child in children
+            if isinstance(child, dict)
+        ]
+
+    return normalized
+
+
+def _normalize_generated_payload(raw_payload: object) -> dict:
+    if isinstance(raw_payload, list):
+        blocks = raw_payload
+    elif isinstance(raw_payload, dict):
+        if isinstance(raw_payload.get("blocks"), list):
+            blocks = raw_payload["blocks"]
+        elif isinstance(raw_payload.get("data"), dict) and isinstance(raw_payload["data"].get("blocks"), list):
+            blocks = raw_payload["data"]["blocks"]
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="LLM response is missing blocks payload",
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="LLM response payload is not valid JSON",
+        )
+
+    return {
+        "blocks": [_normalize_block_payload(block) for block in blocks if isinstance(block, dict)],
+    }
+
+
 class FakeProvider:
     async def generate_section(self, context: SectionGenerationContext):
         if context.section_title == "教学目标":
@@ -176,7 +217,9 @@ class DeepSeekProvider:
 
         content = response.json()["choices"][0]["message"]["content"]
         cleaned = content.strip().removeprefix("```json").removesuffix("```").strip()
-        payload = GeneratedBlocksPayload.model_validate(json.loads(cleaned))
+        payload = GeneratedBlocksPayload.model_validate(
+            _normalize_generated_payload(json.loads(cleaned))
+        )
         return payload.blocks
 
 
@@ -185,4 +228,3 @@ def get_provider():
     if settings.llm_provider == "deepseek":
         return DeepSeekProvider()
     return FakeProvider()
-

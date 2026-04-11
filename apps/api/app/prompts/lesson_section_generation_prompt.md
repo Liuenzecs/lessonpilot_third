@@ -3,7 +3,7 @@
 请根据以下上下文，为指定章节生成结构化 JSON。
 
 要求：
-1. 只能输出一个 JSON 对象，格式为：{"blocks":[...]}
+1. 只能输出一个 JSON 对象，格式为：{{"blocks":[...]}}
 2. blocks 里的 type 只能是 "paragraph"、"list"、"teaching_step"
 3. 所有 block 的 status 必须是 "pending"
 4. 所有 block 的 source 必须是 "ai"

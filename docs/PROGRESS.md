@@ -74,3 +74,50 @@
   - `pnpm --dir apps/web lint`：passed（保留现有 Vue 模板格式 warnings，无 error）
   - PostgreSQL smoke flow：注册 → 创建任务 → SSE 生成 → 接受 pending → 导出 `.docx` 已跑通
 - Status: DONE
+
+## [Phase 1] — 复核意见完善
+- 完成日期：2026-04-11
+- 完成内容：
+  - 同步 `GOAL.md` 阶段勾选状态，使其与 `PROGRESS.md` 中的 Phase 0 / Phase 1 完成记录一致
+  - 在当前本机环境重新验证前端生产构建，确认 `pnpm --dir apps/web build` 已通过，不再保留该项为待办
+  - 收敛 `NEXT.md` 为仅剩用户手动验收与后续指示，避免状态描述混乱
+  - 补充本地缓存目录忽略规则，降低 Git 状态噪音
+- 关键文件：
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+  - `.gitignore`
+- 验证结果：
+  - `pnpm --dir apps/web build`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：5 passed
+- Status: DONE
+
+## [Phase 1] — DeepSeek 生成链路修复
+- 完成日期：2026-04-11
+- 完成内容：
+  - 修复 DeepSeek prompt 模板中的 JSON 花括号未转义问题，避免在 `.format()` 阶段提前报错
+  - 为模型返回的 block 增加服务端兼容层，自动补齐缺失的 `id / status / source`
+  - 支持解析 `{"blocks":[...]}`、裸数组以及 `data.blocks` 形式的模型响应，降低结构抖动带来的失败率
+  - 确认当前工作区中的真实 DeepSeek 调用已能返回可落库的 block 数据
+- 关键文件：
+  - `apps/api/app/prompts/lesson_section_generation_prompt.md`
+  - `apps/api/app/services/llm_service.py`
+  - `apps/api/tests/test_llm_service.py`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：7 passed
+  - 直接调用 `DeepSeekProvider.generate_section(...)`：passed，已返回带自动补齐 `id` 的 block
+- Status: DONE
+
+## [Phase 1] — 用户验收通过
+- 完成日期：2026-04-11
+- 完成内容：
+  - 用户完成 Phase 1 主链路手动验收，确认注册、创建任务、AI 生成、pending 接受/拒绝、编辑自动保存与导出流程可用
+  - 将 `NEXT.md` 收口为“等待用户指示”，不自动进入 Phase 2
+  - 准备提交当前工作区中与 DeepSeek 生成链路和阶段状态同步相关的改动
+- 关键文件：
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+- 验证结果：
+  - 用户手动验收：passed
+- Status: DONE

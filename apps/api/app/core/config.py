@@ -1,9 +1,26 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+API_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+
+def _resolve_env_files() -> tuple[str, ...]:
+    files: list[str] = []
+    project_env = PROJECT_ROOT / ".env"
+    api_env = API_ROOT / ".env"
+
+    if project_env.exists():
+        files.append(str(project_env))
+    if api_env.exists():
+        files.append(str(api_env))
+
+    return tuple(files) or (".env",)
 
 
 class Settings(BaseSettings):
@@ -16,7 +33,11 @@ class Settings(BaseSettings):
     deepseek_model: str = "deepseek-chat"
     deepseek_base_url: str = "https://api.deepseek.com/v1"
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=_resolve_env_files(),
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     @property
     def cors_origins_list(self) -> list[str]:
