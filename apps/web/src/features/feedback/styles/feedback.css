@@ -1,0 +1,75 @@
+.feedback-widget {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 70;
+}
+
+.feedback-trigger {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 16px 28px rgba(46, 71, 103, 0.22);
+}
+
+.feedback-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(320px, calc(100vw - 24px));
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.feedback-panel-title {
+  font-weight: 700;
+}
+
+.feedback-textarea {
+  min-height: 120px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.feedback-mood-row {
+  display: flex;
+  gap: 10px;
+}
+
+.feedback-mood-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.feedback-mood-button.active {
+  border-color: rgba(62, 98, 143, 0.34);
+  background: rgba(62, 98, 143, 0.12);
+}
+
+.feedback-submit {
+  width: 100%;
+}
+
+.feedback-note {
+  margin: 0;
+  font-size: 14px;
+}
+
+.feedback-note.success {
+  color: var(--success);
+}
+
+.feedback-note.error {
+  color: var(--danger);
+}

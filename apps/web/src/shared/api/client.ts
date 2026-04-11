@@ -85,14 +85,17 @@ export async function request<T>(
   return (await response.json()) as T;
 }
 
-export async function download(path: string): Promise<Blob> {
+export async function download(path: string, init: RequestInit = {}): Promise<Blob> {
   const token = getToken();
-  const headers = new Headers();
+  const headers = new Headers(init.headers);
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+  if (!(init.body instanceof FormData) && init.body) {
+    headers.set('Content-Type', 'application/json');
+  }
 
-  const response = await fetch(buildApiUrl(path), { headers });
+  const response = await fetch(buildApiUrl(path), { ...init, headers });
   if (!response.ok) {
     if (response.status === 401) {
       handleUnauthorized(path);

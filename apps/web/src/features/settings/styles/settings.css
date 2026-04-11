@@ -1,0 +1,152 @@
+.settings-page {
+  display: grid;
+  gap: 24px;
+}
+
+.settings-hero,
+.settings-tabs,
+.settings-panel {
+  padding: 24px;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+}
+
+.settings-tabs {
+  display: grid;
+  gap: 8px;
+  height: fit-content;
+}
+
+.settings-tabs button {
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--text);
+}
+
+.settings-tabs button.active {
+  background: rgba(62, 98, 143, 0.1);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.settings-content {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-panel h2,
+.data-card h3,
+.subscription-upgrade h3 {
+  margin: 0;
+}
+
+.subscription-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.subscription-plan {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.subscription-upgrade {
+  display: grid;
+  gap: 12px;
+  background: rgba(62, 98, 143, 0.06);
+}
+
+.subscription-upgrade p,
+.data-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.subscription-usage {
+  display: grid;
+  gap: 10px;
+}
+
+.usage-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(76, 95, 122, 0.12);
+  overflow: hidden;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4c6e9e, #6b84bc);
+}
+
+.data-card {
+  display: grid;
+  gap: 12px;
+}
+
+.data-card.danger {
+  border-color: rgba(198, 84, 101, 0.24);
+  background: rgba(198, 84, 101, 0.04);
+}
+
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 47, 69, 0.26);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 60;
+}
+
+.settings-modal {
+  width: min(460px, 100%);
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.settings-modal p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.settings-modal input {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+@media (max-width: 920px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-tabs {
+    grid-template-columns: 1fr;
+  }
+}

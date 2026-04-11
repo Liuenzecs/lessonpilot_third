@@ -194,6 +194,10 @@ textarea:focus {
   font-size: 14px;
 }
 
+.feedback.success {
+  color: var(--success);
+}
+
 .empty-state {
   padding: 36px;
   text-align: center;

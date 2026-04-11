@@ -16,7 +16,14 @@ from app.schemas.task import (
     TaskUpdatePayload,
 )
 from app.services.generation_service import get_task_document, stream_generation
-from app.services.task_service import create_task, delete_task, get_owned_task, list_tasks, update_task
+from app.services.task_service import (
+    create_task,
+    delete_task,
+    duplicate_task,
+    get_owned_task,
+    list_tasks,
+    update_task,
+)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -92,6 +99,17 @@ def remove_task(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post("/{task_id}/duplicate", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+def duplicate_owned_task(
+    task_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> TaskRead:
+    source_task, source_document = get_task_document(session, task_id, current_user.id)
+    duplicated_task = duplicate_task(session, source_task, source_document)
+    return _to_task_read(duplicated_task)
+
+
 @router.post("/{task_id}/generate", response_model=GenerationStartResponse)
 def start_generation(
     task_id: str,
@@ -117,4 +135,3 @@ async def stream_task_generation(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
-

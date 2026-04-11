@@ -83,6 +83,34 @@ def create_task(session: Session, user_id: str, payload: TaskCreatePayload) -> T
     return task
 
 
+def duplicate_task(session: Session, source_task: Task, source_document: Document) -> Task:
+    duplicated_task = Task(
+        user_id=source_task.user_id,
+        title=f"{source_task.title}（副本）",
+        subject=source_task.subject,
+        grade=source_task.grade,
+        topic=source_task.topic,
+        requirements=source_task.requirements,
+        status="draft",
+    )
+    session.add(duplicated_task)
+    session.flush()
+
+    duplicated_content = ContentDocument.model_validate(source_document.content)
+    duplicated_content.version = 1
+    duplicated_document = Document(
+        task_id=duplicated_task.id,
+        user_id=source_task.user_id,
+        title=duplicated_task.title,
+        content=duplicated_content.model_dump(mode="json", by_alias=True),
+        version=1,
+    )
+    session.add(duplicated_document)
+    session.commit()
+    session.refresh(duplicated_task)
+    return duplicated_task
+
+
 def update_task(session: Session, task: Task, payload: TaskUpdatePayload) -> Task:
     changed = False
     if payload.title is not None:
@@ -102,7 +130,7 @@ def update_task(session: Session, task: Task, payload: TaskUpdatePayload) -> Tas
     return task
 
 
-def delete_task(session: Session, task: Task) -> None:
+def delete_task(session: Session, task: Task, *, commit: bool = True) -> None:
     document = session.exec(select(Document).where(Document.task_id == task.id)).first()
     if document is not None:
         snapshots = session.exec(
@@ -112,4 +140,5 @@ def delete_task(session: Session, task: Task) -> None:
             session.delete(snapshot)
         session.delete(document)
     session.delete(task)
-    session.commit()
+    if commit:
+        session.commit()

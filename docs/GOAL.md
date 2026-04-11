@@ -41,7 +41,7 @@ AI 赋能的备课工具：**结构化教案编辑器 + AI 填充引擎**。
   - 目标：编辑器真正好用，成为产品核心
   - 所有 Block 类型完整渲染、AI pending/confirm 流程、局部 AI 重写、Block 级操作、PDF 导出、键盘快捷键、版本历史
   - 参考 `docs/design/editor-ui.md` 全面落地
-- [ ] **Phase 3 — 公域页面 & Auth 完善（有门面）**
+- [x] **Phase 3 — 公域页面 & Auth 完善（有门面）**
   - 目标：产品有完整公开门面，可对外传播
   - Landing 首页、定价页、FAQ/帮助中心、关于我们、隐私政策/服务条款、404、公域导航栏 + Footer、忘记密码、邮箱验证
   - 参考 `docs/design/public-pages-ui.md` 全面落地

@@ -35,6 +35,11 @@ export const useAuthStore = defineStore('auth', {
       this.hydrated = true;
       savePersistedAuthState({ token, user });
     },
+    setUser(user: AuthUser) {
+      this.user = user;
+      this.hydrated = true;
+      savePersistedAuthState({ token: this.token, user });
+    },
     clearSession() {
       this.token = null;
       this.user = null;
@@ -47,4 +52,3 @@ export const useAuthStore = defineStore('auth', {
 export function useAuthStoreWithPinia(pinia: Pinia) {
   return useAuthStore(pinia);
 }
-

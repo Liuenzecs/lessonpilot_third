@@ -71,7 +71,7 @@ async function submit() {
     <div class="wizard-frame app-card">
       <div class="wizard-head">
         <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
-          返回工作台
+          返回备课台
         </button>
 
         <div class="wizard-progress">
@@ -83,11 +83,11 @@ async function submit() {
       </div>
 
       <section class="wizard-content">
-        <div class="wizard-copy">
-          <div class="wizard-eyebrow">创建向导</div>
-          <h1 class="page-title wizard-title">{{ stepMeta.title }}</h1>
-          <p class="subtitle wizard-subtitle">{{ stepMeta.description }}</p>
-        </div>
+          <div class="wizard-copy">
+            <div class="wizard-eyebrow">创建向导</div>
+            <h1 class="page-title wizard-title">{{ stepMeta.title }}</h1>
+            <p class="subtitle wizard-subtitle">{{ stepMeta.description }}</p>
+          </div>
 
         <div v-if="step === 1" class="wizard-choice-grid">
           <button

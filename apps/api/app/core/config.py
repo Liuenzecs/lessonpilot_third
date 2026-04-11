@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     jwt_secret: str = "development-secret"
     jwt_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:5173"
+    app_base_url: str = "http://localhost:5173"
+    mail_delivery_mode: Literal["console"] = "console"
+    mail_from_email: str = "hello@lessonpilot.com"
+    mail_from_name: str = "LessonPilot"
+    feedback_notify_email: str = "hello@lessonpilot.com"
+    verify_email_token_expire_hours: int = 48
+    reset_password_token_expire_minutes: int = 30
     llm_provider: Literal["fake", "deepseek"] = "fake"
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-chat"

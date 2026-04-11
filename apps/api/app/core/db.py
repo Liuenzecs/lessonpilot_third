@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from pathlib import Path
 
+from alembic.config import Config
+from sqlalchemy import inspect
 from sqlmodel import Session, SQLModel, create_engine
 
+from alembic import command
 from app.core.config import get_settings
 
 _engine = None
@@ -37,7 +41,46 @@ def get_session() -> Generator[Session, None, None]:
         yield session
 
 
-def create_db_and_tables() -> None:
-    from app.models import Document, DocumentSnapshot, Task, User  # noqa: F401
+def _create_alembic_config() -> Config:
+    api_root = Path(__file__).resolve().parents[2]
+    alembic_config = Config(str(api_root / "alembic.ini"))
+    alembic_config.set_main_option("script_location", str(api_root / "alembic"))
+    alembic_config.set_main_option("sqlalchemy.url", get_settings().database_url)
+    return alembic_config
 
+
+def _infer_existing_revision() -> str | None:
+    inspector = inspect(get_engine())
+    table_names = set(inspector.get_table_names())
+    if "users" not in table_names:
+        return None
+
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    if (
+        {"email_verified", "email_verified_at"}.issubset(user_columns)
+        and {"auth_tokens", "feedback_entries"}.issubset(table_names)
+    ):
+        return "20260411_0003"
+
+    if "document_snapshots" in table_names:
+        return "20260411_0002"
+
+    if {"users", "tasks", "documents"}.issubset(table_names):
+        return "20260410_0001"
+
+    return None
+
+
+def run_migrations() -> None:
+    alembic_config = _create_alembic_config()
+    existing_revision = _infer_existing_revision()
+    if existing_revision is not None:
+        command.stamp(alembic_config, existing_revision)
+    command.upgrade(alembic_config, "head")
+
+
+def create_db_and_tables() -> None:
+    from app.models import AuthToken, Document, DocumentSnapshot, Feedback, Task, User  # noqa: F401
+
+    run_migrations()
     SQLModel.metadata.create_all(get_engine())

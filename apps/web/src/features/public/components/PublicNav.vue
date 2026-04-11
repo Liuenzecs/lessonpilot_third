@@ -1,0 +1,64 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
+
+import { useAuthStore } from '@/app/stores/auth';
+import UserMenu from '@/shared/components/UserMenu.vue';
+
+const authStore = useAuthStore();
+const route = useRoute();
+const menuOpen = ref(false);
+const isScrolled = ref(false);
+
+const isLoginRoute = computed(() => route.name === 'login');
+const isRegisterRoute = computed(() => route.name === 'register');
+const isAuthRoute = computed(() => isLoginRoute.value || isRegisterRoute.value);
+const guestActionLabel = computed(() => (isLoginRoute.value ? '注册' : '登录'));
+const guestActionTarget = computed(() => (isLoginRoute.value ? { name: 'register' } : { name: 'login' }));
+
+function handleScroll() {
+  isScrolled.value = window.scrollY > 10;
+}
+
+onMounted(() => {
+  handleScroll();
+  window.addEventListener('scroll', handleScroll, { passive: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
+</script>
+
+<template>
+  <header class="public-nav" :class="{ scrolled: isScrolled }">
+    <div class="public-nav-inner">
+      <RouterLink class="public-brand" :to="{ name: 'landing' }">LessonPilot</RouterLink>
+
+      <button class="public-nav-mobile" type="button" @click="menuOpen = !menuOpen">☰</button>
+
+      <nav class="public-nav-links" :class="{ open: menuOpen }">
+        <template v-if="!authStore.isAuthenticated">
+          <RouterLink :to="{ name: 'landing', hash: '#features' }">功能介绍</RouterLink>
+          <RouterLink :to="{ name: 'pricing' }">定价</RouterLink>
+          <RouterLink :to="{ name: 'help' }">帮助中心</RouterLink>
+
+          <template v-if="isAuthRoute">
+            <RouterLink class="public-nav-login" :to="guestActionTarget">{{ guestActionLabel }}</RouterLink>
+          </template>
+
+          <template v-else>
+            <RouterLink class="public-nav-login" :to="{ name: 'login' }">登录</RouterLink>
+            <RouterLink class="button primary public-nav-cta" :to="{ name: 'register' }">开始使用</RouterLink>
+          </template>
+        </template>
+
+        <template v-else>
+          <RouterLink :to="{ name: 'help' }">帮助中心</RouterLink>
+          <RouterLink :to="{ name: 'tasks' }">备课台</RouterLink>
+          <UserMenu />
+        </template>
+      </nav>
+    </div>
+  </header>
+</template>

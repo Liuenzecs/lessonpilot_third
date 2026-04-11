@@ -24,11 +24,10 @@ async function bootstrap() {
       const user = await request<AuthUser>('/api/v1/auth/me');
       authStore.setSession(authStore.token, user);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        authStore.clearSession();
-      } else {
+      if (!(error instanceof ApiError && error.status === 401)) {
         console.error('Failed to restore session.', error);
       }
+      authStore.clearSession();
     }
   }
 

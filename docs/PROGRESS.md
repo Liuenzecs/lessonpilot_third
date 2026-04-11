@@ -237,3 +237,70 @@
   - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
   - 用户手动验收：passed
 - Status: DONE
+
+## [Phase 3] — 公域页面与 Auth 完善开始实施
+- 完成日期：2026-04-11
+- 完成内容：
+  - 按 `docs/design/public-pages-ui.md` 重开 `Phase 3`，将其作为本轮最高优先级验收规范
+  - 将工作范围锁定为公域页面、Auth 完善、备课台补齐、账户设置、全局反馈入口与任务卡片更多操作
+  - 当前实现基线已覆盖三套布局壳、主要公域页面、忘记密码/重置密码/邮箱验证链路、账户与反馈接口、任务复制接口及对应前端页面
+  - 同步将 `NEXT.md` 改写为 `Phase 3` 严格验收清单，验收通过前不进入 `Phase 4`
+- 关键文件：
+  - `docs/NEXT.md`
+  - `docs/design/public-pages-ui.md`
+  - `apps/web/src/app/router/index.ts`
+  - `apps/web/src/app/layouts/`
+  - `apps/web/src/features/public/`
+  - `apps/web/src/features/auth/views/`
+  - `apps/web/src/features/settings/`
+  - `apps/api/app/api/v1/endpoints/auth.py`
+  - `apps/api/app/api/v1/endpoints/account.py`
+  - `apps/api/app/api/v1/endpoints/tasks.py`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（当前仍保留大量 Vue 模板格式 warnings，但已无 error）
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：22 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+- Status: IN PROGRESS
+
+## [Phase 3] — 公域页面、账户体系与验收问题修复完成
+- 完成日期：2026-04-11
+- 完成内容：
+  - 严格按 `docs/design/public-pages-ui.md` 完成公域页面、三套布局壳、备课台、账户设置、反馈入口、认证链路与任务卡片更多操作的 Phase 3 落地
+  - 修复验收阶段暴露的问题：认证页缺失统一顶部导航、已登录用户仍出现“登录”入口、Footer 文案对比度不足、短页面 Footer 未贴底、旧会话恢复异常、登录/注册失败提示不准确
+  - 为后端补齐幂等化 Alembic 迁移与启动迁移执行，修复历史数据库处于半升级状态时导致的登录/注册失败问题，并确认邮箱验证相关字段与认证令牌表已正确落库
+  - 用户已明确确认本轮 Phase 3 验收满意，通过验收；同步将 `GOAL.md` 中的 Phase 3 标记为完成，并将 `NEXT.md` 收口为等待下一步指示
+- 关键文件：
+  - `apps/web/src/app/layouts/AuthLayout.vue`
+  - `apps/web/src/app/layouts/PublicLayout.vue`
+  - `apps/web/src/app/layouts/PrivateLayout.vue`
+  - `apps/web/src/features/public/components/PublicNav.vue`
+  - `apps/web/src/features/public/components/PublicFooter.vue`
+  - `apps/web/src/features/public/styles/public.css`
+  - `apps/web/src/features/auth/views/LoginView.vue`
+  - `apps/web/src/features/auth/views/RegisterView.vue`
+  - `apps/web/src/features/auth/views/ForgotPasswordView.vue`
+  - `apps/web/src/features/auth/views/ResetPasswordView.vue`
+  - `apps/web/src/features/auth/views/VerifyEmailView.vue`
+  - `apps/web/src/features/auth/utils/error.ts`
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/settings/views/SettingsView.vue`
+  - `apps/web/src/features/feedback/`
+  - `apps/api/app/core/db.py`
+  - `apps/api/alembic/versions/20260411_0003_phase3_auth_account.py`
+  - `apps/api/app/api/v1/endpoints/account.py`
+  - `apps/api/app/services/account_service.py`
+  - `apps/api/tests/api/test_auth.py`
+  - `apps/api/tests/api/test_phase3_account.py`
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（仍有现存 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：22 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
+  - 手动验收：passed
+- Status: DONE

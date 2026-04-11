@@ -1,168 +1,149 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { useAuthStore } from '@/app/stores/auth';
-import { useLogoutMutation } from '@/features/auth/composables/useAuth';
+import { exportDocx } from '@/features/export/composables/useExport';
+import { useDeleteTaskMutation, useDuplicateTaskMutation, useTasks } from '@/features/task/composables/useTasks';
 import TaskCard from '@/features/task/components/TaskCard.vue';
-import { useDeleteTaskMutation, useTasks } from '@/features/task/composables/useTasks';
+import type { TaskRecord } from '@/features/task/types';
+import { request } from '@/shared/api/client';
+
+import '@/features/task/styles/workspace.css';
 
 const router = useRouter();
-const authStore = useAuthStore();
 const tasksQuery = useTasks();
 const deleteTaskMutation = useDeleteTaskMutation();
-const logoutMutation = useLogoutMutation();
+const duplicateTaskMutation = useDuplicateTaskMutation();
 
 const search = ref('');
-const accountMenuOpen = ref(false);
-const accountMenuRef = ref<HTMLElement | null>(null);
+const subjectFilter = ref('全部');
+const sortOrder = ref<'recent' | 'title'>('recent');
 
 const tasks = computed(() => tasksQuery.data.value?.items ?? []);
+const availableSubjects = computed(() => ['全部', ...new Set(tasks.value.map((task) => task.subject))]);
+const hasTasks = computed(() => tasks.value.length > 0);
+
 const filteredTasks = computed(() => {
   const keyword = search.value.trim().toLowerCase();
-  if (!keyword) {
-    return tasks.value;
-  }
+  const filtered = tasks.value.filter((task) => {
+    const matchesKeyword =
+      !keyword ||
+      [task.title, task.subject, task.grade, task.topic].some((value) =>
+        value.toLowerCase().includes(keyword),
+      );
+    const matchesSubject = subjectFilter.value === '全部' || task.subject === subjectFilter.value;
+    return matchesKeyword && matchesSubject;
+  });
 
-  return tasks.value.filter((task) =>
-    [task.title, task.subject, task.grade, task.topic].some((value) =>
-      value.toLowerCase().includes(keyword),
-    ),
-  );
+  return [...filtered].sort((left, right) => {
+    if (sortOrder.value === 'title') {
+      return left.title.localeCompare(right.title, 'zh-CN');
+    }
+    return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+  });
 });
 
-const userName = computed(() => authStore.user?.name?.trim() || '老师');
-const userInitial = computed(() => userName.value.slice(0, 1).toUpperCase());
-const hasTasks = computed(() => tasks.value.length > 0);
-const isSearching = computed(() => search.value.trim().length > 0);
-
-function handleGlobalClick(event: MouseEvent) {
-  if (!accountMenuRef.value) {
-    return;
-  }
-  if (!accountMenuRef.value.contains(event.target as Node)) {
-    accountMenuOpen.value = false;
-  }
-}
-
 async function removeTask(taskId: string) {
-  if (!window.confirm('确认删除这份备课任务吗？')) {
+  if (!window.confirm('确认删除这份教案吗？')) {
     return;
   }
   await deleteTaskMutation.mutateAsync(taskId);
 }
 
-async function logout() {
-  try {
-    if (authStore.token) {
-      await logoutMutation.mutateAsync();
-    }
-  } catch {
-    // Ignore logout failures and clear the local session anyway.
-  }
-
-  authStore.clearSession();
-  accountMenuOpen.value = false;
-  await router.push({ name: 'login' });
+async function duplicateTask(task: TaskRecord) {
+  const duplicatedTask = await duplicateTaskMutation.mutateAsync(task.id);
+  await router.push({ name: 'editor', params: { taskId: duplicatedTask.id } });
 }
 
-onMounted(() => {
-  document.addEventListener('click', handleGlobalClick);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleGlobalClick);
-});
+async function exportTask(task: TaskRecord) {
+  const documentList = await request<{ items: Array<{ id: string }> }>(`/api/v1/documents/?task_id=${task.id}`);
+  const documentId = documentList.items[0]?.id;
+  if (!documentId) {
+    return;
+  }
+  await exportDocx(documentId, task.title);
+}
 </script>
 
 <template>
-  <div class="page-shell workspace-page">
-    <header class="workspace-topbar">
-      <div class="brand">LessonPilot</div>
-
-      <div ref="accountMenuRef" class="workspace-account">
-        <button class="workspace-account-trigger" type="button" @click="accountMenuOpen = !accountMenuOpen">
-          <span class="workspace-account-avatar">{{ userInitial }}</span>
-          <span class="workspace-account-name">{{ userName }}</span>
-          <span class="workspace-account-caret">▾</span>
-        </button>
-
-        <div v-if="accountMenuOpen" class="workspace-account-menu app-card">
-          <div class="workspace-account-menu-label">当前账户</div>
-          <div class="workspace-account-menu-name">{{ userName }}</div>
-          <button class="workspace-account-menu-item" type="button" @click="logout">
-            退出登录
-          </button>
-        </div>
+  <section class="workspace-page">
+    <div class="workspace-hero app-card">
+      <div class="workspace-hero-copy">
+        <p class="page-eyebrow">备课台</p>
+        <h1 class="page-title">我的备课</h1>
+        <p class="subtitle">打开就是你的备课桌，最近的教案、搜索、复制和导出都在这一页完成。</p>
       </div>
-    </header>
 
-    <main class="workspace-stack">
-      <section class="workspace-hero app-card">
-        <div class="workspace-hero-copy">
-          <div class="workspace-hero-badge">AI 备课工作台</div>
-          <h1 class="workspace-hero-title">今晚要备的课，打开就能开始。</h1>
-          <p class="workspace-hero-text">
-            选择学科和主题，先给你清晰骨架，再由 AI 逐段补充内容。老师只需要确认、调整、导出。
-          </p>
+      <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
+        <span class="workspace-start-title">+ 开始备课</span>
+        <span class="workspace-start-subtitle">选择学科和主题，AI 帮你快速生成</span>
+      </button>
+    </div>
+
+    <div v-if="!hasTasks && !tasksQuery.isLoading.value" class="workspace-empty-state app-card">
+      <div class="workspace-empty-icon">📝</div>
+      <h2>你的备课台还是空的</h2>
+      <p>创建第一份教案，体验 AI 备课。</p>
+      <div class="button-row">
+        <button class="button primary" type="button" @click="router.push({ name: 'task-create' })">
+          开始第一次备课
+        </button>
+        <button class="button ghost" type="button" @click="router.push({ name: 'help' })">
+          3 分钟快速上手指南
+        </button>
+      </div>
+    </div>
+
+    <template v-else>
+      <div class="workspace-toolbar">
+        <div>
+          <h2>最近备课</h2>
+          <p class="subtitle">卡片点击直接进入编辑器，不再多一层详情页。</p>
         </div>
 
-        <button class="workspace-hero-cta" type="button" @click="router.push({ name: 'task-create' })">
-          <span class="workspace-hero-cta-title">+ 开始备课</span>
-          <span class="workspace-hero-cta-subtitle">选择学科和主题，AI 帮你快速生成</span>
-        </button>
-      </section>
+        <div class="workspace-filters">
+          <label class="workspace-search app-card">
+            <span>🔍</span>
+            <input v-model.trim="search" type="text" placeholder="搜索" />
+          </label>
 
-      <section class="workspace-section">
-        <div class="workspace-section-head">
-          <div>
-            <h2 class="workspace-section-title">最近备课</h2>
-            <p class="workspace-section-subtitle">点击卡片直接回到编辑器，不再多一层详情页。</p>
-          </div>
+          <label class="workspace-select app-card">
+            <span>学科</span>
+            <select v-model="subjectFilter">
+              <option v-for="subject in availableSubjects" :key="subject" :value="subject">{{ subject }}</option>
+            </select>
+          </label>
 
-          <label class="workspace-search">
-            <span class="workspace-search-icon">搜索</span>
-            <input v-model.trim="search" type="text" placeholder="按标题、学科或年级筛选" />
+          <label class="workspace-select app-card">
+            <span>排序</span>
+            <select v-model="sortOrder">
+              <option value="recent">最近修改</option>
+              <option value="title">标题</option>
+            </select>
           </label>
         </div>
+      </div>
 
-        <div v-if="tasksQuery.isLoading.value" class="workspace-loading-grid">
-          <div v-for="index in 3" :key="index" class="workspace-task-skeleton app-card" />
-        </div>
+      <div v-if="tasksQuery.isLoading.value" class="task-grid">
+        <div v-for="index in 4" :key="index" class="task-card-skeleton app-card" />
+      </div>
 
-        <div v-else-if="!hasTasks" class="workspace-empty app-card">
-          <div class="workspace-empty-eyebrow">欢迎来到 LessonPilot</div>
-          <h3 class="workspace-empty-title">你的工作台还是空的。</h3>
-          <p class="workspace-empty-text">
-            点击下方按钮开始第一次备课，3 步完成创建，生成进度会直接在编辑器里展示。
-          </p>
-          <button class="button primary" type="button" @click="router.push({ name: 'task-create' })">
-            开始第一次备课
-          </button>
-        </div>
+      <div v-else-if="filteredTasks.length === 0" class="workspace-empty-state app-card compact">
+        <h2>没有找到匹配的教案</h2>
+        <p>换个关键词、学科或排序方式试试。</p>
+      </div>
 
-        <div v-else-if="filteredTasks.length === 0" class="workspace-empty app-card">
-          <div class="workspace-empty-eyebrow">没有找到匹配结果</div>
-          <h3 class="workspace-empty-title">换一个关键词试试。</h3>
-          <p class="workspace-empty-text">当前搜索词是“{{ search }}”，你也可以直接开始新的备课任务。</p>
-          <div class="button-row">
-            <button class="button ghost" type="button" @click="search = ''">清空搜索</button>
-            <button class="button primary" type="button" @click="router.push({ name: 'task-create' })">
-              开始备课
-            </button>
-          </div>
-        </div>
-
-        <div v-else class="workspace-task-grid" :class="{ searching: isSearching }">
-          <TaskCard
-            v-for="task in filteredTasks"
-            :key="task.id"
-            :task="task"
-            @open="router.push({ name: 'editor', params: { taskId: task.id } })"
-            @delete="removeTask(task.id)"
-          />
-        </div>
-      </section>
-    </main>
-  </div>
+      <div v-else class="task-grid">
+        <TaskCard
+          v-for="task in filteredTasks"
+          :key="task.id"
+          :task="task"
+          @open="router.push({ name: 'editor', params: { taskId: task.id } })"
+          @export="exportTask(task)"
+          @duplicate="duplicateTask(task)"
+          @delete="removeTask(task.id)"
+        />
+      </div>
+    </template>
+  </section>
 </template>

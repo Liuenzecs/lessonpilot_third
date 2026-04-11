@@ -66,6 +66,19 @@ export function useDeleteTaskMutation() {
   });
 }
 
+export function useDuplicateTaskMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      request<TaskRecord>(`/api/v1/tasks/${taskId}/duplicate`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
 export function useStartGenerationMutation(taskId: string) {
   return useMutation({
     mutationFn: (sectionId?: string) =>
@@ -75,4 +88,3 @@ export function useStartGenerationMutation(taskId: string) {
       }),
   });
 }
-
