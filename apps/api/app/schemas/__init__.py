@@ -2,12 +2,12 @@ from app.schemas.account import (
     AccountChangePasswordPayload,
     AccountDeletePayload,
     AccountRead,
-    AccountSubscriptionRead,
     AccountUpdatePayload,
     FeedbackCreatePayload,
     FeedbackRead,
 )
 from app.schemas.auth import AuthResponse, LoginPayload, RegisterPayload, UserRead
+from app.schemas.billing import AccountSubscriptionRead
 from app.schemas.content import ContentDocument
 from app.schemas.document import DocumentListResponse, DocumentRead, DocumentUpdatePayload
 from app.schemas.task import (

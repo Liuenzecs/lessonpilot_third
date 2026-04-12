@@ -2,11 +2,14 @@
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { useBillingDialogStore } from '@/app/stores/billing';
+import { getBillingErrorDetail } from '@/features/billing/utils';
 import { useCreateTaskMutation } from '@/features/task/composables/useTasks';
 import { SUBJECT_OPTIONS, GRADE_OPTIONS } from '@/shared/constants/options';
 import { ApiError } from '@/shared/api/client';
 
 const router = useRouter();
+const billingDialog = useBillingDialogStore();
 const createTaskMutation = useCreateTaskMutation();
 
 const step = ref(1);
@@ -33,7 +36,7 @@ const stepMeta = computed(() => {
   }
   return {
     title: '输入课题主题',
-    description: '最后写下课题主题，可再补一句具体要求。',
+    description: '最后写下课题主题，也可以补一句具体要求。',
   };
 });
 
@@ -57,6 +60,17 @@ async function submit() {
     });
     await router.push({ name: 'editor', params: { taskId: task.id } });
   } catch (error) {
+    const billingError = getBillingErrorDetail(error);
+    if (billingError?.code === 'quota_exceeded') {
+      submitError.value = billingError.message;
+      billingDialog.openDialog({
+        reason: 'quota_exceeded',
+        title: '本月免费额度已用完',
+        description: billingError.message,
+      });
+      return;
+    }
+
     if (error instanceof ApiError && error.status === 401) {
       submitError.value = '登录状态已失效，请重新登录后再试。';
       return;
@@ -83,11 +97,11 @@ async function submit() {
       </div>
 
       <section class="wizard-content">
-          <div class="wizard-copy">
-            <div class="wizard-eyebrow">创建向导</div>
-            <h1 class="page-title wizard-title">{{ stepMeta.title }}</h1>
-            <p class="subtitle wizard-subtitle">{{ stepMeta.description }}</p>
-          </div>
+        <div class="wizard-copy">
+          <div class="wizard-eyebrow">创建向导</div>
+          <h1 class="page-title wizard-title">{{ stepMeta.title }}</h1>
+          <p class="subtitle wizard-subtitle">{{ stepMeta.description }}</p>
+        </div>
 
         <div v-if="step === 1" class="wizard-choice-grid">
           <button
@@ -131,7 +145,7 @@ async function submit() {
             <textarea
               v-model.trim="form.requirements"
               class="wizard-requirements-input"
-              placeholder="例如：重点讲解配方法，练习部分增加一道分层题。"
+              placeholder="例如：重点讲解配方法，练习部分增加一题分层题。"
             />
           </label>
         </div>

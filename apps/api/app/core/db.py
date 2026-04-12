@@ -57,6 +57,12 @@ def _infer_existing_revision() -> str | None:
 
     user_columns = {column["name"] for column in inspector.get_columns("users")}
     if (
+        {"billing_orders", "billing_webhook_events", "invoice_requests", "user_subscriptions"}.issubset(table_names)
+        and {"email_verified", "email_verified_at"}.issubset(user_columns)
+    ):
+        return "20260412_0004"
+
+    if (
         {"email_verified", "email_verified_at"}.issubset(user_columns)
         and {"auth_tokens", "feedback_entries"}.issubset(table_names)
     ):
@@ -80,7 +86,18 @@ def run_migrations() -> None:
 
 
 def create_db_and_tables() -> None:
-    from app.models import AuthToken, Document, DocumentSnapshot, Feedback, Task, User  # noqa: F401
+    from app.models import (  # noqa: F401
+        AuthToken,
+        BillingOrder,
+        BillingWebhookEvent,
+        Document,
+        DocumentSnapshot,
+        Feedback,
+        InvoiceRequest,
+        Task,
+        User,
+        UserSubscription,
+    )
 
     run_migrations()
     SQLModel.metadata.create_all(get_engine())

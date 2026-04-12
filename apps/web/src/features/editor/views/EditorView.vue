@@ -66,6 +66,7 @@ const {
   handleBottomAddExercise,
   toggleAppendComposer,
   cancelAppendComposer,
+  openHistoryDrawer,
 } = useEditorView();
 </script>
 
@@ -78,7 +79,7 @@ const {
       :export-menu-open="exportMenuOpen"
       @back="router.push({ name: 'tasks' })"
       @toggle-outline="outlineCollapsed = !outlineCollapsed"
-      @open-history="historyOpen = true"
+      @open-history="openHistoryDrawer"
       @toggle-export-menu="exportMenuOpen = !exportMenuOpen"
       @export="handleExport"
       @open-export-preview="openExportPreview"

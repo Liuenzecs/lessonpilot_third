@@ -13,23 +13,43 @@ from app.schemas.account import (
     AccountChangePasswordPayload,
     AccountDeletePayload,
     AccountRead,
-    AccountSubscriptionRead,
     AccountUpdatePayload,
     FeedbackCreatePayload,
     FeedbackRead,
 )
 from app.schemas.auth import MessageResponse
+from app.schemas.billing import (
+    AccountSubscriptionRead,
+    BillingOrderListResponse,
+    InvoiceRequestCreatePayload,
+    InvoiceRequestListResponse,
+    InvoiceRequestRead,
+    SubscriptionActionResponse,
+    SubscriptionCheckoutPayload,
+)
 from app.services.account_service import (
     change_account_password,
     create_feedback,
     delete_account,
     export_account_data,
-    get_subscription_summary,
     serialize_account,
     serialize_feedback,
     update_account_profile,
 )
-from app.services.mail_service import send_feedback_notification, send_verification_email
+from app.services.billing_service import (
+    create_checkout,
+    create_invoice_request,
+    get_subscription_summary,
+    list_invoice_requests,
+    list_subscription_orders,
+    renew_subscription,
+    start_trial,
+)
+from app.services.mail_service import (
+    send_feedback_notification,
+    send_invoice_request_notification,
+    send_verification_email,
+)
 
 router = APIRouter(prefix="/account", tags=["account"])
 
@@ -68,6 +88,69 @@ def get_subscription(
     current_user: User = Depends(get_current_user),
 ) -> AccountSubscriptionRead:
     return get_subscription_summary(session, current_user)
+
+
+@router.post("/subscription/trial", response_model=SubscriptionActionResponse)
+def start_subscription_trial(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> SubscriptionActionResponse:
+    return start_trial(session, current_user)
+
+
+@router.post("/subscription/checkout", response_model=SubscriptionActionResponse)
+def create_subscription_checkout(
+    payload: SubscriptionCheckoutPayload,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> SubscriptionActionResponse:
+    return create_checkout(session, current_user, payload)
+
+
+@router.post("/subscription/renew", response_model=SubscriptionActionResponse)
+def renew_professional_subscription(
+    payload: SubscriptionCheckoutPayload,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> SubscriptionActionResponse:
+    return renew_subscription(session, current_user, payload)
+
+
+@router.get("/subscription/orders", response_model=BillingOrderListResponse)
+def get_subscription_orders(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> BillingOrderListResponse:
+    return list_subscription_orders(session, current_user)
+
+
+@router.get("/invoice-requests", response_model=InvoiceRequestListResponse)
+def get_account_invoice_requests(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> InvoiceRequestListResponse:
+    return list_invoice_requests(session, current_user)
+
+
+@router.post("/invoice-requests", response_model=InvoiceRequestRead, status_code=status.HTTP_201_CREATED)
+def post_invoice_request(
+    payload: InvoiceRequestCreatePayload,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> InvoiceRequestRead:
+    invoice_request = create_invoice_request(session, current_user, payload)
+    background_tasks.add_task(
+        send_invoice_request_notification,
+        user_name=current_user.name,
+        user_email=current_user.email,
+        order_id=payload.order_id,
+        title=payload.title,
+        tax_number=payload.tax_number,
+        invoice_email=payload.email,
+        remark=payload.remark,
+    )
+    return invoice_request
 
 
 @router.post("/export")

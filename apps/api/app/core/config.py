@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:5173"
     app_base_url: str = "http://localhost:5173"
+    billing_mode: Literal["mock", "gateway"] = "mock"
+    billing_professional_monthly_price_cents: int = 2900
+    billing_professional_yearly_price_cents: int = 22800
+    billing_trial_days: int = 7
+    billing_gateway_secret: str = ""
+    billing_webhook_secret: str = ""
+    billing_return_url: str = "http://localhost:5173/settings"
+    billing_invoice_notify_email: str = "billing@lessonpilot.com"
     mail_delivery_mode: Literal["console"] = "console"
     mail_from_email: str = "hello@lessonpilot.com"
     mail_from_name: str = "LessonPilot"

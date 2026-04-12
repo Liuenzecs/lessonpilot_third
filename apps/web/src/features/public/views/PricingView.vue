@@ -1,42 +1,61 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { useRouter } from 'vue-router';
 
+import { useAuthStore } from '@/app/stores/auth';
+import { useBillingDialogStore } from '@/app/stores/billing';
 import FaqAccordion from '@/features/public/components/FaqAccordion.vue';
 import { pricingFaqs } from '@/features/public/content';
 
+const router = useRouter();
+const authStore = useAuthStore();
+const billingDialog = useBillingDialogStore();
 const billingCycle = ref<'monthly' | 'yearly'>('yearly');
 
 const pricingCards = computed(() => [
   {
     title: '免费版',
     price: '¥0',
-    secondary: '',
+    secondary: '适合先体验产品主链路',
     badge: '',
     disabled: false,
-    cta: '免费开始',
-    to: { name: 'register' },
-    features: ['每月 5 份教案参考额度', '基础编辑', 'Word 导出'],
+    cta: authStore.isAuthenticated ? '进入备课台' : '免费开始',
+    action: () => router.push(authStore.isAuthenticated ? { name: 'tasks' } : { name: 'register' }),
+    features: ['每月 5 份教案额度', '基础编辑', 'Word 导出'],
   },
   {
     title: '专业版',
-    price: billingCycle.value === 'monthly' ? '¥29/月' : '¥19/月',
-    secondary: billingCycle.value === 'monthly' ? '按月支付' : '年付均价，省 20%',
+    price: billingCycle.value === 'monthly' ? '¥29/月' : '¥228/年',
+    secondary: billingCycle.value === 'monthly' ? '手动续费，不自动扣费' : '折合 ¥19/月，手动续费',
     badge: '推荐',
     disabled: false,
-    cta: '开始免费试用',
-    to: { name: 'register' },
-    features: ['无限生成', '局部 AI 重写', 'Word + PDF 导出', '版本历史', '所有学科模板'],
+    cta: '开始试用或支付',
+    action: () => {
+      if (authStore.isAuthenticated) {
+        billingDialog.openDialog({
+          reason: 'upgrade',
+          title: '升级到专业版',
+          description: '现在就解锁不限量备课、局部 AI、PDF 导出和版本历史。',
+          initialCycle: billingCycle.value,
+        });
+        return;
+      }
+      void router.push({
+        name: 'register',
+        query: { upgrade: '1', cycle: billingCycle.value },
+      });
+    },
+    features: ['不限量教案生成', '局部 AI 重写与补充', 'Word + PDF 导出', '版本历史', '官方预设全覆盖'],
   },
   {
     title: '团队版',
-    price: billingCycle.value === 'monthly' ? '¥99/月' : '¥69/月',
-    secondary: '即将推出',
+    price: '即将推出',
+    secondary: '暂不开放真实购买',
     badge: '',
     disabled: true,
-    cta: '联系我们',
-    to: { name: 'about' },
-    features: ['专业版全部能力', '5 个成员', '共享资产库', '优先客服'],
+    cta: '敬请期待',
+    action: () => undefined,
+    features: ['专业版全部能力', '多人协作与共享资产', '专属支持'],
   },
 ]);
 </script>
@@ -46,14 +65,14 @@ const pricingCards = computed(() => [
     <section class="pricing-hero section-card">
       <p class="page-eyebrow">定价页</p>
       <h1 class="page-title">选择适合你的方案</h1>
-      <p class="subtitle">所有方案都包含核心备课能力，先用起来，再决定是否升级。</p>
+      <p class="subtitle">免费版先上手，专业版通过试用或手动续费完成升级，不做自动代扣。</p>
 
       <div class="pricing-toggle">
         <button :class="{ active: billingCycle === 'monthly' }" type="button" @click="billingCycle = 'monthly'">
           月付
         </button>
         <button :class="{ active: billingCycle === 'yearly' }" type="button" @click="billingCycle = 'yearly'">
-          年付（省 20%）
+          年付（更划算）
         </button>
       </div>
     </section>
@@ -78,16 +97,22 @@ const pricingCards = computed(() => [
           <li v-for="feature in card.features" :key="feature">✓ {{ feature }}</li>
         </ul>
 
-        <RouterLink class="button" :class="card.title === '专业版' ? 'primary' : 'ghost'" :to="card.to">
+        <button
+          class="button"
+          :class="card.title === '专业版' ? 'primary' : 'ghost'"
+          type="button"
+          :disabled="card.disabled"
+          @click="card.action()"
+        >
           {{ card.cta }}
-        </RouterLink>
+        </button>
       </article>
     </section>
 
     <section class="section-card">
       <div class="landing-section-head">
         <p class="page-eyebrow">常见定价问题</p>
-        <h2>先把最关心的问题说清楚</h2>
+        <h2>把最关心的付费细节说清楚</h2>
       </div>
       <FaqAccordion :items="pricingFaqs" />
     </section>

@@ -15,6 +15,7 @@ from app.schemas.task import (
     TaskRead,
     TaskUpdatePayload,
 )
+from app.services.billing_service import require_professional_feature, require_task_quota
 from app.services.generation_service import get_task_document, stream_generation
 from app.services.task_service import (
     create_task,
@@ -64,6 +65,7 @@ def post_task(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
+    require_task_quota(session, current_user)
     task = create_task(session, current_user.id, payload)
     return _to_task_read(task)
 
@@ -105,6 +107,7 @@ def duplicate_owned_task(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
+    require_task_quota(session, current_user)
     source_task, source_document = get_task_document(session, task_id, current_user.id)
     duplicated_task = duplicate_task(session, source_task, source_document)
     return _to_task_read(duplicated_task)
@@ -118,6 +121,8 @@ def start_generation(
     current_user: User = Depends(get_current_user),
 ) -> GenerationStartResponse:
     get_owned_task(session, task_id, current_user.id)
+    if payload.section_id:
+        require_professional_feature(session, current_user, "章节重新生成")
     section_query = f"?section_id={payload.section_id}" if payload.section_id else ""
     return GenerationStartResponse(stream_url=f"/api/v1/tasks/{task_id}/generate/stream{section_query}")
 
@@ -130,6 +135,8 @@ async def stream_task_generation(
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     task, document = get_task_document(session, task_id, current_user.id)
+    if section_id:
+        require_professional_feature(session, current_user, "章节重新生成")
     return StreamingResponse(
         stream_generation(session, task, document, section_id=section_id),
         media_type="text/event-stream",

@@ -34,6 +34,7 @@ export function useCreateTaskMutation() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['account', 'subscription'] });
     },
   });
 }
@@ -75,6 +76,7 @@ export function useDuplicateTaskMutation() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['account', 'subscription'] });
     },
   });
 }

@@ -35,25 +35,13 @@ class AccountChangePasswordPayload(BaseModel):
         return self
 
 
-class AccountSubscriptionRead(BaseModel):
-    plan: Literal["free", "professional"]
-    plan_label: str
-    is_paid: bool
-    monthly_task_limit: int
-    tasks_used_this_month: int
-    next_renewal_at: datetime | None = None
-
-
 class AccountDeletePayload(BaseModel):
-    confirm_text: str | None = Field(default=None, max_length=64)
-    password: str | None = Field(default=None, max_length=128)
+    confirm_text: str = Field(max_length=64)
 
     @model_validator(mode="after")
     def validate_confirmation(self) -> "AccountDeletePayload":
-        has_delete = (self.confirm_text or "").strip().upper() == "DELETE"
-        has_password = bool((self.password or "").strip())
-        if not has_delete and not has_password:
-            raise ValueError('Either confirm_text="DELETE" or password is required')
+        if self.confirm_text.strip().upper() != "DELETE":
+            raise ValueError('confirm_text must equal "DELETE"')
         return self
 
 

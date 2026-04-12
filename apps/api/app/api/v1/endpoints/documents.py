@@ -22,6 +22,7 @@ from app.schemas.document import (
 )
 from app.services.append_service import get_document_task as get_append_document_task
 from app.services.append_service import stream_append
+from app.services.billing_service import require_professional_feature
 from app.services.document_service import (
     get_document_snapshot,
     get_owned_document,
@@ -78,6 +79,7 @@ def start_document_rewrite(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentRewriteStartResponse:
+    require_professional_feature(session, current_user, "局部 AI 重写")
     document = get_owned_document(session, document_id, current_user.id)
     if payload.document_version != document.version:
         raise HTTPException(status_code=409, detail="Document version conflict")
@@ -103,6 +105,7 @@ def start_document_append(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentAppendStartResponse:
+    require_professional_feature(session, current_user, "AI 补充内容")
     document = get_owned_document(session, document_id, current_user.id)
     if payload.document_version != document.version:
         raise HTTPException(status_code=409, detail="Document version conflict")
@@ -128,6 +131,7 @@ async def stream_document_append(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
+    require_professional_feature(session, current_user, "AI 补充内容")
     document = get_owned_document(session, document_id, current_user.id)
     if document.version != document_version:
         raise HTTPException(status_code=409, detail="Document version conflict")
@@ -156,6 +160,7 @@ async def stream_document_rewrite(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
+    require_professional_feature(session, current_user, "局部 AI 重写")
     document = get_owned_document(session, document_id, current_user.id)
     if document.version != document_version:
         raise HTTPException(status_code=409, detail="Document version conflict")
@@ -182,6 +187,7 @@ def get_document_history(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentHistoryResponse:
+    require_professional_feature(session, current_user, "版本历史")
     document = get_owned_document(session, document_id, current_user.id)
     snapshots = list_document_history(session, document, limit=limit)
     return DocumentHistoryResponse(items=[serialize_snapshot(snapshot) for snapshot in snapshots])
@@ -194,6 +200,7 @@ def get_document_history_snapshot(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentSnapshotRead:
+    require_professional_feature(session, current_user, "版本历史")
     document = get_owned_document(session, document_id, current_user.id)
     snapshot = get_document_snapshot(session, document, snapshot_id)
     return serialize_snapshot(snapshot)
@@ -206,6 +213,7 @@ def restore_history_snapshot(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentRead:
+    require_professional_feature(session, current_user, "版本历史")
     document = get_owned_document(session, document_id, current_user.id)
     snapshot = get_document_snapshot(session, document, snapshot_id)
     updated_document = restore_document_snapshot(session, document, snapshot)
@@ -233,6 +241,7 @@ def export_document(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
         )
     if format == "pdf":
+        require_professional_feature(session, current_user, "PDF 导出")
         payload = build_pdf(task, load_content(document))
         filename = quote(f"{task.title}.pdf")
         return Response(

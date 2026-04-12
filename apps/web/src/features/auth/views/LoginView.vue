@@ -37,9 +37,19 @@ async function submit() {
   try {
     const response = await loginMutation.mutateAsync({ ...form });
     authStore.setSession(response.access_token, response.user);
+    if (route.query.upgrade === '1') {
+      await router.push({
+        name: 'tasks',
+        query: {
+          upgrade: '1',
+          cycle: route.query.cycle === 'monthly' ? 'monthly' : 'yearly',
+        },
+      });
+      return;
+    }
     await router.push({ name: 'tasks' });
   } catch {
-    // The mutation state already drives the inline error message.
+    // Inline error state is enough here.
   }
 }
 </script>
@@ -83,13 +93,13 @@ async function submit() {
     </form>
 
     <div class="auth-divider">或</div>
-    <button class="auth-wechat-button" type="button" disabled>🔵 使用微信登录（即将支持）</button>
+    <button class="auth-wechat-button" type="button" disabled>微信登录（即将支持）</button>
 
     <div v-if="infoMessage" class="feedback success">{{ infoMessage }}</div>
     <div v-if="errorMessage" class="feedback">{{ errorMessage }}</div>
     <p class="subtitle">
       没有账号？
-      <RouterLink :to="{ name: 'register' }" class="auth-link">免费注册</RouterLink>
+      <RouterLink :to="{ name: 'register', query: route.query }" class="auth-link">免费注册</RouterLink>
     </p>
   </div>
 </template>

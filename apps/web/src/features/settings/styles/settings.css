@@ -71,6 +71,28 @@
   background: rgba(62, 98, 143, 0.06);
 }
 
+.billing-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.billing-toggle-row button {
+  border: 1px solid rgba(85, 104, 169, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.billing-toggle-row button.active {
+  border-color: rgba(77, 98, 214, 0.36);
+  background: rgba(77, 98, 214, 0.1);
+  color: var(--primary);
+  font-weight: 700;
+}
+
 .subscription-upgrade p,
 .data-card p {
   margin: 0;
@@ -98,6 +120,31 @@
 .data-card {
   display: grid;
   gap: 12px;
+}
+
+.billing-records,
+.invoice-request-list {
+  display: grid;
+  gap: 12px;
+}
+
+.billing-record-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(94, 108, 146, 0.14);
+}
+
+.billing-record-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.billing-record-meta {
+  display: grid;
+  gap: 4px;
+  text-align: right;
 }
 
 .data-card.danger {
@@ -148,5 +195,17 @@
 @media (max-width: 640px) {
   .settings-tabs {
     grid-template-columns: 1fr;
+  }
+
+  .billing-toggle-row {
+    grid-template-columns: 1fr;
+  }
+
+  .billing-record-row {
+    flex-direction: column;
+  }
+
+  .billing-record-meta {
+    text-align: left;
   }
 }

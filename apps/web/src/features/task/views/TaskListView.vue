@@ -2,7 +2,10 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { useBillingDialogStore } from '@/app/stores/billing';
+import { getBillingErrorDetail } from '@/features/billing/utils';
 import { exportDocx } from '@/features/export/composables/useExport';
+import { useSubscription } from '@/features/settings/composables/useAccount';
 import { useDeleteTaskMutation, useDuplicateTaskMutation, useTasks } from '@/features/task/composables/useTasks';
 import TaskCard from '@/features/task/components/TaskCard.vue';
 import type { TaskRecord } from '@/features/task/types';
@@ -11,7 +14,9 @@ import { request } from '@/shared/api/client';
 import '@/features/task/styles/workspace.css';
 
 const router = useRouter();
+const billingDialog = useBillingDialogStore();
 const tasksQuery = useTasks();
+const subscriptionQuery = useSubscription();
 const deleteTaskMutation = useDeleteTaskMutation();
 const duplicateTaskMutation = useDuplicateTaskMutation();
 
@@ -20,8 +25,18 @@ const subjectFilter = ref('全部');
 const sortOrder = ref<'recent' | 'title'>('recent');
 
 const tasks = computed(() => tasksQuery.data.value?.items ?? []);
+const subscription = computed(() => subscriptionQuery.data.value);
 const availableSubjects = computed(() => ['全部', ...new Set(tasks.value.map((task) => task.subject))]);
 const hasTasks = computed(() => tasks.value.length > 0);
+const subscriptionLabel = computed(() => {
+  if (!subscription.value) {
+    return '';
+  }
+  if (subscription.value.status === 'active' || subscription.value.status === 'trialing') {
+    return `${subscription.value.plan_label} · 不限量备课已解锁`;
+  }
+  return `免费版 · 本月剩余 ${subscription.value.quota_remaining ?? 0} / ${subscription.value.monthly_task_limit ?? 5}`;
+});
 
 const filteredTasks = computed(() => {
   const keyword = search.value.trim().toLowerCase();
@@ -51,8 +66,19 @@ async function removeTask(taskId: string) {
 }
 
 async function duplicateTask(task: TaskRecord) {
-  const duplicatedTask = await duplicateTaskMutation.mutateAsync(task.id);
-  await router.push({ name: 'editor', params: { taskId: duplicatedTask.id } });
+  try {
+    const duplicatedTask = await duplicateTaskMutation.mutateAsync(task.id);
+    await router.push({ name: 'editor', params: { taskId: duplicatedTask.id } });
+  } catch (error) {
+    const billingError = getBillingErrorDetail(error);
+    if (billingError?.code === 'quota_exceeded') {
+      billingDialog.openDialog({
+        reason: 'quota_exceeded',
+        title: '复制会占用新的教案额度',
+        description: billingError.message,
+      });
+    }
+  }
 }
 
 async function exportTask(task: TaskRecord) {
@@ -71,7 +97,8 @@ async function exportTask(task: TaskRecord) {
       <div class="workspace-hero-copy">
         <p class="page-eyebrow">备课台</p>
         <h1 class="page-title">我的备课</h1>
-        <p class="subtitle">打开就是你的备课桌，最近的教案、搜索、复制和导出都在这一页完成。</p>
+        <p class="subtitle">打开就是你的备课桌，最近的教案、搜索、复制和导出都在这里完成。</p>
+        <p v-if="subscriptionLabel" class="subscription-pill">{{ subscriptionLabel }}</p>
       </div>
 
       <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
@@ -81,7 +108,7 @@ async function exportTask(task: TaskRecord) {
     </div>
 
     <div v-if="!hasTasks && !tasksQuery.isLoading.value" class="workspace-empty-state app-card">
-      <div class="workspace-empty-icon">📝</div>
+      <div class="workspace-empty-icon">📘</div>
       <h2>你的备课台还是空的</h2>
       <p>创建第一份教案，体验 AI 备课。</p>
       <div class="button-row">

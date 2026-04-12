@@ -304,3 +304,61 @@
   - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
   - 手动验收：passed
 - Status: DONE
+
+## [Phase 4] — 账户设置与真实计费开始实施
+- 完成日期：2026-04-12
+- 完成内容：
+  - 按 Phase 4 方案将设置页“订阅方案”从展示层升级为真实计费中心，补齐 7 天试用、微信/支付宝双渠道、手动续费、支付记录、发票申请与全局升级弹层
+  - 后端新增 `user_subscriptions / billing_orders / billing_webhook_events / invoice_requests` 计费模型、真实订阅摘要、mock/gateway 双模式配置、订单创建/支付回调/发票申请链路
+  - 在 `POST /api/v1/tasks/` 与 `POST /api/v1/tasks/{id}/duplicate` 落实免费版每月 5 份教案额度限制，并把额度超限统一收口为结构化 `402 quota_exceeded`
+  - 为局部 AI 重写、AI 补充内容、章节重新生成、PDF 导出、版本历史与恢复补齐专业版后端闸门，并统一返回 `402 plan_required`
+  - 修复编辑器内升级提示、创建向导额度拦截、备课台订阅信息刷新、账户删除 `DELETE` 二次确认，以及试用/支付在 SQLite 测试环境下的 UTC 时间兼容问题
+  - 为 Phase 4 补齐并更新后端测试，覆盖试用状态流转、trial 期间支付生效时间、手动续费顺延、额度限制、专业版闸门、发票申请与 gateway webhook 幂等
+- 关键文件：
+  - `apps/api/app/services/billing_service.py`
+  - `apps/api/app/api/v1/endpoints/account.py`
+  - `apps/api/app/api/v1/endpoints/billing.py`
+  - `apps/api/app/api/v1/endpoints/tasks.py`
+  - `apps/api/app/api/v1/endpoints/documents.py`
+  - `apps/api/app/models/user_subscription.py`
+  - `apps/api/app/models/billing_order.py`
+  - `apps/api/app/models/billing_webhook_event.py`
+  - `apps/api/app/models/invoice_request.py`
+  - `apps/api/app/schemas/billing.py`
+  - `apps/api/tests/api/test_documents_phase2.py`
+  - `apps/api/tests/api/test_phase4_billing.py`
+  - `apps/web/src/features/settings/views/SettingsView.vue`
+  - `apps/web/src/features/public/views/PricingView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/editor/composables/useEditorView.ts`
+  - `apps/web/src/features/billing/components/UpgradeModal.vue`
+  - `apps/web/src/app/stores/billing.ts`
+  - `apps/web/src/features/settings/composables/useAccount.ts`
+  - `apps/web/src/features/task/composables/useTasks.ts`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：28 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（保留现有 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+- Status: IN PROGRESS
+
+## [Phase 4] — 用户验收通过
+- 完成日期：2026-04-12
+- 完成内容：
+  - 用户已手动验收通过 Phase 4，确认真实计费、免费额度限制、试用/手动续费、升级弹层、发票申请和专业版能力闸门符合本轮要求
+  - 同步更新 `GOAL.md`，将 Phase 4 标记为完成
+  - 将 `NEXT.md` 收口为“等待用户指示”，在没有新指令前不自动进入 Phase 5
+- 关键文件：
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+- 验证结果：
+  - 用户手动验收：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：28 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（保留现有 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE

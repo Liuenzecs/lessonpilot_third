@@ -57,3 +57,26 @@ def send_feedback_notification(
         f"内容：\n{message}"
     )
     _log_email("LessonPilot 用户反馈", recipient, body)
+
+
+def send_invoice_request_notification(
+    *,
+    user_name: str,
+    user_email: str,
+    order_id: str,
+    title: str,
+    tax_number: str,
+    invoice_email: str,
+    remark: str | None,
+) -> None:
+    recipient = get_settings().billing_invoice_notify_email
+    body = (
+        "收到新的发票申请：\n\n"
+        f"用户：{user_name} <{user_email}>\n"
+        f"订单：{order_id}\n"
+        f"抬头：{title}\n"
+        f"税号：{tax_number}\n"
+        f"接收邮箱：{invoice_email}\n"
+        f"备注：{remark or '无'}"
+    )
+    _log_email("LessonPilot 发票申请", recipient, body)

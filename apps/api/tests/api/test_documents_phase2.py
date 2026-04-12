@@ -42,6 +42,12 @@ def _create_task_and_document(client, auth_headers):
     return task_id, document
 
 
+def _start_trial(client, auth_headers):
+    response = client.post("/api/v1/account/subscription/trial", headers=auth_headers)
+    assert response.status_code == 200
+    return response.json()
+
+
 def _seed_paragraph_block(client, auth_headers, document):
     content = document["content"]
     first_section = content["blocks"][0]
@@ -96,6 +102,7 @@ def test_generation_supports_exercise_groups_and_questions(client, auth_headers)
 
 def test_rewrite_flow_and_history_restore(client, auth_headers):
     _, document = _create_task_and_document(client, auth_headers)
+    _start_trial(client, auth_headers)
     updated_document, paragraph_id = _seed_paragraph_block(client, auth_headers, document)
 
     rewrite_start = client.post(
@@ -199,6 +206,7 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
 
 def test_append_flow_and_error_cases(client, auth_headers):
     _, document = _create_task_and_document(client, auth_headers)
+    _start_trial(client, auth_headers)
     section_id = document["content"]["blocks"][0]["id"]
 
     unauthorized = client.post(
@@ -271,6 +279,7 @@ def test_append_flow_and_error_cases(client, auth_headers):
 
 def test_pdf_export_returns_pdf_and_excludes_pending(client, auth_headers):
     task_id, document = _create_task_and_document(client, auth_headers)
+    _start_trial(client, auth_headers)
     updated_document, _ = _seed_paragraph_block(client, auth_headers, document)
 
     content = updated_document["content"]

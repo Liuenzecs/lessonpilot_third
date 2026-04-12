@@ -100,7 +100,11 @@ export async function download(path: string, init: RequestInit = {}): Promise<Bl
     if (response.status === 401) {
       handleUnauthorized(path);
     }
-    throw new ApiError(`Download failed with status ${response.status}`, response.status, null);
+    const contentType = response.headers.get('content-type') ?? '';
+    const errorBody = contentType.includes('application/json')
+      ? await response.json()
+      : await response.text();
+    throw new ApiError(`Download failed with status ${response.status}`, response.status, errorBody);
   }
   return await response.blob();
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useRegisterMutation } from '@/features/auth/composables/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/utils/error';
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const registerMutation = useRegisterMutation();
@@ -30,9 +31,19 @@ async function submit() {
   try {
     const response = await registerMutation.mutateAsync({ ...form });
     authStore.setSession(response.access_token, response.user);
+    if (route.query.upgrade === '1') {
+      await router.push({
+        name: 'tasks',
+        query: {
+          upgrade: '1',
+          cycle: route.query.cycle === 'monthly' ? 'monthly' : 'yearly',
+        },
+      });
+      return;
+    }
     await router.push({ name: 'tasks' });
   } catch {
-    // The mutation state already drives the inline error message.
+    // Inline error state is enough here.
   }
 }
 </script>
@@ -84,12 +95,12 @@ async function submit() {
     </p>
 
     <div class="auth-divider">或</div>
-    <button class="auth-wechat-button" type="button" disabled>🔵 使用微信登录（即将支持）</button>
+    <button class="auth-wechat-button" type="button" disabled>微信登录（即将支持）</button>
 
     <div v-if="errorMessage" class="feedback">{{ errorMessage }}</div>
     <p class="subtitle">
       已有账号？
-      <RouterLink :to="{ name: 'login' }" class="auth-link">登录</RouterLink>
+      <RouterLink :to="{ name: 'login', query: route.query }" class="auth-link">登录</RouterLink>
     </p>
   </div>
 </template>

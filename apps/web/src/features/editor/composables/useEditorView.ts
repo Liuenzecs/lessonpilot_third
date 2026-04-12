@@ -4,6 +4,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
+import { useBillingDialogStore } from '@/app/stores/billing';
+import { getBillingErrorDetail } from '@/features/billing/utils';
 import {
   useDocumentHistory,
   useDocumentSnapshot,
@@ -20,6 +22,7 @@ import {
   consumeGenerationStream,
   consumeRewriteStream,
 } from '@/features/generation/composables/useGeneration';
+import { useSubscription } from '@/features/settings/composables/useAccount';
 import { useStartGenerationMutation, useTask } from '@/features/task/composables/useTasks';
 import {
   acceptPendingBlock,
@@ -49,10 +52,12 @@ export function useEditorView() {
   const router = useRouter();
   const route = useRoute();
   const authStore = useAuthStore();
+  const billingDialog = useBillingDialogStore();
 
   const taskId = computed(() => String(route.params.taskId ?? ''));
   const taskQuery = useTask(taskId.value);
   const documentsQuery = useTaskDocuments(taskId.value);
+  const subscriptionQuery = useSubscription();
   const startGenerationMutation = useStartGenerationMutation(taskId.value);
   const draftDocument = ref<LessonDocument | null>(null);
   const saveState = ref<'saved' | 'dirty' | 'saving' | 'conflict'>('saved');
@@ -230,6 +235,18 @@ export function useEditorView() {
   });
 
   watch(
+    () => historyQuery.error.value,
+    (error) => {
+      if (!error) {
+        return;
+      }
+      if (handleBillingError(error, '版本历史需要专业版', '版本历史为专业版能力，请升级后继续使用。')) {
+        historyOpen.value = false;
+      }
+    },
+  );
+
+  watch(
     sections,
     () => {
       if (!visibleSectionId.value) {
@@ -249,6 +266,33 @@ export function useEditorView() {
     noticeTimer = window.setTimeout(() => {
       notice.text = '';
     }, 3200);
+  }
+
+  function openUpgradeDialog(title: string, description: string) {
+    billingDialog.openDialog({
+      reason: 'plan_required',
+      title,
+      description,
+    });
+  }
+
+  function hasProfessionalEntitlement(
+    entitlement: 'ai_rewrite' | 'ai_append' | 'section_regenerate' | 'pdf_export' | 'version_history',
+  ) {
+    const entitlements = subscriptionQuery.data.value?.entitlements;
+    if (!entitlements) {
+      return true;
+    }
+    return Boolean(entitlements[entitlement]);
+  }
+
+  function handleBillingError(error: unknown, title: string, description: string): boolean {
+    const billingError = getBillingErrorDetail(error);
+    if (!billingError) {
+      return false;
+    }
+    openUpgradeDialog(title, billingError.message || description);
+    return true;
   }
 
   function focusEditableElement(element: HTMLElement | null) {
@@ -567,6 +611,10 @@ export function useEditorView() {
     if (!authStore.token) {
       return;
     }
+    if (sectionId && !hasProfessionalEntitlement('section_regenerate')) {
+      openUpgradeDialog('章节重新生成需要专业版', '章节重新生成为专业版能力，请升级后继续使用。');
+      return;
+    }
     if (!(await ensureLatestDocumentSaved())) {
       return;
     }
@@ -616,7 +664,7 @@ export function useEditorView() {
             if (historyOpen.value) {
               void historyQuery.refetch();
             }
-            flashNotice(sectionId ? '本节 AI 内容已生成，待你确认。' : '教案已生成，你可以开始编辑。');
+            flashNotice(sectionId ? '本节 AI 内容已生成，等待你确认。' : '教案已生成，你可以开始编辑。');
           }
 
           if (event === 'error') {
@@ -626,7 +674,12 @@ export function useEditorView() {
           }
         },
       });
-    } catch {
+    } catch (error) {
+      if (handleBillingError(error, '章节重新生成需要专业版', '章节重新生成为专业版能力，请升级后继续使用。')) {
+        generationProgress.isGenerating = false;
+        generationProgress.currentSectionId = null;
+        return;
+      }
       streamError.value = '生成流打开失败，请稍后重试。';
       generationProgress.isGenerating = false;
       generationProgress.currentSectionId = null;
@@ -640,6 +693,10 @@ export function useEditorView() {
     selectionText?: string;
   }) {
     if (!authStore.token || !draftDocument.value) {
+      return;
+    }
+    if (!hasProfessionalEntitlement('ai_rewrite')) {
+      openUpgradeDialog('局部 AI 重写需要专业版', '局部 AI 重写与文本润色为专业版能力，请升级后继续使用。');
       return;
     }
     if (!(await ensureLatestDocumentSaved())) {
@@ -672,7 +729,7 @@ export function useEditorView() {
             if (historyOpen.value) {
               void historyQuery.refetch();
             }
-            flashNotice('AI 建议已生成，待你确认。', 'info');
+            flashNotice('AI 建议已生成，等待你确认。', 'info');
           }
           if (event === 'error') {
             streamError.value = (eventPayload as { message: string }).message;
@@ -681,7 +738,12 @@ export function useEditorView() {
           }
         },
       });
-    } catch {
+    } catch (error) {
+      if (handleBillingError(error, '局部 AI 重写需要专业版', '局部 AI 重写与文本润色为专业版能力，请升级后继续使用。')) {
+        rewriteState.isRewriting = false;
+        rewriteState.targetBlockId = null;
+        return;
+      }
       streamError.value = 'AI 重写失败，请稍后再试。';
       rewriteState.isRewriting = false;
       rewriteState.targetBlockId = null;
@@ -690,6 +752,10 @@ export function useEditorView() {
 
   async function startAppend() {
     if (!authStore.token || !draftDocument.value || !currentSectionId.value || !appendInstruction.value.trim()) {
+      return;
+    }
+    if (!hasProfessionalEntitlement('ai_append')) {
+      openUpgradeDialog('AI 补充内容需要专业版', 'AI 补充内容为专业版能力，请升级后继续使用。');
       return;
     }
     if (!(await ensureLatestDocumentSaved())) {
@@ -728,7 +794,11 @@ export function useEditorView() {
           }
         },
       });
-    } catch {
+    } catch (error) {
+      if (handleBillingError(error, 'AI 补充内容需要专业版', 'AI 补充内容为专业版能力，请升级后继续使用。')) {
+        appendState.isAppending = false;
+        return;
+      }
       streamError.value = 'AI 补充内容失败，请稍后再试。';
       appendState.isAppending = false;
     }
@@ -746,15 +816,26 @@ export function useEditorView() {
     if (!draftDocument.value || !taskQuery.data.value) {
       return;
     }
+    if (format === 'pdf' && !hasProfessionalEntitlement('pdf_export')) {
+      openUpgradeDialog('PDF 导出需要专业版', 'PDF 导出为专业版能力，请升级后继续使用。');
+      return;
+    }
     if (!(await ensureLatestDocumentSaved())) {
       return;
     }
     exportMenuOpen.value = false;
-    if (format === 'docx') {
-      await exportDocx(draftDocument.value.id, taskQuery.data.value.title);
-      return;
+    try {
+      if (format === 'docx') {
+        await exportDocx(draftDocument.value.id, taskQuery.data.value.title);
+        return;
+      }
+      await exportPdf(draftDocument.value.id, taskQuery.data.value.title);
+    } catch (error) {
+      if (handleBillingError(error, 'PDF 导出需要专业版', 'PDF 导出为专业版能力，请升级后继续使用。')) {
+        return;
+      }
+      throw error;
     }
-    await exportPdf(draftDocument.value.id, taskQuery.data.value.title);
   }
 
   function openExportPreview() {
@@ -763,6 +844,10 @@ export function useEditorView() {
   }
 
   async function restoreSnapshot(snapshotId: string) {
+    if (!hasProfessionalEntitlement('version_history')) {
+      openUpgradeDialog('版本历史需要专业版', '版本预览与恢复为专业版能力，请升级后继续使用。');
+      return;
+    }
     const updatedDocument = await restoreSnapshotMutation.mutateAsync(snapshotId);
     applyServerDocument(updatedDocument);
     if (historyOpen.value) {
@@ -814,6 +899,14 @@ export function useEditorView() {
   function cancelAppendComposer() {
     appendComposerOpen.value = false;
     appendInstruction.value = '';
+  }
+
+  function openHistoryDrawer() {
+    if (!hasProfessionalEntitlement('version_history')) {
+      openUpgradeDialog('版本历史需要专业版', '版本历史为专业版能力，请升级后继续使用。');
+      return;
+    }
+    historyOpen.value = true;
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -932,5 +1025,6 @@ export function useEditorView() {
     handleBottomAddExercise,
     toggleAppendComposer,
     cancelAppendComposer,
+    openHistoryDrawer,
   };
 }
