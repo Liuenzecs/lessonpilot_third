@@ -16,4 +16,17 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    ssrManifest: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@tiptap')) {
+            return 'editor-vendor';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
 });

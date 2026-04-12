@@ -36,6 +36,7 @@ from app.services.account_service import (
     serialize_feedback,
     update_account_profile,
 )
+from app.services.analytics_service import record_server_event
 from app.services.billing_service import (
     create_checkout,
     create_invoice_request,
@@ -68,7 +69,7 @@ def patch_account(
 ) -> AccountRead:
     user, verification_token = update_account_profile(session, current_user, payload)
     if verification_token:
-        background_tasks.add_task(send_verification_email, user.email, user.name, verification_token)
+        background_tasks.add_task(send_verification_email, user.email, user.name, verification_token, user_id=user.id)
     return serialize_account(user)
 
 
@@ -95,7 +96,15 @@ def start_subscription_trial(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> SubscriptionActionResponse:
-    return start_trial(session, current_user)
+    response = start_trial(session, current_user)
+    record_server_event(
+        session,
+        event_name="trial_started",
+        user=current_user,
+        page_path="/settings",
+        properties={"billing_cycle": response.subscription.billing_cycle},
+    )
+    return response
 
 
 @router.post("/subscription/checkout", response_model=SubscriptionActionResponse)
@@ -104,7 +113,15 @@ def create_subscription_checkout(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> SubscriptionActionResponse:
-    return create_checkout(session, current_user, payload)
+    response = create_checkout(session, current_user, payload)
+    record_server_event(
+        session,
+        event_name="checkout_started",
+        user=current_user,
+        page_path="/settings",
+        properties={"billing_cycle": payload.billing_cycle, "channel": payload.channel},
+    )
+    return response
 
 
 @router.post("/subscription/renew", response_model=SubscriptionActionResponse)
@@ -113,7 +130,15 @@ def renew_professional_subscription(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> SubscriptionActionResponse:
-    return renew_subscription(session, current_user, payload)
+    response = renew_subscription(session, current_user, payload)
+    record_server_event(
+        session,
+        event_name="checkout_started",
+        user=current_user,
+        page_path="/settings",
+        properties={"billing_cycle": payload.billing_cycle, "channel": payload.channel, "mode": "renew"},
+    )
+    return response
 
 
 @router.get("/subscription/orders", response_model=BillingOrderListResponse)
@@ -142,6 +167,7 @@ def post_invoice_request(
     invoice_request = create_invoice_request(session, current_user, payload)
     background_tasks.add_task(
         send_invoice_request_notification,
+        user_id=current_user.id,
         user_name=current_user.name,
         user_email=current_user.email,
         order_id=payload.order_id,
@@ -185,8 +211,16 @@ def post_feedback(
     current_user: User = Depends(get_current_user),
 ) -> FeedbackRead:
     feedback = create_feedback(session, current_user, payload)
+    record_server_event(
+        session,
+        event_name="feedback_submitted",
+        user=current_user,
+        page_path=payload.page_path or "/feedback",
+        properties={"mood": payload.mood},
+    )
     background_tasks.add_task(
         send_feedback_notification,
+        user_id=current_user.id,
         user_name=current_user.name,
         user_email=current_user.email,
         mood=payload.mood,

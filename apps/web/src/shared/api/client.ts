@@ -37,6 +37,9 @@ function handleUnauthorized(path: string): void {
 }
 
 function getToken(): string | null {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return null;
+  }
   const rawValue = localStorage.getItem('lessonpilot.auth');
   if (!rawValue) {
     return null;

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session
 
@@ -15,8 +15,15 @@ from app.schemas.task import (
     TaskRead,
     TaskUpdatePayload,
 )
-from app.services.billing_service import require_professional_feature, require_task_quota
+from app.services.analytics_service import record_server_event
+from app.services.billing_service import (
+    get_subscription_summary,
+    month_key,
+    require_professional_feature,
+    require_task_quota,
+)
 from app.services.generation_service import get_task_document, stream_generation
+from app.services.mail_service import send_quota_warning_email
 from app.services.task_service import (
     create_task,
     delete_task,
@@ -62,11 +69,27 @@ def get_tasks(
 @router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def post_task(
     payload: TaskCreatePayload,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
     require_task_quota(session, current_user)
     task = create_task(session, current_user.id, payload)
+    subscription = get_subscription_summary(session, current_user)
+    record_server_event(
+        session,
+        event_name="task_created",
+        user=current_user,
+        page_path="/tasks/new",
+        properties={"subject": task.subject, "grade": task.grade},
+    )
+    if subscription.monthly_task_limit is not None and subscription.quota_remaining in {0, 1}:
+        background_tasks.add_task(
+            send_quota_warning_email,
+            user_id=current_user.id,
+            remaining=subscription.quota_remaining,
+            month_key=month_key(),
+        )
     return _to_task_read(task)
 
 
@@ -104,12 +127,28 @@ def remove_task(
 @router.post("/{task_id}/duplicate", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 def duplicate_owned_task(
     task_id: str,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
     require_task_quota(session, current_user)
     source_task, source_document = get_task_document(session, task_id, current_user.id)
     duplicated_task = duplicate_task(session, source_task, source_document)
+    subscription = get_subscription_summary(session, current_user)
+    record_server_event(
+        session,
+        event_name="task_duplicated",
+        user=current_user,
+        page_path="/tasks",
+        properties={"source_task_id": source_task.id},
+    )
+    if subscription.monthly_task_limit is not None and subscription.quota_remaining in {0, 1}:
+        background_tasks.add_task(
+            send_quota_warning_email,
+            user_id=current_user.id,
+            remaining=subscription.quota_remaining,
+            month_key=month_key(),
+        )
     return _to_task_read(duplicated_task)
 
 

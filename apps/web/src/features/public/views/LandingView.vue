@@ -1,8 +1,19 @@
 <script setup lang="ts">
+import { getActivePinia } from 'pinia';
 import { RouterLink } from 'vue-router';
 
+import { trackClientEvent } from '@/features/analytics/client';
 import HeroProductPreview from '@/features/public/components/HeroProductPreview.vue';
 import { landingFeatures, landingPainPoints, landingPersonas } from '@/features/public/content';
+
+const pinia = getActivePinia();
+
+function trackCta(ctaId: string, location: string) {
+  if (!pinia) {
+    return;
+  }
+  trackClientEvent(pinia, 'cta_click', '/', { cta_id: ctaId, location });
+}
 </script>
 
 <template>
@@ -15,8 +26,12 @@ import { landingFeatures, landingPainPoints, landingPersonas } from '@/features/
           AI 帮你生成结构化教案，你来调整和把关。选学科、定主题，剩下的交给 LessonPilot。
         </p>
         <div class="button-row landing-hero-actions">
-          <RouterLink class="button primary" :to="{ name: 'register' }">免费开始备课</RouterLink>
-          <RouterLink class="landing-link" :to="{ name: 'login' }">已有账号？登录</RouterLink>
+          <RouterLink class="button primary" :to="{ name: 'register' }" @click="trackCta('hero_start', 'hero')">
+            免费开始备课
+          </RouterLink>
+          <RouterLink class="landing-link" :to="{ name: 'login' }" @click="trackCta('hero_login', 'hero')">
+            已有账号？登录
+          </RouterLink>
         </div>
       </div>
 
@@ -90,7 +105,11 @@ import { landingFeatures, landingPainPoints, landingPersonas } from '@/features/
     <section class="landing-cta section-card">
       <p class="page-eyebrow">收尾 CTA</p>
       <h2>今晚的课，现在就能备好</h2>
-      <RouterLink class="button primary landing-cta-button" :to="{ name: 'register' }">
+      <RouterLink
+        class="button primary landing-cta-button"
+        :to="{ name: 'register' }"
+        @click="trackCta('footer_start', 'closing_cta')"
+      >
         免费开始备课
       </RouterLink>
       <p class="subtitle">无需信用卡 · 免费额度足够先把流程跑通</p>

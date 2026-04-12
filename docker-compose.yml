@@ -34,9 +34,12 @@ services:
 
   web:
     build:
-      context: ./apps/web
+      context: .
+      dockerfile: apps/web/Dockerfile
     environment:
       VITE_API_BASE_URL: http://localhost:8000
+      VITE_APP_BASE_URL: http://localhost:5173
+      APP_BASE_URL: http://localhost:5173
     depends_on:
       - api
     ports:
@@ -44,4 +47,3 @@ services:
 
 volumes:
   postgres-data:
-

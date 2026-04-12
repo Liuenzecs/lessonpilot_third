@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:5173"
     app_base_url: str = "http://localhost:5173"
+    admin_allowlist_emails: str = ""
     billing_mode: Literal["mock", "gateway"] = "mock"
     billing_professional_monthly_price_cents: int = 2900
     billing_professional_yearly_price_cents: int = 22800
@@ -37,10 +38,20 @@ class Settings(BaseSettings):
     billing_webhook_secret: str = ""
     billing_return_url: str = "http://localhost:5173/settings"
     billing_invoice_notify_email: str = "billing@lessonpilot.com"
-    mail_delivery_mode: Literal["console"] = "console"
+    mail_delivery_mode: Literal["console", "smtp"] = "console"
     mail_from_email: str = "hello@lessonpilot.com"
     mail_from_name: str = "LessonPilot"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
     feedback_notify_email: str = "hello@lessonpilot.com"
+    sentry_dsn_api: str = ""
+    sentry_dsn_web: str = ""
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate_api: float = 0.0
+    sentry_traces_sample_rate_web: float = 0.0
     verify_email_token_expire_hours: int = 48
     reset_password_token_expire_minutes: int = 30
     llm_provider: Literal["fake", "deepseek"] = "fake"
@@ -57,6 +68,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def admin_allowlist(self) -> list[str]:
+        return [email.strip().lower() for email in self.admin_allowlist_emails.split(",") if email.strip()]
 
 
 @lru_cache

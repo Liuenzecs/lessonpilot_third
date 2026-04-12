@@ -5,7 +5,14 @@ export interface PersistedAuthState {
   user: unknown | null;
 }
 
+function canUseStorage(): boolean {
+  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+}
+
 export function loadPersistedAuthState(): PersistedAuthState {
+  if (!canUseStorage()) {
+    return { token: null, user: null };
+  }
   const rawValue = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!rawValue) {
     return { token: null, user: null };
@@ -19,10 +26,15 @@ export function loadPersistedAuthState(): PersistedAuthState {
 }
 
 export function savePersistedAuthState(state: PersistedAuthState): void {
+  if (!canUseStorage()) {
+    return;
+  }
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state));
 }
 
 export function clearPersistedAuthState(): void {
+  if (!canUseStorage()) {
+    return;
+  }
   localStorage.removeItem(AUTH_STORAGE_KEY);
 }
-

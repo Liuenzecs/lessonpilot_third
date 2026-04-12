@@ -51,3 +51,18 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+def get_optional_current_user(
+    session: Session = Depends(get_session),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> User | None:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+
+    payload = decode_access_token(credentials.credentials)
+    user_id = payload.get("sub")
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user

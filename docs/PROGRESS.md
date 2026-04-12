@@ -422,3 +422,61 @@
   - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
   - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：29 passed
 - Status: DONE
+
+## [Phase 6] — 运营基础设施严格落地
+- 完成日期：2026-04-12
+- 完成内容：
+  - 按 `docs/GOAL.md` Phase 6 清单与 accepted advice 完成运营基础设施落地：统一 `console | smtp` 事务邮件抽象、欢迎验证/重置密码/免费额度预警邮件、反馈与发票通知收口、邮件发送日志与去重键
+  - 后端新增第一方分析事件管道、`analytics_events / quota_adjustments / email_delivery_logs` 模型与迁移，接入注册、登录、试用、支付、创建/复制任务、导出、反馈等权威运营事件
+  - 新增 `/admin` 管理后台接口与前端后台页面，按管理员邮箱白名单控制访问，提供概览、用户列表、用户详情与手动月度配额调整，并把人工调整并入用户侧有效额度计算
+  - 前后端统一接入 Sentry，覆盖浏览器、SSR Node 进程与 FastAPI 后端，并对 JWT、Authorization、密码、token、教案内容和 prompt 做敏感信息清洗
+  - 前端升级为“公域 SSR + 私域 SPA”运行形态，补齐公域 SEO 元信息、`robots.txt`、`sitemap.xml`、默认 OG 图、Node SSR 服务器、`apps/web` Dockerfile 与更新后的 `docker-compose.yml`
+  - 收口路由级懒加载、SSR 缓存策略和静态资源缓存，保持公域首屏、后台聚合与既有编辑器主链路在 Phase 6 下继续稳定
+- 关键文件：
+  - `apps/api/app/services/mail_service.py`
+  - `apps/api/app/services/analytics_service.py`
+  - `apps/api/app/services/admin_service.py`
+  - `apps/api/app/core/sentry.py`
+  - `apps/api/app/api/v1/endpoints/admin.py`
+  - `apps/api/app/api/v1/endpoints/analytics.py`
+  - `apps/api/alembic/versions/20260412_0005_phase6_ops.py`
+  - `apps/api/tests/api/test_phase6_ops.py`
+  - `apps/web/src/app/createApp.ts`
+  - `apps/web/src/entry-client.ts`
+  - `apps/web/src/entry-server.ts`
+  - `apps/web/src/app/seo.ts`
+  - `apps/web/server.mjs`
+  - `apps/web/src/features/admin/views/AdminOverviewView.vue`
+  - `apps/web/src/features/admin/views/AdminUsersView.vue`
+  - `apps/web/src/features/admin/views/AdminUserDetailView.vue`
+  - `apps/web/src/features/analytics/client.ts`
+  - `apps/web/Dockerfile`
+  - `docker-compose.yml`
+  - `docs/NEXT.md`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（保留既有大量 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed（已同时产出 client + SSR server）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：35 passed
+  - SSR smoke：passed（`/`、`/pricing`、`/robots.txt`、`/sitemap.xml` 可访问，源码中可见公域正文与 SEO 信息）
+- Status: IN PROGRESS
+
+## [Phase 6] — 用户验收通过
+- 完成日期：2026-04-13
+- 完成内容：
+  - 用户已手动验收通过 Phase 6，确认事务邮件、公域 SSR/SEO、第一方分析管道、Sentry、管理员白名单后台与配额调整链路符合本轮文档要求
+  - 同步更新 `GOAL.md`，将 Phase 6 标记为完成
+  - 将 `NEXT.md` 收口为“等待用户指示”，在没有新指令前不自动进入 Phase 7
+- 关键文件：
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+- 验证结果：
+  - 用户手动验收：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（保留既有 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：35 passed
+- Status: DONE

@@ -16,6 +16,7 @@ from app.schemas.auth import (
     UserRead,
     VerifyEmailPayload,
 )
+from app.services.analytics_service import record_server_event
 from app.services.auth_service import (
     authenticate_user,
     issue_verification_token,
@@ -24,7 +25,11 @@ from app.services.auth_service import (
     reset_password_with_token,
     verify_email_token,
 )
-from app.services.mail_service import send_password_reset_email, send_verification_email
+from app.services.mail_service import (
+    send_password_reset_email,
+    send_verification_email,
+    send_welcome_verification_email,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -49,7 +54,20 @@ def register(
     user = register_user(session, payload)
     verification_token = issue_verification_token(session, user)
     if verification_token:
-        background_tasks.add_task(send_verification_email, user.email, user.name, verification_token)
+        background_tasks.add_task(
+            send_welcome_verification_email,
+            user.email,
+            user.name,
+            verification_token,
+            user_id=user.id,
+        )
+    record_server_event(
+        session,
+        event_name="register_success",
+        user=user,
+        page_path="/register",
+        properties={"email_verified": user.email_verified},
+    )
     return AuthResponse(access_token=create_access_token(user.id), user=_to_user_read(user))
 
 
@@ -59,6 +77,13 @@ def login(
     session: Session = Depends(get_session),
 ) -> AuthResponse:
     user = authenticate_user(session, payload)
+    record_server_event(
+        session,
+        event_name="login_success",
+        user=user,
+        page_path="/login",
+        properties={"email_verified": user.email_verified},
+    )
     return AuthResponse(access_token=create_access_token(user.id), user=_to_user_read(user))
 
 
@@ -81,7 +106,7 @@ def forgot_password(
 ) -> MessageResponse:
     user, reset_token = request_password_reset(session, payload.email)
     if user is not None and reset_token is not None:
-        background_tasks.add_task(send_password_reset_email, user.email, user.name, reset_token)
+        background_tasks.add_task(send_password_reset_email, user.email, user.name, reset_token, user_id=user.id)
     return MessageResponse(message="如果该邮箱已注册，我们会发送重置链接。")
 
 
@@ -102,7 +127,13 @@ def resend_verification(
 ) -> MessageResponse:
     verification_token = issue_verification_token(session, current_user)
     if verification_token:
-        background_tasks.add_task(send_verification_email, current_user.email, current_user.name, verification_token)
+        background_tasks.add_task(
+            send_verification_email,
+            current_user.email,
+            current_user.name,
+            verification_token,
+            user_id=current_user.id,
+        )
         return MessageResponse(message="验证邮件已重新发送。")
     return MessageResponse(message="当前邮箱已验证，无需重复发送。")
 

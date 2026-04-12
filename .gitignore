@@ -23,6 +23,8 @@ apps/api/.mypy_cache/
 apps/web/.vite/
 apps/web/.eslintcache
 apps/web/.dev-logs/
+apps/api/backend-runtime*.log
+apps/web/frontend-runtime*.log
 apps/web/src/**/*.d.ts
 *.sqlite3
 *.db

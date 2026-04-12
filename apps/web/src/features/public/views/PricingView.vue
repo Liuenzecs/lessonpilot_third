@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { getActivePinia } from 'pinia';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useBillingDialogStore } from '@/app/stores/billing';
+import { trackClientEvent } from '@/features/analytics/client';
 import FaqAccordion from '@/features/public/components/FaqAccordion.vue';
 import { pricingFaqs } from '@/features/public/content';
 
@@ -11,6 +13,18 @@ const router = useRouter();
 const authStore = useAuthStore();
 const billingDialog = useBillingDialogStore();
 const billingCycle = ref<'monthly' | 'yearly'>('yearly');
+const pinia = getActivePinia();
+
+function trackPricingCta(ctaId: string) {
+  if (!pinia) {
+    return;
+  }
+  trackClientEvent(pinia, 'cta_click', '/pricing', {
+    cta_id: ctaId,
+    location: 'pricing_card',
+    billing_cycle: billingCycle.value,
+  });
+}
 
 const pricingCards = computed(() => [
   {
@@ -20,7 +34,10 @@ const pricingCards = computed(() => [
     badge: '',
     disabled: false,
     cta: authStore.isAuthenticated ? '进入备课台' : '免费开始',
-    action: () => router.push(authStore.isAuthenticated ? { name: 'tasks' } : { name: 'register' }),
+    action: () => {
+      trackPricingCta('free_plan');
+      return router.push(authStore.isAuthenticated ? { name: 'tasks' } : { name: 'register' });
+    },
     features: ['每月 5 份教案额度', '基础编辑', 'Word 导出'],
   },
   {
@@ -31,6 +48,7 @@ const pricingCards = computed(() => [
     disabled: false,
     cta: '开始试用或支付',
     action: () => {
+      trackPricingCta('professional_plan');
       if (authStore.isAuthenticated) {
         billingDialog.openDialog({
           reason: 'upgrade',

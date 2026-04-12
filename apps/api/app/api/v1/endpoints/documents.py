@@ -20,6 +20,7 @@ from app.schemas.document import (
     DocumentSnapshotRead,
     DocumentUpdatePayload,
 )
+from app.services.analytics_service import record_server_event
 from app.services.append_service import get_document_task as get_append_document_task
 from app.services.append_service import stream_append
 from app.services.billing_service import require_professional_feature
@@ -234,6 +235,13 @@ def export_document(
 
     if format == "docx":
         payload = build_docx(task, load_content(document))
+        record_server_event(
+            session,
+            event_name="docx_export_succeeded",
+            user=current_user,
+            page_path=f"/tasks/{task.id}/editor",
+            properties={"task_id": task.id},
+        )
         filename = quote(f"{task.title}.docx")
         return Response(
             content=payload,
@@ -243,6 +251,13 @@ def export_document(
     if format == "pdf":
         require_professional_feature(session, current_user, "PDF 导出")
         payload = build_pdf(task, load_content(document))
+        record_server_event(
+            session,
+            event_name="pdf_export_succeeded",
+            user=current_user,
+            page_path=f"/tasks/{task.id}/editor",
+            properties={"task_id": task.id},
+        )
         filename = quote(f"{task.title}.pdf")
         return Response(
             content=payload,

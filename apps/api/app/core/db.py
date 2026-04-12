@@ -57,6 +57,13 @@ def _infer_existing_revision() -> str | None:
 
     user_columns = {column["name"] for column in inspector.get_columns("users")}
     if (
+        {"analytics_events", "quota_adjustments", "email_delivery_logs"}.issubset(table_names)
+        and {"billing_orders", "billing_webhook_events", "invoice_requests", "user_subscriptions"}.issubset(table_names)
+        and {"email_verified", "email_verified_at"}.issubset(user_columns)
+    ):
+        return "20260412_0005"
+
+    if (
         {"billing_orders", "billing_webhook_events", "invoice_requests", "user_subscriptions"}.issubset(table_names)
         and {"email_verified", "email_verified_at"}.issubset(user_columns)
     ):
@@ -87,13 +94,16 @@ def run_migrations() -> None:
 
 def create_db_and_tables() -> None:
     from app.models import (  # noqa: F401
+        AnalyticsEvent,
         AuthToken,
         BillingOrder,
         BillingWebhookEvent,
         Document,
         DocumentSnapshot,
+        EmailDeliveryLog,
         Feedback,
         InvoiceRequest,
+        QuotaAdjustment,
         Task,
         User,
         UserSubscription,

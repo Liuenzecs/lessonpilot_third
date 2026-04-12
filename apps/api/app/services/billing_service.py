@@ -6,10 +6,11 @@ from calendar import monthrange
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
-from app.models import BillingOrder, BillingWebhookEvent, InvoiceRequest, Task, User, UserSubscription
+from app.models import BillingOrder, BillingWebhookEvent, InvoiceRequest, QuotaAdjustment, Task, User, UserSubscription
 from app.models.base import utcnow
 from app.schemas.billing import (
     AccountSubscriptionRead,
@@ -24,6 +25,7 @@ from app.schemas.billing import (
     SubscriptionCheckoutPayload,
     SubscriptionEntitlementsRead,
 )
+from app.services.analytics_service import record_server_event
 
 FREE_MONTHLY_TASK_LIMIT = 5
 
@@ -50,6 +52,11 @@ def month_start(now: datetime | None = None) -> datetime:
     return datetime(current.year, current.month, 1, tzinfo=UTC)
 
 
+def month_key(now: datetime | None = None) -> str:
+    current = now or datetime.now(UTC)
+    return f"{current.year:04d}-{current.month:02d}"
+
+
 def add_billing_period(start: datetime, billing_cycle: BillingCycle) -> datetime:
     if billing_cycle == "yearly":
         year = start.year + 1
@@ -66,6 +73,16 @@ def count_tasks_used_this_month(session: Session, user_id: str) -> int:
     created_after = month_start()
     tasks = session.exec(select(Task).where(Task.user_id == user_id, Task.created_at >= created_after)).all()
     return len(tasks)
+
+
+def get_quota_adjustment_total(session: Session, user_id: str, *, for_month: str | None = None) -> int:
+    target_month = for_month or month_key()
+    statement = (
+        select(func.coalesce(func.sum(QuotaAdjustment.delta), 0))
+        .select_from(QuotaAdjustment)
+        .where(QuotaAdjustment.user_id == user_id, QuotaAdjustment.month_key == target_month)
+    )
+    return int(session.exec(statement).one())
 
 
 def ensure_subscription(session: Session, user: User) -> UserSubscription:
@@ -162,6 +179,10 @@ def get_subscription_summary(session: Session, user: User) -> AccountSubscriptio
     entitlements = _build_entitlements(subscription)
     quota_remaining = None
     if entitlements.monthly_task_limit is not None:
+        entitlements.monthly_task_limit = max(
+            entitlements.monthly_task_limit + get_quota_adjustment_total(session, user.id),
+            0,
+        )
         quota_remaining = max(entitlements.monthly_task_limit - tasks_used_this_month, 0)
 
     return AccountSubscriptionRead(
@@ -381,6 +402,20 @@ def _mark_order_paid(
     session.refresh(order)
     session.refresh(subscription)
     reconcile_subscription(session, subscription)
+    user = session.get(User, order.user_id)
+    if user is not None:
+        record_server_event(
+            session,
+            event_name="payment_succeeded",
+            user=user,
+            page_path="/settings",
+            properties={
+                "billing_cycle": order.billing_cycle,
+                "channel": order.channel,
+                "amount_cents": order.amount_cents,
+            },
+            occurred_at=paid_at,
+        )
     return order
 
 
