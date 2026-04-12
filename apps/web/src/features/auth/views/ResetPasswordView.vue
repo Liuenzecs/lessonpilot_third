@@ -3,10 +3,13 @@ import { computed, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useResetPasswordMutation } from '@/features/auth/composables/useAuth';
+import { getAuthErrorMessage } from '@/features/auth/utils/error';
+import { useToast } from '@/shared/composables/useToast';
 
 const route = useRoute();
 const router = useRouter();
 const resetPasswordMutation = useResetPasswordMutation();
+const toast = useToast();
 
 const token = computed(() => String(route.query.token || ''));
 const form = reactive({
@@ -14,28 +17,26 @@ const form = reactive({
   confirm_password: '',
 });
 const showPassword = ref(false);
-const successMessage = ref('');
 
 const errorMessage = computed(() => {
   if (!token.value) {
     return '重置链接无效，请重新发起密码重置。';
   }
-  if (!resetPasswordMutation.error.value) {
-    return '';
-  }
-  return '重置密码失败，请确认链接仍然有效。';
+  return '';
 });
 
 async function submit() {
-  await resetPasswordMutation.mutateAsync({
-    token: token.value,
-    password: form.password,
-    confirm_password: form.confirm_password,
-  });
-  successMessage.value = '密码已重置，正在带你回到登录页。';
-  window.setTimeout(() => {
-    void router.push({ name: 'login', query: { reset: 'success' } });
-  }, 800);
+  try {
+    await resetPasswordMutation.mutateAsync({
+      token: token.value,
+      password: form.password,
+      confirm_password: form.confirm_password,
+    });
+    toast.success('密码已重置', '请使用新密码登录。');
+    await router.push({ name: 'login' });
+  } catch (error) {
+    toast.error('重置密码失败', getAuthErrorMessage(error, '请确认链接仍然有效。'));
+  }
 }
 </script>
 
@@ -77,9 +78,7 @@ async function submit() {
         {{ resetPasswordMutation.isPending.value ? '提交中...' : '确认重置' }}
       </button>
     </form>
-
-    <p v-if="successMessage" class="feedback success">{{ successMessage }}</p>
-    <p v-else-if="errorMessage" class="feedback">{{ errorMessage }}</p>
+    <p v-if="errorMessage" class="feedback">{{ errorMessage }}</p>
     <p class="subtitle">
       <RouterLink :to="{ name: 'login' }" class="auth-link">返回登录</RouterLink>
     </p>

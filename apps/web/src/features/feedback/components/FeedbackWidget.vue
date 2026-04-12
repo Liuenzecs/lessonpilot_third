@@ -1,50 +1,80 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { useFeedbackMutation } from '@/features/settings/composables/useAccount';
 import type { FeedbackCreatePayload } from '@/features/settings/types';
+import { getErrorDescription } from '@/shared/api/errors';
+import { useToast } from '@/shared/composables/useToast';
 
 import '@/features/feedback/styles/feedback.css';
 
 const route = useRoute();
 const feedbackMutation = useFeedbackMutation();
+const toast = useToast();
 
+const rootRef = ref<HTMLElement | null>(null);
 const isOpen = ref(false);
 const message = ref('');
 const mood = ref<FeedbackCreatePayload['mood']>('happy');
-const successMessage = ref('');
+const errorMessage = computed(() => feedbackMutation.error.value);
 
-const errorMessage = computed(() => {
-  if (!feedbackMutation.error.value) {
-    return '';
+function resetComposer() {
+  message.value = '';
+  mood.value = 'happy';
+}
+
+function closePanel() {
+  isOpen.value = false;
+}
+
+function handleOutsideClick(event: MouseEvent) {
+  if (!rootRef.value?.contains(event.target as Node)) {
+    closePanel();
   }
-  return '提交反馈失败，请稍后重试。';
-});
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closePanel();
+  }
+}
 
 async function submitFeedback() {
-  successMessage.value = '';
   try {
     await feedbackMutation.mutateAsync({
       mood: mood.value,
       message: message.value.trim(),
       page_path: route.fullPath,
     });
-    successMessage.value = '反馈已提交，谢谢你的建议。';
-    message.value = '';
-    mood.value = 'happy';
-    window.setTimeout(() => {
-      isOpen.value = false;
-      successMessage.value = '';
-    }, 1600);
-  } catch {
-    // Inline message handles the error state.
+    toast.success('反馈已提交', '谢谢你的建议，我们会继续打磨体验。');
+    resetComposer();
+    closePanel();
+  } catch (error) {
+    toast.error('提交反馈失败', getErrorDescription(error, '请稍后重试。'));
   }
 }
+
+watch(
+  () => route.fullPath,
+  () => {
+    closePanel();
+  },
+);
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick);
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideClick);
+  window.removeEventListener('keydown', handleKeydown);
+});
 </script>
 
 <template>
-  <div class="feedback-widget">
+  <div ref="rootRef" class="feedback-widget">
     <button class="feedback-trigger" type="button" @click="isOpen = !isOpen">💬</button>
 
     <div v-if="isOpen" class="feedback-panel app-card">
@@ -91,8 +121,7 @@ async function submitFeedback() {
         {{ feedbackMutation.isPending.value ? '提交中...' : '提交反馈' }}
       </button>
 
-      <p v-if="successMessage" class="feedback-note success">{{ successMessage }}</p>
-      <p v-else-if="errorMessage" class="feedback-note error">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="feedback-note error">提交反馈失败，请稍后重试。</p>
     </div>
   </div>
 </template>

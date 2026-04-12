@@ -6,6 +6,7 @@ import { useAuthStore } from '@/app/stores/auth';
 import { useBillingDialogStore } from '@/app/stores/billing';
 import UpgradeModal from '@/features/billing/components/UpgradeModal.vue';
 import FeedbackWidget from '@/features/feedback/components/FeedbackWidget.vue';
+import ToastViewport from '@/shared/components/ToastViewport.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -38,7 +39,12 @@ watch(
 </script>
 
 <template>
-  <RouterView />
+  <RouterView v-slot="{ Component, route: currentRoute }">
+    <Transition name="page-shell-transition" mode="out-in">
+      <component :is="Component" :key="currentRoute.fullPath" />
+    </Transition>
+  </RouterView>
+  <ToastViewport />
   <FeedbackWidget v-if="showFeedbackWidget" />
   <UpgradeModal v-if="authStore.isAuthenticated" />
 </template>

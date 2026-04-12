@@ -15,9 +15,11 @@ import AboutView from '@/features/public/views/AboutView.vue';
 import ChangelogView from '@/features/public/views/ChangelogView.vue';
 import HelpView from '@/features/public/views/HelpView.vue';
 import LandingView from '@/features/public/views/LandingView.vue';
+import NetworkErrorView from '@/features/public/views/NetworkErrorView.vue';
 import NotFoundView from '@/features/public/views/NotFoundView.vue';
 import PricingView from '@/features/public/views/PricingView.vue';
 import PrivacyView from '@/features/public/views/PrivacyView.vue';
+import ServerErrorView from '@/features/public/views/ServerErrorView.vue';
 import TermsView from '@/features/public/views/TermsView.vue';
 import SettingsView from '@/features/settings/views/SettingsView.vue';
 import TaskCreateView from '@/features/task/views/TaskCreateView.vue';
@@ -65,6 +67,16 @@ export function createAppRouter(pinia: Pinia) {
             path: 'changelog',
             name: 'changelog',
             component: ChangelogView,
+          },
+          {
+            path: '500',
+            name: 'server-error',
+            component: ServerErrorView,
+          },
+          {
+            path: 'network-error',
+            name: 'network-error',
+            component: NetworkErrorView,
           },
           {
             path: ':pathMatch(.*)*',

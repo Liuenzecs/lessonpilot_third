@@ -5,7 +5,11 @@ from html import escape, unescape
 from io import BytesIO
 
 from docx import Document as DocxDocument
-from docx.shared import Pt
+from docx.enum.style import WD_STYLE_TYPE
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Cm, Pt, RGBColor
 
 from app.models import Task
 from app.schemas.content import (
@@ -35,14 +39,155 @@ def _to_plain_text(value: str) -> str:
     return unescape(HTML_TAG_PATTERN.sub("", value)).strip()
 
 
-def _render_docx_question(document: DocxDocument, label: str, prompt: str, answer: str, analysis: str) -> None:
+def _set_style_font(style, font_name: str, size: int, *, bold: bool = False, color: str | None = None) -> None:
+    style.font.name = font_name
+    style.font.size = Pt(size)
+    style.font.bold = bold
+    if color:
+        style.font.color.rgb = RGBColor.from_string(color)
+
+    r_pr = style._element.get_or_add_rPr()
+    r_fonts = r_pr.rFonts
+    if r_fonts is None:
+        r_fonts = OxmlElement("w:rFonts")
+        r_pr.append(r_fonts)
+    r_fonts.set(qn("w:ascii"), font_name)
+    r_fonts.set(qn("w:hAnsi"), font_name)
+    r_fonts.set(qn("w:eastAsia"), font_name)
+
+
+def _ensure_paragraph_style(document: DocxDocument, name: str):
+    if name in document.styles:
+        return document.styles[name]
+    return document.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+
+
+def _configure_docx_styles(document: DocxDocument) -> None:
+    section = document.sections[0]
+    section.page_width = Cm(21)
+    section.page_height = Cm(29.7)
+    section.top_margin = Cm(2.2)
+    section.bottom_margin = Cm(2.2)
+    section.left_margin = Cm(2.4)
+    section.right_margin = Cm(2.4)
+
+    normal_style = document.styles["Normal"]
+    _set_style_font(normal_style, "宋体", 11)
+    normal_style.paragraph_format.line_spacing = 1.55
+    normal_style.paragraph_format.space_after = Pt(6)
+
+    title_style = _ensure_paragraph_style(document, "LessonPilot Title")
+    _set_style_font(title_style, "Microsoft YaHei", 22, bold=True, color="243349")
+    title_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_style.paragraph_format.space_after = Pt(10)
+    title_style.paragraph_format.keep_with_next = True
+
+    meta_style = _ensure_paragraph_style(document, "LessonPilot Meta")
+    _set_style_font(meta_style, "Microsoft YaHei", 10, color="6C7A90")
+    meta_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    meta_style.paragraph_format.space_after = Pt(18)
+    meta_style.paragraph_format.keep_with_next = True
+
+    section_style = _ensure_paragraph_style(document, "LessonPilot Section")
+    _set_style_font(section_style, "Microsoft YaHei", 16, bold=True, color="16385B")
+    section_style.paragraph_format.space_before = Pt(18)
+    section_style.paragraph_format.space_after = Pt(8)
+    section_style.paragraph_format.keep_with_next = True
+
+    subsection_style = _ensure_paragraph_style(document, "LessonPilot Subheading")
+    _set_style_font(subsection_style, "Microsoft YaHei", 13, bold=True, color="2D4B71")
+    subsection_style.paragraph_format.space_before = Pt(14)
+    subsection_style.paragraph_format.space_after = Pt(6)
+    subsection_style.paragraph_format.keep_with_next = True
+
+    body_style = _ensure_paragraph_style(document, "LessonPilot Body")
+    _set_style_font(body_style, "宋体", 11, color="243349")
+    body_style.paragraph_format.line_spacing = 1.62
+    body_style.paragraph_format.space_after = Pt(8)
+
+    list_style = _ensure_paragraph_style(document, "LessonPilot List")
+    _set_style_font(list_style, "宋体", 11, color="243349")
+    list_style.paragraph_format.line_spacing = 1.55
+    list_style.paragraph_format.space_after = Pt(4)
+
+    question_style = _ensure_paragraph_style(document, "LessonPilot Question")
+    _set_style_font(question_style, "Microsoft YaHei", 11, bold=True, color="243349")
+    question_style.paragraph_format.line_spacing = 1.45
+    question_style.paragraph_format.space_before = Pt(8)
+    question_style.paragraph_format.space_after = Pt(5)
+    question_style.paragraph_format.keep_with_next = True
+
+    option_style = _ensure_paragraph_style(document, "LessonPilot Option")
+    _set_style_font(option_style, "宋体", 11, color="243349")
+    option_style.paragraph_format.left_indent = Pt(18)
+    option_style.paragraph_format.space_after = Pt(2)
+
+    answer_style = _ensure_paragraph_style(document, "LessonPilot Answer")
+    _set_style_font(answer_style, "宋体", 10, color="2E7B66")
+    answer_style.paragraph_format.left_indent = Pt(18)
+    answer_style.paragraph_format.space_after = Pt(2)
+
+    analysis_style = _ensure_paragraph_style(document, "LessonPilot Analysis")
+    _set_style_font(analysis_style, "宋体", 10, color="6C7A90")
+    analysis_style.paragraph_format.left_indent = Pt(18)
+    analysis_style.paragraph_format.space_after = Pt(8)
+
+
+def _add_docx_paragraph(
+    document: DocxDocument,
+    text: str,
+    style_name: str,
+    *,
+    left_indent: Pt | None = None,
+) -> None:
+    paragraph = document.add_paragraph(style=style_name)
+    paragraph.add_run(text)
+    if left_indent is not None:
+        paragraph.paragraph_format.left_indent = left_indent
+
+
+def _render_docx_question(
+    document: DocxDocument,
+    label: str,
+    prompt: str,
+    answer: str,
+    analysis: str,
+    *,
+    index: int | None = None,
+    options: list[str] | None = None,
+) -> None:
     prompt_text = _to_plain_text(prompt)
     if prompt_text:
-        document.add_paragraph(f"{label} {prompt_text}")
+        prefix = f"{index}. " if index is not None else ""
+        _add_docx_paragraph(
+            document,
+            f"{prefix}{label}{prompt_text}",
+            "LessonPilot Question",
+        )
+
+    for option_index, option in enumerate(options or []):
+        option_text = _to_plain_text(option)
+        if not option_text:
+            continue
+        option_prefix = chr(65 + option_index) if option_index < 26 else str(option_index + 1)
+        _add_docx_paragraph(
+            document,
+            f"{option_prefix}. {option_text}",
+            "LessonPilot Option",
+        )
+
     if answer:
-        document.add_paragraph(f"参考答案：{_to_plain_text(answer)}")
+        _add_docx_paragraph(
+            document,
+            f"参考答案：{_to_plain_text(answer)}",
+            "LessonPilot Answer",
+        )
     if analysis:
-        document.add_paragraph(f"解析：{_to_plain_text(analysis)}")
+        _add_docx_paragraph(
+            document,
+            f"解析：{_to_plain_text(analysis)}",
+            "LessonPilot Analysis",
+        )
 
 
 def _render_docx_block(document: DocxDocument, block, level: int = 1) -> None:
@@ -50,37 +195,73 @@ def _render_docx_block(document: DocxDocument, block, level: int = 1) -> None:
         return
 
     if isinstance(block, SectionBlock):
-        document.add_heading(block.title, level=min(level, 4))
+        _add_docx_paragraph(document, block.title, "LessonPilot Section")
         for child in block.children:
             _render_docx_block(document, child, level + 1)
         return
 
     if isinstance(block, TeachingStepBlock):
         duration = f"（{block.duration_minutes}分钟）" if block.duration_minutes else ""
-        document.add_heading(f"{block.title}{duration}", level=min(level, 4))
+        _add_docx_paragraph(document, f"{block.title}{duration}", "LessonPilot Subheading")
         for child in block.children:
             _render_docx_block(document, child, level + 1)
         return
 
     if isinstance(block, ExerciseGroupBlock):
-        document.add_heading(block.title, level=min(level, 4))
-        for child in block.children:
-            _render_docx_block(document, child, level + 1)
+        _add_docx_paragraph(document, block.title, "LessonPilot Subheading")
+        for index, child in enumerate(block.children, start=1):
+            if isinstance(child, ChoiceQuestionBlock):
+                _render_docx_question(
+                    document,
+                    "选择题：",
+                    child.prompt,
+                    "；".join(child.answers),
+                    child.analysis,
+                    index=index,
+                    options=child.options,
+                )
+                continue
+            if isinstance(child, FillBlankQuestionBlock):
+                _render_docx_question(
+                    document,
+                    "填空题：",
+                    child.prompt,
+                    "；".join(child.answers),
+                    child.analysis,
+                    index=index,
+                )
+                continue
+            _render_docx_question(
+                document,
+                "简答题：",
+                child.prompt,
+                child.reference_answer,
+                child.analysis,
+                index=index,
+            )
         return
 
     if isinstance(block, ParagraphBlock):
         text = _to_plain_text(block.content)
         if text:
-            paragraph = document.add_paragraph(text)
-            paragraph.paragraph_format.left_indent = _indent_points(block.indent)
+            _add_docx_paragraph(
+                document,
+                text,
+                "LessonPilot Body",
+                left_indent=_indent_points(block.indent),
+            )
         return
 
     if isinstance(block, ListBlock):
         for item in block.items:
             text = _to_plain_text(item)
             if text:
-                paragraph = document.add_paragraph(text, style="List Bullet")
-                paragraph.paragraph_format.left_indent = _indent_points(block.indent)
+                _add_docx_paragraph(
+                    document,
+                    f"• {text}",
+                    "LessonPilot List",
+                    left_indent=_indent_points(block.indent),
+                )
         return
 
     if isinstance(block, ChoiceQuestionBlock):
@@ -90,11 +271,8 @@ def _render_docx_block(document: DocxDocument, block, level: int = 1) -> None:
             block.prompt,
             "；".join(block.answers),
             block.analysis,
+            options=block.options,
         )
-        for option in block.options:
-            option_text = _to_plain_text(option)
-            if option_text:
-                document.add_paragraph(option_text, style="List Bullet")
         return
 
     if isinstance(block, FillBlankQuestionBlock):
@@ -119,8 +297,9 @@ def _render_docx_block(document: DocxDocument, block, level: int = 1) -> None:
 
 def build_docx(task: Task, content: ContentDocument) -> bytes:
     document = DocxDocument()
-    document.add_heading(task.title, level=0)
-    document.add_paragraph(f"{task.subject} | {task.grade} | {task.topic}")
+    _configure_docx_styles(document)
+    _add_docx_paragraph(document, task.title, "LessonPilot Title")
+    _add_docx_paragraph(document, f"{task.subject} · {task.grade} · {task.topic}", "LessonPilot Meta")
     for block in content.blocks:
         _render_docx_block(document, block)
     buffer = BytesIO()
@@ -128,12 +307,32 @@ def build_docx(task: Task, content: ContentDocument) -> bytes:
     return buffer.getvalue()
 
 
-def _build_html_question(label: str, prompt: str, answer: str, analysis: str) -> str:
-    parts = [f"<p><strong>{escape(label)}</strong> {prompt}</p>"]
+def _build_html_question(
+    label: str,
+    prompt: str,
+    answer: str,
+    analysis: str,
+    *,
+    index: int | None = None,
+    options: list[str] | None = None,
+) -> str:
+    prefix = f'<span class="lp-question-index">{index}.</span>' if index is not None else ""
+    parts = [
+        '<div class="lp-question">',
+        f'<div class="lp-question-title">{prefix}<span>{escape(label)}</span></div>',
+        f'<div class="lp-question-body">{prompt}</div>',
+    ]
+    if options:
+        option_items = "".join(
+            f"<li>{escape(_to_plain_text(option))}</li>" for option in options if _to_plain_text(option)
+        )
+        if option_items:
+            parts.append(f'<ol class="lp-option-list" type="A">{option_items}</ol>')
     if answer:
-        parts.append(f"<p><strong>参考答案：</strong>{escape(answer)}</p>")
+        parts.append(f'<p class="lp-answer"><strong>参考答案：</strong>{escape(_to_plain_text(answer))}</p>')
     if analysis:
-        parts.append(f"<p><strong>解析：</strong>{analysis}</p>")
+        parts.append(f'<div class="lp-analysis"><strong>解析：</strong>{analysis}</div>')
+    parts.append("</div>")
     return "".join(parts)
 
 
@@ -142,45 +341,98 @@ def _build_html_block(block, level: int = 1) -> str:
         return ""
 
     if isinstance(block, SectionBlock):
-        tag = f"h{min(level + 1, 4)}"
-        return f"<{tag}>{escape(block.title)}</{tag}>" + "".join(
-            _build_html_block(child, level + 1) for child in block.children
+        return (
+            '<section class="lp-section">'
+            f'<h2 class="lp-section-title">{escape(block.title)}</h2>'
+            + "".join(_build_html_block(child, level + 1) for child in block.children)
+            + "</section>"
         )
 
     if isinstance(block, TeachingStepBlock):
         duration = f"（{block.duration_minutes}分钟）" if block.duration_minutes else ""
-        tag = f"h{min(level + 1, 5)}"
-        return f"<{tag}>{escape(block.title + duration)}</{tag}>" + "".join(
-            _build_html_block(child, level + 1) for child in block.children
+        return (
+            '<section class="lp-subsection">'
+            f'<h3 class="lp-subsection-title">{escape(block.title + duration)}</h3>'
+            + "".join(_build_html_block(child, level + 1) for child in block.children)
+            + "</section>"
         )
 
     if isinstance(block, ExerciseGroupBlock):
-        tag = f"h{min(level + 1, 5)}"
-        return f"<{tag}>{escape(block.title)}</{tag}>" + "".join(
-            _build_html_block(child, level + 1) for child in block.children
+        questions = []
+        for index, child in enumerate(block.children, start=1):
+            if isinstance(child, ChoiceQuestionBlock):
+                questions.append(
+                    _build_html_question(
+                        "选择题",
+                        child.prompt,
+                        "；".join(child.answers),
+                        child.analysis,
+                        index=index,
+                        options=child.options,
+                    )
+                )
+                continue
+            if isinstance(child, FillBlankQuestionBlock):
+                questions.append(
+                    _build_html_question(
+                        "填空题",
+                        child.prompt,
+                        "；".join(child.answers),
+                        child.analysis,
+                        index=index,
+                    )
+                )
+                continue
+            questions.append(
+                _build_html_question(
+                    "简答题",
+                    child.prompt,
+                    child.reference_answer,
+                    child.analysis,
+                    index=index,
+                )
+            )
+        return (
+            '<section class="lp-subsection lp-exercise-group">'
+            f'<h3 class="lp-subsection-title">{escape(block.title)}</h3>'
+            + "".join(questions)
+            + "</section>"
         )
 
     if isinstance(block, ParagraphBlock):
         margin_left = _indent_px(block.indent)
-        return f'<div style="margin-left: {margin_left}px">{block.content}</div>'
+        return f'<p class="lp-paragraph" style="margin-left: {margin_left}px">{block.content}</p>'
 
     if isinstance(block, ListBlock):
         items = "".join(f"<li>{item}</li>" for item in block.items if _to_plain_text(item))
         if not items:
             return ""
         margin_left = _indent_px(block.indent)
-        return f'<ul style="margin-left: {margin_left}px">{items}</ul>'
+        return f'<ul class="lp-list" style="margin-left: {margin_left}px">{items}</ul>'
 
     if isinstance(block, ChoiceQuestionBlock):
-        options = "".join(f"<li>{escape(_to_plain_text(option))}</li>" for option in block.options if option)
-        return _build_html_question("选择题：", block.prompt, "；".join(block.answers), block.analysis) + (
-            f"<ul>{options}</ul>" if options else ""
+        return _build_html_question(
+            "选择题",
+            block.prompt,
+            "；".join(block.answers),
+            block.analysis,
+            options=block.options,
         )
 
     if isinstance(block, FillBlankQuestionBlock):
-        return _build_html_question("填空题：", block.prompt, "；".join(block.answers), block.analysis)
+        return _build_html_question(
+            "填空题",
+            block.prompt,
+            "；".join(block.answers),
+            block.analysis,
+        )
 
-    return _build_html_question("简答题：", block.prompt, block.reference_answer, block.analysis)
+    return _build_html_question(
+        "简答题",
+        block.prompt,
+        block.reference_answer,
+        block.analysis,
+    )
 
 
 def _build_export_html(task: Task, content: ContentDocument) -> str:
@@ -191,28 +443,110 @@ def _build_export_html(task: Task, content: ContentDocument) -> str:
       <head>
         <meta charset="utf-8" />
         <style>
+          @page {{
+            size: A4;
+            margin: 20mm 18mm 20mm 18mm;
+          }}
+
           body {{
             font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-            color: #1f2f45;
-            padding: 32px;
+            color: #243349;
             line-height: 1.7;
+            font-size: 12pt;
           }}
-          h1, h2, h3, h4, h5 {{
-            color: #15355a;
-            margin: 18px 0 10px;
+
+          .lp-document-title {{
+            margin: 0 0 10pt;
+            text-align: center;
+            font-size: 22pt;
+            font-weight: 700;
           }}
-          p, li {{
-            font-size: 13px;
-            margin: 6px 0;
+
+          .lp-document-meta {{
+            margin: 0 0 18pt;
+            text-align: center;
+            color: #6c7a90;
+            font-size: 10.5pt;
           }}
-          ul {{
-            padding-left: 20px;
+
+          .lp-section {{
+            margin-top: 16pt;
+          }}
+
+          .lp-section-title {{
+            margin: 0 0 8pt;
+            color: #16385b;
+            font-size: 16pt;
+            page-break-after: avoid;
+          }}
+
+          .lp-subsection {{
+            margin-top: 12pt;
+          }}
+
+          .lp-subsection-title {{
+            margin: 0 0 6pt;
+            color: #2d4b71;
+            font-size: 13pt;
+            page-break-after: avoid;
+          }}
+
+          .lp-paragraph,
+          .lp-list li,
+          .lp-question-body,
+          .lp-answer,
+          .lp-analysis {{
+            font-size: 11pt;
+          }}
+
+          .lp-paragraph {{
+            margin: 0 0 8pt;
+          }}
+
+          .lp-list {{
+            margin: 0 0 8pt 0;
+            padding-left: 18pt;
+          }}
+
+          .lp-question {{
+            margin: 8pt 0 12pt;
+            padding: 12pt 14pt;
+            border: 1px solid #dbe3ef;
+            border-radius: 10pt;
+            background: #fafbfc;
+            page-break-inside: avoid;
+          }}
+
+          .lp-question-title {{
+            margin-bottom: 6pt;
+            color: #16385b;
+            font-weight: 700;
+          }}
+
+          .lp-question-index {{
+            display: inline-block;
+            min-width: 18pt;
+          }}
+
+          .lp-option-list {{
+            margin: 6pt 0;
+            padding-left: 18pt;
+          }}
+
+          .lp-answer {{
+            margin: 6pt 0 4pt;
+            color: #2e7b66;
+          }}
+
+          .lp-analysis {{
+            margin: 4pt 0 0;
+            color: #6c7a90;
           }}
         </style>
       </head>
       <body>
-        <h1>{escape(task.title)}</h1>
-        <p>{escape(task.subject)} | {escape(task.grade)} | {escape(task.topic)}</p>
+        <h1 class="lp-document-title">{escape(task.title)}</h1>
+        <p class="lp-document-meta">{escape(task.subject)} · {escape(task.grade)} · {escape(task.topic)}</p>
         {body}
       </body>
     </html>

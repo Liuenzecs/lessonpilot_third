@@ -78,10 +78,13 @@ function buildParagraphsFromLines(lines: string[]): string {
   return safeLines.map((line) => `<p>${line.trim()}</p>`).join('');
 }
 
-function createSuggestionlessConfirmedBlock(block: Block): Block {
+function createSuggestionlessConfirmedBlock(block: Block, nextId?: string): Block {
   const nextBlock = cloneSerializable(block);
   clearSuggestionDeep(nextBlock);
   nextBlock.status = 'confirmed';
+  if (nextId) {
+    nextBlock.id = nextId;
+  }
   return nextBlock;
 }
 
@@ -133,6 +136,13 @@ function removeReplaceSuggestionsForTarget(blocks: Block[], targetBlockId: strin
 }
 
 export function findBlockLocation(content: ContentDocument, blockId: string): BlockLocation | null {
+  return findBlockLocationByPredicate(content, (block) => block.id === blockId);
+}
+
+function findBlockLocationByPredicate(
+  content: ContentDocument,
+  predicate: (block: Block) => boolean,
+): BlockLocation | null {
   const walk = (
     siblings: Block[],
     parentBlock: ContainerBlock | null,
@@ -140,7 +150,7 @@ export function findBlockLocation(content: ContentDocument, blockId: string): Bl
   ): BlockLocation | null => {
     for (const [index, block] of siblings.entries()) {
       const currentSection = block.type === 'section' ? block : section;
-      if (block.id === blockId) {
+      if (predicate(block)) {
         return {
           block,
           siblings,
@@ -168,6 +178,13 @@ export function findBlockLocation(content: ContentDocument, blockId: string): Bl
   };
 
   return walk(content.blocks, null, null);
+}
+
+function findPendingBlockLocation(content: ContentDocument, blockId: string): BlockLocation | null {
+  return findBlockLocationByPredicate(
+    content,
+    (block) => block.id === blockId && block.status === 'pending',
+  );
 }
 
 export function createBlock<T extends InsertableBlockType>(type: T): Extract<Block, { type: T }> {
@@ -502,19 +519,20 @@ export function convertBlockType(
 
 export function acceptPendingBlock(content: ContentDocument, blockId: string): ContentDocument {
   const nextContent = cloneContent(content);
-  const location = findBlockLocation(nextContent, blockId);
+  const location = findPendingBlockLocation(nextContent, blockId);
   if (!location || location.block.status !== 'pending') {
     return nextContent;
   }
 
   const suggestion = location.block.suggestion as BlockSuggestion | undefined;
   if (suggestion?.kind === 'replace' && suggestion.targetBlockId) {
-    const replacement = createSuggestionlessConfirmedBlock(location.block);
+    const replacement = createSuggestionlessConfirmedBlock(location.block, suggestion.targetBlockId);
     nextContent.blocks = removeReplaceSuggestionsForTarget(nextContent.blocks, suggestion.targetBlockId, blockId);
+    const refreshedPendingLocation = findPendingBlockLocation(nextContent, blockId);
     const targetLocation = findBlockLocation(nextContent, suggestion.targetBlockId);
-    if (targetLocation) {
+    if (refreshedPendingLocation && targetLocation) {
       targetLocation.siblings.splice(targetLocation.index, 1, replacement);
-      nextContent.blocks = removeBlockById(nextContent.blocks, blockId);
+      refreshedPendingLocation.siblings.splice(refreshedPendingLocation.index, 1);
       return nextContent;
     }
   }

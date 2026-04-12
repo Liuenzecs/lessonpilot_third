@@ -46,6 +46,34 @@
   gap: 18px;
 }
 
+.settings-skeleton-panel,
+.settings-skeleton-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-skeleton-line {
+  height: 16px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(208, 216, 228, 0.5) 0%, rgba(241, 244, 248, 0.96) 50%, rgba(208, 216, 228, 0.5) 100%);
+  background-size: 200% 100%;
+  animation: workspace-shimmer 1.6s linear infinite;
+}
+
+.settings-skeleton-line.short {
+  width: 34%;
+}
+
+.settings-skeleton-card {
+  min-height: 110px;
+  border-radius: 22px;
+  background:
+    linear-gradient(90deg, rgba(208, 216, 228, 0.5) 0%, rgba(241, 244, 248, 0.96) 50%, rgba(208, 216, 228, 0.5) 100%);
+  background-size: 200% 100%;
+  animation: workspace-shimmer 1.6s linear infinite;
+}
+
 .settings-panel h2,
 .data-card h3,
 .subscription-upgrade h3 {

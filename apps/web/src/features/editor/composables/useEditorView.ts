@@ -24,6 +24,8 @@ import {
 } from '@/features/generation/composables/useGeneration';
 import { useSubscription } from '@/features/settings/composables/useAccount';
 import { useStartGenerationMutation, useTask } from '@/features/task/composables/useTasks';
+import { getErrorDescription } from '@/shared/api/errors';
+import { useToast } from '@/shared/composables/useToast';
 import {
   acceptPendingBlock,
   adjustBlockIndent,
@@ -53,6 +55,7 @@ export function useEditorView() {
   const route = useRoute();
   const authStore = useAuthStore();
   const billingDialog = useBillingDialogStore();
+  const toast = useToast();
 
   const taskId = computed(() => String(route.params.taskId ?? ''));
   const taskQuery = useTask(taskId.value);
@@ -70,7 +73,8 @@ export function useEditorView() {
   const historyOpen = ref(false);
   const exportMenuOpen = ref(false);
   const exportPreviewOpen = ref(false);
-  const outlineCollapsed = ref(false);
+  const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
+  const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
   const selectedSnapshotId = ref('');
   const appendComposerOpen = ref(false);
   const appendInstruction = ref('');
@@ -387,6 +391,7 @@ export function useEditorView() {
     if (typeof window === 'undefined') {
       return;
     }
+    isMobileViewport.value = window.innerWidth < 720;
     if (window.innerWidth < 1100) {
       outlineCollapsed.value = true;
     }
@@ -805,10 +810,16 @@ export function useEditorView() {
   }
 
   async function refreshFromServer() {
-    const response = await documentsQuery.refetch();
-    const document = response.data?.items[0];
-    if (document) {
-      applyServerDocument(document);
+    try {
+      const response = await documentsQuery.refetch();
+      const document = response.data?.items[0];
+      if (document) {
+        applyServerDocument(document);
+      }
+      toast.success('已刷新到最新版本');
+    } catch (error) {
+      streamError.value = '刷新最新版本失败，请稍后重试。';
+      toast.error('刷新失败', getErrorDescription(error, '请稍后重试。'));
     }
   }
 
@@ -827,14 +838,16 @@ export function useEditorView() {
     try {
       if (format === 'docx') {
         await exportDocx(draftDocument.value.id, taskQuery.data.value.title);
+        toast.success('Word 文档已开始下载');
         return;
       }
       await exportPdf(draftDocument.value.id, taskQuery.data.value.title);
+      toast.success('PDF 文档已开始下载');
     } catch (error) {
       if (handleBillingError(error, 'PDF 导出需要专业版', 'PDF 导出为专业版能力，请升级后继续使用。')) {
         return;
       }
-      throw error;
+      toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
     }
   }
 
@@ -848,12 +861,17 @@ export function useEditorView() {
       openUpgradeDialog('版本历史需要专业版', '版本预览与恢复为专业版能力，请升级后继续使用。');
       return;
     }
-    const updatedDocument = await restoreSnapshotMutation.mutateAsync(snapshotId);
-    applyServerDocument(updatedDocument);
-    if (historyOpen.value) {
-      void historyQuery.refetch();
+    try {
+      const updatedDocument = await restoreSnapshotMutation.mutateAsync(snapshotId);
+      applyServerDocument(updatedDocument);
+      if (historyOpen.value) {
+        void historyQuery.refetch();
+      }
+      flashNotice('已恢复历史版本，并创建了一个新版本。', 'info');
+      toast.success('已恢复历史版本');
+    } catch (error) {
+      toast.error('恢复历史版本失败', getErrorDescription(error, '请稍后重试。'));
     }
-    flashNotice('已恢复历史版本，并创建了一个新版本。', 'info');
   }
 
   function handleInsertAfter(type: 'paragraph' | 'list') {
@@ -981,6 +999,7 @@ export function useEditorView() {
     exportMenuOpen,
     exportPreviewOpen,
     outlineCollapsed,
+    isMobileViewport,
     selectedSnapshotId,
     appendComposerOpen,
     appendInstruction,

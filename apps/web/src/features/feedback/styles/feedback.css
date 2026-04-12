@@ -1,8 +1,8 @@
 .feedback-widget {
   position: fixed;
-  right: 22px;
-  bottom: 22px;
-  z-index: 70;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  z-index: 35;
 }
 
 .feedback-trigger {
@@ -14,6 +14,15 @@
   color: #fff;
   font-size: 22px;
   box-shadow: 0 16px 28px rgba(46, 71, 103, 0.22);
+  transition:
+    transform var(--motion-fast) var(--motion-easing),
+    box-shadow var(--motion-fast) var(--motion-easing),
+    background-color var(--motion-fast) var(--motion-easing);
+}
+
+.feedback-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 30px rgba(46, 71, 103, 0.22);
 }
 
 .feedback-panel {
@@ -24,6 +33,8 @@
   padding: 18px;
   display: grid;
   gap: 12px;
+  transform-origin: bottom right;
+  animation: feedback-panel-in var(--motion-base) var(--motion-easing);
 }
 
 .feedback-panel-title {
@@ -72,4 +83,27 @@
 
 .feedback-note.error {
   color: var(--danger);
+}
+
+@keyframes feedback-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 720px) {
+  .feedback-widget {
+    right: 12px;
+    left: 12px;
+  }
+
+  .feedback-panel {
+    width: auto;
+  }
 }

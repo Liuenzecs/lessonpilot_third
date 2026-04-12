@@ -24,6 +24,10 @@
   --success: #2e7b66;
   --shadow: 0 18px 36px rgba(34, 48, 68, 0.08);
   --shadow-soft: 0 10px 24px rgba(34, 48, 68, 0.06);
+  --motion-fast: 0.16s;
+  --motion-base: 0.22s;
+  --motion-slow: 0.32s;
+  --motion-easing: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 * {
@@ -55,6 +59,10 @@ textarea {
 
 button {
   cursor: pointer;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 input,
@@ -143,15 +151,19 @@ textarea:focus {
   border-radius: 16px;
   padding: 12px 18px;
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    opacity 0.18s ease,
-    background-color 0.18s ease,
-    border-color 0.18s ease;
+    transform var(--motion-fast) var(--motion-easing),
+    box-shadow var(--motion-fast) var(--motion-easing),
+    opacity var(--motion-fast) var(--motion-easing),
+    background-color var(--motion-fast) var(--motion-easing),
+    border-color var(--motion-fast) var(--motion-easing);
 }
 
 .button:hover {
   transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
 }
 
 .button:disabled {
@@ -201,6 +213,196 @@ textarea:focus {
 .empty-state {
   padding: 36px;
   text-align: center;
+}
+
+.toast-viewport {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 90;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.toast-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.toast-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  pointer-events: auto;
+}
+
+.toast-card.level-success {
+  border-color: rgba(46, 123, 102, 0.18);
+  background: rgba(249, 255, 252, 0.98);
+}
+
+.toast-card.level-info {
+  border-color: rgba(62, 98, 143, 0.18);
+  background: rgba(250, 252, 255, 0.98);
+}
+
+.toast-card.level-error {
+  border-color: rgba(198, 84, 101, 0.2);
+  background: rgba(255, 250, 250, 0.98);
+}
+
+.toast-card-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.toast-card-title {
+  font-weight: 700;
+}
+
+.toast-card-description {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.toast-card-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.toast-card-button {
+  padding: 8px 12px;
+}
+
+.toast-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.toast-close:hover {
+  background: rgba(62, 98, 143, 0.08);
+}
+
+.toast-list-enter-active,
+.toast-list-leave-active,
+.page-shell-transition-enter-active,
+.page-shell-transition-leave-active {
+  transition:
+    opacity var(--motion-slow) var(--motion-easing),
+    transform var(--motion-slow) var(--motion-easing);
+}
+
+.toast-list-enter-from,
+.toast-list-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.page-shell-transition-enter-from,
+.page-shell-transition-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.page-shell-transition-leave-active {
+  position: relative;
+}
+
+.state-panel {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.state-panel.compact {
+  padding: 24px;
+  border-radius: 24px;
+}
+
+.state-panel.tone-info {
+  border-color: rgba(62, 98, 143, 0.16);
+  background: rgba(248, 251, 255, 0.96);
+}
+
+.state-panel.tone-error {
+  border-color: rgba(198, 84, 101, 0.18);
+  background: rgba(255, 249, 249, 0.96);
+}
+
+.state-panel.tone-empty {
+  background: rgba(248, 245, 239, 0.92);
+}
+
+.state-panel-icon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  background: rgba(62, 98, 143, 0.1);
+  font-size: 32px;
+}
+
+.state-panel.tone-error .state-panel-icon {
+  background: rgba(198, 84, 101, 0.1);
+}
+
+.state-panel-eyebrow {
+  margin: 0;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.state-panel-title {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.1;
+}
+
+.state-panel.compact .state-panel-title {
+  font-size: 22px;
+}
+
+.state-panel-description {
+  margin: 0;
+  max-width: 44rem;
+  color: var(--muted);
+}
+
+.state-panel-actions {
+  justify-content: center;
+}
+
+.state-panel-extra {
+  width: 100%;
+}
+
+.onboarding-target {
+  position: relative;
+  transition:
+    box-shadow var(--motion-base) var(--motion-easing),
+    transform var(--motion-base) var(--motion-easing),
+    border-color var(--motion-base) var(--motion-easing);
+}
+
+.onboarding-target.is-active {
+  border-color: rgba(88, 107, 182, 0.28);
+  box-shadow:
+    0 0 0 4px rgba(112, 126, 208, 0.12),
+    0 18px 36px rgba(34, 48, 68, 0.08);
 }
 
 .workspace-page {
@@ -676,6 +878,14 @@ textarea:focus {
 }
 
 @media (max-width: 720px) {
+  .toast-viewport {
+    top: auto;
+    right: 12px;
+    left: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    width: auto;
+  }
+
   .page-shell {
     padding: 16px;
   }
@@ -712,5 +922,20 @@ textarea:focus {
 
   .wizard-progress-dot {
     flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

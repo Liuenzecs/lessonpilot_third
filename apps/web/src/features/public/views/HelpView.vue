@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 
 import FaqAccordion from '@/features/public/components/FaqAccordion.vue';
 import { helpGroups } from '@/features/public/content';
+import StatePanel from '@/shared/components/StatePanel.vue';
 
 const search = ref('');
 
@@ -21,6 +22,10 @@ const filteredGroups = computed(() => {
     }))
     .filter((group) => group.items.length > 0);
 });
+
+function clearSearch() {
+  search.value = '';
+}
 </script>
 
 <template>
@@ -36,16 +41,31 @@ const filteredGroups = computed(() => {
       </label>
     </section>
 
-    <section
-      v-for="group in filteredGroups"
-      :key="group.title"
-      class="help-group section-card"
+    <StatePanel
+      v-if="filteredGroups.length === 0"
+      icon="🔎"
+      eyebrow="帮助中心"
+      title="没有找到相关问题"
+      description="换个关键词试试，或者先清空搜索看看完整的帮助目录。"
+      tone="empty"
     >
-      <div class="landing-section-head">
-        <p class="page-eyebrow">{{ group.title }}</p>
-        <h2>{{ group.title }}</h2>
-      </div>
-      <FaqAccordion :items="group.items" />
-    </section>
+      <template #actions>
+        <button class="button ghost" type="button" @click="clearSearch">清空搜索</button>
+      </template>
+    </StatePanel>
+
+    <template v-else>
+      <section
+        v-for="group in filteredGroups"
+        :key="group.title"
+        class="help-group section-card"
+      >
+        <div class="landing-section-head">
+          <p class="page-eyebrow">{{ group.title }}</p>
+          <h2>{{ group.title }}</h2>
+        </div>
+        <FaqAccordion :items="group.items" />
+      </section>
+    </template>
   </div>
 </template>

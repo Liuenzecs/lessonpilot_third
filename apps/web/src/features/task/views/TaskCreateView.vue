@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { useAuthStore } from '@/app/stores/auth';
 import { useBillingDialogStore } from '@/app/stores/billing';
 import { getBillingErrorDetail } from '@/features/billing/utils';
+import OnboardingCallout from '@/features/onboarding/components/OnboardingCallout.vue';
+import { useOnboarding } from '@/features/onboarding/composables/useOnboarding';
 import { useCreateTaskMutation } from '@/features/task/composables/useTasks';
-import { SUBJECT_OPTIONS, GRADE_OPTIONS } from '@/shared/constants/options';
 import { ApiError } from '@/shared/api/client';
+import { getErrorDescription } from '@/shared/api/errors';
+import { useToast } from '@/shared/composables/useToast';
+import { GRADE_OPTIONS, SUBJECT_OPTIONS } from '@/shared/constants/options';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const billingDialog = useBillingDialogStore();
 const createTaskMutation = useCreateTaskMutation();
+const toast = useToast();
+const onboarding = useOnboarding(computed(() => authStore.user?.id ?? null));
 
 const step = ref(1);
 const submitError = ref('');
@@ -50,6 +58,16 @@ const canGoNext = computed(() => {
   return Boolean(form.topic.trim());
 });
 
+watch(
+  () => onboarding.currentStep.value,
+  (currentStep) => {
+    if (currentStep === 'workspace_cta') {
+      onboarding.completeThrough('workspace_cta');
+    }
+  },
+  { immediate: true },
+);
+
 async function submit() {
   submitError.value = '';
 
@@ -58,6 +76,8 @@ async function submit() {
       ...form,
       requirements: form.requirements.trim() || null,
     });
+    onboarding.completeThrough('task_create');
+    toast.info('已进入编辑器，正在生成教案…', '你会先看到结构骨架，再逐段收到 AI 内容。');
     await router.push({ name: 'editor', params: { taskId: task.id } });
   } catch (error) {
     const billingError = getBillingErrorDetail(error);
@@ -68,21 +88,25 @@ async function submit() {
         title: '本月免费额度已用完',
         description: billingError.message,
       });
+      toast.info('本月免费额度已用完', billingError.message);
       return;
     }
 
     if (error instanceof ApiError && error.status === 401) {
       submitError.value = '登录状态已失效，请重新登录后再试。';
+      toast.error('登录状态已失效', '请重新登录后再创建教案。');
       return;
     }
+
     submitError.value = '创建备课任务失败，请稍后重试。';
+    toast.error('创建备课任务失败', getErrorDescription(error, '请稍后重试。'));
   }
 }
 </script>
 
 <template>
   <div class="page-shell wizard-page">
-    <div class="wizard-frame app-card">
+    <div class="wizard-frame app-card onboarding-target" :class="{ 'is-active': onboarding.isActive('task_create') }">
       <div class="wizard-head">
         <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
           返回备课台
@@ -95,6 +119,18 @@ async function submit() {
           </div>
         </div>
       </div>
+
+      <OnboardingCallout
+        v-if="onboarding.isActive('task_create')"
+        step-label="2 / 4"
+        title="创建向导只保留 3 步"
+        description="按学科、年级、课题依次完成即可。提交后会直接跳进编辑器，不会多一层生成中页面。"
+      >
+        <template #actions>
+          <button class="button primary" type="button" @click="onboarding.complete('task_create')">我知道了</button>
+          <button class="button ghost" type="button" @click="onboarding.skipAll()">跳过引导</button>
+        </template>
+      </OnboardingCallout>
 
       <section class="wizard-content">
         <div class="wizard-copy">

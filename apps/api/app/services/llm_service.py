@@ -62,7 +62,7 @@ class AppendContext:
 
 def _normalize_block_payload(block: dict) -> dict:
     normalized = dict(block)
-    normalized.setdefault("id", str(uuid4()))
+    normalized["id"] = str(uuid4())
     normalized.setdefault("status", "pending")
     normalized.setdefault("source", "ai")
 

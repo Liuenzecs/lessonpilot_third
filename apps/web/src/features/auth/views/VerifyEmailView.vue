@@ -4,9 +4,12 @@ import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useVerifyEmailMutation } from '@/features/auth/composables/useAuth';
+import { getAuthErrorMessage } from '@/features/auth/utils/error';
+import { useToast } from '@/shared/composables/useToast';
 
 const authStore = useAuthStore();
 const verifyEmailMutation = useVerifyEmailMutation();
+const toast = useToast();
 const status = ref<'idle' | 'success' | 'error'>('idle');
 
 const token = computed(() => {
@@ -19,6 +22,7 @@ const token = computed(() => {
 async function verify() {
   if (!token.value) {
     status.value = 'error';
+    toast.error('验证链接无效', '请回到账户设置重新发送验证邮件。');
     return;
   }
 
@@ -28,8 +32,10 @@ async function verify() {
       authStore.setUser(user);
     }
     status.value = 'success';
-  } catch {
+    toast.success('邮箱验证成功', '现在可以继续进入备课台。');
+  } catch (error) {
     status.value = 'error';
+    toast.error('邮箱验证失败', getAuthErrorMessage(error, '验证链接无效或已过期。'));
   }
 }
 

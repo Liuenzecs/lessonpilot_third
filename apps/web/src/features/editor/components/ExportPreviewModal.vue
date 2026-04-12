@@ -4,6 +4,7 @@ import type { Block } from '@lessonpilot/shared-types';
 import type { TaskRecord } from '@/features/task/types';
 
 import BlockPreview from '@/features/editor/components/BlockPreview.vue';
+import StatePanel from '@/shared/components/StatePanel.vue';
 
 defineProps<{
   open: boolean;
@@ -36,8 +37,17 @@ defineEmits<{
         </div>
 
         <div class="export-preview-body">
-          <BlockPreview v-for="block in blocks" :key="block.id" :block="block" />
-          <div v-if="blocks.length === 0" class="preview-hint">当前还没有已确认内容可以导出。</div>
+          <template v-if="blocks.length">
+            <BlockPreview v-for="block in blocks" :key="block.id" :block="block" />
+          </template>
+          <StatePanel
+            v-else
+            icon="📄"
+            title="当前还没有已确认内容可以导出"
+            description="先接受 AI 建议或补充正文内容，再回来预览最终文档效果。"
+            tone="empty"
+            compact
+          />
         </div>
       </div>
     </div>

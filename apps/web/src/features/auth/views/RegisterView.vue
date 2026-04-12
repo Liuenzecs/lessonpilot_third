@@ -5,11 +5,13 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/app/stores/auth';
 import { useRegisterMutation } from '@/features/auth/composables/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/utils/error';
+import { useToast } from '@/shared/composables/useToast';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const registerMutation = useRegisterMutation();
+const toast = useToast();
 const showPassword = ref(false);
 const form = reactive({
   name: '',
@@ -31,6 +33,7 @@ async function submit() {
   try {
     const response = await registerMutation.mutateAsync({ ...form });
     authStore.setSession(response.access_token, response.user);
+    toast.success('注册成功', '已为你打开备课台，可以开始第一次备课了。');
     if (route.query.upgrade === '1') {
       await router.push({
         name: 'tasks',
@@ -43,7 +46,7 @@ async function submit() {
     }
     await router.push({ name: 'tasks' });
   } catch {
-    // Inline error state is enough here.
+    // Inline error state remains the source of truth for form validation.
   }
 }
 </script>

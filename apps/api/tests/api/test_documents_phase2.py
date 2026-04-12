@@ -128,6 +128,7 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
     children = rewritten_document["content"]["blocks"][0]["children"]
     assert children[0]["id"] == paragraph_id
     assert children[1]["status"] == "pending"
+    assert children[1]["id"] != paragraph_id
     assert children[1]["suggestion"]["kind"] == "replace"
     assert children[1]["suggestion"]["targetBlockId"] == paragraph_id
 
@@ -160,6 +161,7 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
         and child["suggestion"]["action"] == "polish"
     ]
     assert selection_pending
+    assert selection_pending[0]["id"] != paragraph_id
     assert selection_pending[0]["suggestion"]["mode"] == "selection"
     assert selection_pending[0]["suggestion"]["selectionText"] == "原始段落内容"
 

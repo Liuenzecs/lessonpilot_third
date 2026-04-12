@@ -49,6 +49,15 @@ function getToken(): string | null {
   }
 }
 
+async function parseErrorBody(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    return await response.json();
+  }
+  const text = await response.text();
+  return text ? { detail: text } : { detail: '' };
+}
+
 export async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -63,18 +72,23 @@ export async function request<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(buildApiUrl(path), {
-    ...init,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildApiUrl(path), {
+      ...init,
+      headers,
+    });
+  } catch (error) {
+    throw new ApiError('Network request failed', 0, {
+      detail: error instanceof Error ? error.message : 'Network request failed',
+    });
+  }
+
   if (!response.ok) {
     if (response.status === 401) {
       handleUnauthorized(path);
     }
-    const contentType = response.headers.get('content-type') ?? '';
-    const errorBody = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text();
+    const errorBody = await parseErrorBody(response);
     throw new ApiError(`Request failed with status ${response.status}`, response.status, errorBody);
   }
 
@@ -95,15 +109,20 @@ export async function download(path: string, init: RequestInit = {}): Promise<Bl
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(buildApiUrl(path), { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(buildApiUrl(path), { ...init, headers });
+  } catch (error) {
+    throw new ApiError('Network request failed', 0, {
+      detail: error instanceof Error ? error.message : 'Network request failed',
+    });
+  }
+
   if (!response.ok) {
     if (response.status === 401) {
       handleUnauthorized(path);
     }
-    const contentType = response.headers.get('content-type') ?? '';
-    const errorBody = contentType.includes('application/json')
-      ? await response.json()
-      : await response.text();
+    const errorBody = await parseErrorBody(response);
     throw new ApiError(`Download failed with status ${response.status}`, response.status, errorBody);
   }
   return await response.blob();

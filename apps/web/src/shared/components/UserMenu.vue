@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useLogoutMutation } from '@/features/auth/composables/useAuth';
+import { useToast } from '@/shared/composables/useToast';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const logoutMutation = useLogoutMutation();
+const toast = useToast();
 
 const open = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
@@ -17,6 +19,12 @@ const userInitial = computed(() => userName.value.slice(0, 1).toUpperCase());
 
 function handleOutsideClick(event: MouseEvent) {
   if (!rootRef.value?.contains(event.target as Node)) {
+    open.value = false;
+  }
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
     open.value = false;
   }
 }
@@ -32,6 +40,7 @@ async function logout() {
 
   authStore.clearSession();
   open.value = false;
+  toast.info('你已退出登录');
   await router.push({ name: 'login' });
 }
 
@@ -42,10 +51,12 @@ async function goToSettings() {
 
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick);
+  window.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleOutsideClick);
+  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 

@@ -5,11 +5,13 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/app/stores/auth';
 import { useLoginMutation } from '@/features/auth/composables/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/utils/error';
+import { useToast } from '@/shared/composables/useToast';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const loginMutation = useLoginMutation();
+const toast = useToast();
 const showPassword = ref(false);
 const form = reactive({
   email: '',
@@ -37,6 +39,7 @@ async function submit() {
   try {
     const response = await loginMutation.mutateAsync({ ...form });
     authStore.setSession(response.access_token, response.user);
+    toast.success('登录成功', '欢迎回到备课台。');
     if (route.query.upgrade === '1') {
       await router.push({
         name: 'tasks',
@@ -49,7 +52,7 @@ async function submit() {
     }
     await router.push({ name: 'tasks' });
   } catch {
-    // Inline error state is enough here.
+    // Inline error state remains the source of truth for credential issues.
   }
 }
 </script>

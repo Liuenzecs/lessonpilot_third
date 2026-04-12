@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue';
+
+import { useAuthStore } from '@/app/stores/auth';
 import EditorQuickActionsBar from '@/features/editor/components/EditorQuickActionsBar.vue';
 import EditorSectionCard from '@/features/editor/components/EditorSectionCard.vue';
 import EditorSectionSkeleton from '@/features/editor/components/EditorSectionSkeleton.vue';
@@ -7,12 +10,20 @@ import EditorStatusBanner from '@/features/editor/components/EditorStatusBanner.
 import ExportPreviewModal from '@/features/editor/components/ExportPreviewModal.vue';
 import HistoryDrawer from '@/features/editor/components/HistoryDrawer.vue';
 import { useEditorView } from '@/features/editor/composables/useEditorView';
+import OnboardingCallout from '@/features/onboarding/components/OnboardingCallout.vue';
+import { useOnboarding } from '@/features/onboarding/composables/useOnboarding';
+import { getAppErrorState } from '@/shared/api/errors';
+import StatePanel from '@/shared/components/StatePanel.vue';
 
 import '@/features/editor/styles/editor.css';
+
+const authStore = useAuthStore();
+const onboarding = useOnboarding(computed(() => authStore.user?.id ?? null));
 
 const {
   router,
   taskQuery,
+  documentsQuery,
   draftDocument,
   saveState,
   streamError,
@@ -22,6 +33,7 @@ const {
   exportMenuOpen,
   exportPreviewOpen,
   outlineCollapsed,
+  isMobileViewport,
   selectedSnapshotId,
   appendComposerOpen,
   appendInstruction,
@@ -68,6 +80,50 @@ const {
   cancelAppendComposer,
   openHistoryDrawer,
 } = useEditorView();
+
+watch(
+  () => onboarding.currentStep.value,
+  (currentStep) => {
+    if (currentStep === 'workspace_cta') {
+      onboarding.completeThrough('workspace_cta');
+      return;
+    }
+    if (currentStep === 'task_create') {
+      onboarding.completeThrough('task_create');
+    }
+  },
+  { immediate: true },
+);
+
+const editorErrorState = computed(() => {
+  if (draftDocument.value) {
+    return null;
+  }
+
+  const error = taskQuery.error.value ?? documentsQuery.error.value;
+  if (!error) {
+    return null;
+  }
+
+  return getAppErrorState(error, {
+    defaultTitle: '教案暂时打不开',
+    defaultDescription: '你可以重试，或者先回到备课台继续其他工作。',
+  });
+});
+
+const showOutlineGuide = computed(
+  () => onboarding.isActive('editor_outline') && !isMobileViewport.value,
+);
+const showActionsGuide = computed(
+  () => onboarding.isActive('editor_actions') && !isMobileViewport.value,
+);
+const showMissingState = computed(
+  () => !showInitialSkeleton.value && !draftDocument.value && !editorErrorState.value,
+);
+
+function findSectionIdByTitle(sectionTitle: string) {
+  return sections.value.find((section) => section.title === sectionTitle)?.id ?? null;
+}
 </script>
 
 <template>
@@ -87,11 +143,56 @@ const {
       @retry-save="persistDocument"
     />
 
-    <div v-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
-      <aside v-if="!outlineCollapsed" class="outline-panel app-card">
+    <StatePanel
+      v-if="editorErrorState"
+      icon="🧾"
+      eyebrow="编辑器"
+      :title="editorErrorState.title"
+      :description="editorErrorState.description"
+      tone="error"
+    >
+      <template #actions>
+        <button class="button primary" type="button" @click="refreshFromServer">重试</button>
+        <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">返回备课台</button>
+        <button class="button ghost" type="button" @click="router.push({ name: 'help' })">去帮助中心</button>
+      </template>
+    </StatePanel>
+
+    <StatePanel
+      v-else-if="isMobileViewport"
+      icon="📱"
+      eyebrow="编辑器"
+      title="请在平板或电脑上使用编辑器"
+      description="为了保证结构导航、内联 AI 待确认和导出预览的体验，手机端不再强行压缩编辑器。"
+      tone="info"
+    >
+      <template #actions>
+        <button class="button primary" type="button" @click="router.push({ name: 'tasks' })">回到备课台</button>
+        <button class="button ghost" type="button" @click="router.push({ name: 'help' })">查看帮助</button>
+      </template>
+    </StatePanel>
+
+    <div v-else-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
+      <aside
+        v-if="!outlineCollapsed"
+        class="outline-panel app-card onboarding-target"
+        :class="{ 'is-active': showOutlineGuide }"
+      >
         <div class="outline-panel-head">
           <h3 style="margin: 0">大纲导航</h3>
         </div>
+
+        <OnboardingCallout
+          v-if="showOutlineGuide"
+          step-label="3 / 4"
+          title="先熟悉这份教案的结构骨架"
+          description="左侧会高亮当前可见章节，也能一键跳转。这样老师一眼就知道整份教案的结构在哪里。"
+        >
+          <template #actions>
+            <button class="button primary" type="button" @click="onboarding.complete('editor_outline')">我知道了</button>
+            <button class="button ghost" type="button" @click="onboarding.skipAll()">跳过引导</button>
+          </template>
+        </OnboardingCallout>
 
         <div class="outline-list">
           <button
@@ -99,16 +200,10 @@ const {
             :key="sectionTitle"
             class="outline-item"
             :class="{
-              active:
-                !showInitialSkeleton &&
-                sections.find((section) => section.title === sectionTitle)?.id === highlightedSectionId,
+              active: !showInitialSkeleton && findSectionIdByTitle(sectionTitle) === highlightedSectionId,
             }"
             type="button"
-            @click="
-              !showInitialSkeleton &&
-                sections.find((section) => section.title === sectionTitle) &&
-                scrollToSection(sections.find((section) => section.title === sectionTitle)!.id)
-            "
+            @click="!showInitialSkeleton && findSectionIdByTitle(sectionTitle) && scrollToSection(findSectionIdByTitle(sectionTitle)!)"
           >
             <span class="outline-dot" />
             <span>{{ sectionTitle }}</span>
@@ -117,6 +212,18 @@ const {
       </aside>
 
       <main class="editor-panel app-card">
+        <OnboardingCallout
+          v-if="showOutlineGuide && outlineCollapsed"
+          step-label="3 / 4"
+          title="结构导航现在是折叠的"
+          description="点击左上角的大纲按钮可以展开左侧导航，快速跳转到任意章节。"
+        >
+          <template #actions>
+            <button class="button primary" type="button" @click="outlineCollapsed = false">展开大纲</button>
+            <button class="button ghost" type="button" @click="onboarding.complete('editor_outline')">我知道了</button>
+          </template>
+        </OnboardingCallout>
+
         <EditorStatusBanner
           :is-generating="generationProgress.isGenerating"
           :completed="generationProgress.completed"
@@ -196,24 +303,52 @@ const {
           </div>
         </div>
 
-        <EditorQuickActionsBar
+        <div
           v-if="draftDocument"
-          :current-section-title="currentSectionTitle"
-          :append-open="appendComposerOpen"
-          :append-instruction="appendInstruction"
-          :append-loading="appendState.isAppending"
-          :disabled="!currentSectionId"
-          @add-paragraph="handleBottomAddParagraph"
-          @add-exercise="handleBottomAddExercise"
-          @toggle-append="toggleAppendComposer"
-          @update:append-instruction="appendInstruction = $event"
-          @submit-append="startAppend"
-          @cancel-append="cancelAppendComposer"
-        />
+          class="onboarding-target"
+          :class="{ 'is-active': showActionsGuide }"
+        >
+          <OnboardingCallout
+            v-if="showActionsGuide"
+            step-label="4 / 4"
+            title="顶部导出、内联 AI 和底部快捷栏都在这一屏完成"
+            description="顶部能导出和查看历史，正文里的 AI 建议会以内联待确认卡片出现，底部快捷栏负责添加段落、题组和 AI 补充内容。"
+          >
+            <template #actions>
+              <button class="button primary" type="button" @click="onboarding.complete('editor_actions')">开始使用编辑器</button>
+              <button class="button ghost" type="button" @click="onboarding.skipAll()">跳过引导</button>
+            </template>
+          </OnboardingCallout>
+
+          <EditorQuickActionsBar
+            :current-section-title="currentSectionTitle"
+            :append-open="appendComposerOpen"
+            :append-instruction="appendInstruction"
+            :append-loading="appendState.isAppending"
+            :disabled="!currentSectionId"
+            @add-paragraph="handleBottomAddParagraph"
+            @add-exercise="handleBottomAddExercise"
+            @toggle-append="toggleAppendComposer"
+            @update:append-instruction="appendInstruction = $event"
+            @submit-append="startAppend"
+            @cancel-append="cancelAppendComposer"
+          />
+        </div>
       </main>
     </div>
 
-    <div v-else class="app-card empty-state">没有找到教案文档。</div>
+    <StatePanel
+      v-else-if="showMissingState"
+      icon="🗂"
+      eyebrow="编辑器"
+      title="没有找到这份教案文档"
+      description="它可能已被删除，或者当前任务还没有创建成功。"
+      tone="empty"
+    >
+      <template #actions>
+        <button class="button primary" type="button" @click="router.push({ name: 'tasks' })">返回备课台</button>
+      </template>
+    </StatePanel>
 
     <HistoryDrawer
       :open="historyOpen"

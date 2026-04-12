@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { onBeforeUnmount, reactive, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { useForgotPasswordMutation } from '@/features/auth/composables/useAuth';
+import { getAuthErrorMessage } from '@/features/auth/utils/error';
+import { useToast } from '@/shared/composables/useToast';
 
 const forgotPasswordMutation = useForgotPasswordMutation();
+const toast = useToast();
 const form = reactive({ email: '' });
 const sentTo = ref('');
 const cooldown = ref(0);
 let timerId: number | null = null;
-
-const errorMessage = computed(() => {
-  if (!forgotPasswordMutation.error.value) {
-    return '';
-  }
-  return '发送重置链接失败，请稍后重试。';
-});
 
 function startCooldown() {
   cooldown.value = 60;
@@ -31,10 +27,23 @@ function startCooldown() {
   }, 1000);
 }
 
+onBeforeUnmount(() => {
+  if (timerId) {
+    window.clearInterval(timerId);
+    timerId = null;
+  }
+});
+
 async function submit() {
-  await forgotPasswordMutation.mutateAsync({ email: form.email.trim() });
-  sentTo.value = form.email.trim();
-  startCooldown();
+  const email = form.email.trim();
+  try {
+    await forgotPasswordMutation.mutateAsync({ email });
+    sentTo.value = email;
+    startCooldown();
+    toast.success('重置链接已发送', `请检查邮箱 ${email}。`);
+  } catch (error) {
+    toast.error('发送重置链接失败', getAuthErrorMessage(error, '请稍后重试。'));
+  }
 }
 </script>
 
@@ -61,8 +70,6 @@ async function submit() {
         {{ cooldown > 0 ? `重新发送（${cooldown}s）` : '重新发送' }}
       </button>
     </div>
-
-    <p v-if="errorMessage" class="feedback">{{ errorMessage }}</p>
     <p class="subtitle">
       想起来了？
       <RouterLink :to="{ name: 'login' }" class="auth-link">返回登录</RouterLink>

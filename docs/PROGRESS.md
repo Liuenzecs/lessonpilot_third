@@ -362,3 +362,63 @@
   - `pnpm --dir apps/web lint`：passed（保留现有 Vue 模板格式 warnings，无 error）
   - `pnpm --dir apps/web build`：passed
 - Status: DONE
+
+## [Phase 5] — UX 打磨开始实施
+- 完成日期：2026-04-12
+- 完成内容：
+  - 按 `docs/GOAL.md` Phase 5 清单与 accepted advice 重新开启 UX 打磨，实现统一 Toast、错误归一模型、共享状态面板、轻量路由/组件动效与 `prefers-reduced-motion` 支持
+  - 为备课台、创建向导、编辑器接入一次性热点导览，并补齐首登空状态、搜索无结果、设置页空记录、帮助中心无结果、导出预览空状态与页面骨架屏
+  - 新增独立的 `404 / 500 / 网络错误` 页面，收口私域页面的整页错误态、页面内重试路径、反馈悬浮按钮行为以及编辑器手机端友好提示
+  - 将 Word 导出升级为模板化纸面排版，并同步提升 PDF/导出预览的样式层级与 confirmed-only 导出质量
+  - 为忘记密码、重置密码、邮箱验证补齐全局 Toast 操作反馈，使认证链路与新的 UX 基础设施保持一致
+  - 当前实现已完成，等待用户手动验收；在验收通过前不将 Phase 5 标记为 `DONE`
+- 关键文件：
+  - `apps/web/src/shared/api/errors.ts`
+  - `apps/web/src/shared/composables/useToast.ts`
+  - `apps/web/src/shared/components/ToastViewport.vue`
+  - `apps/web/src/shared/components/StatePanel.vue`
+  - `apps/web/src/features/onboarding/composables/useOnboarding.ts`
+  - `apps/web/src/features/onboarding/components/OnboardingCallout.vue`
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/settings/views/SettingsView.vue`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/composables/useEditorView.ts`
+  - `apps/web/src/features/public/views/ServerErrorView.vue`
+  - `apps/web/src/features/public/views/NetworkErrorView.vue`
+  - `apps/web/src/features/feedback/components/FeedbackWidget.vue`
+  - `apps/api/app/services/export_service.py`
+  - `apps/api/tests/api/test_tasks.py`
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（保留现有 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：29 passed
+- Status: IN PROGRESS
+
+## [Phase 5] — 用户验收通过
+- 完成日期：2026-04-12
+- 完成内容：
+  - 用户已手动验收通过 Phase 5，确认全局 Toast、错误页、热点导览、空状态、响应式收口、反馈入口以及 Word 导出成品排版符合本轮文档要求
+  - 修复验收过程中发现的两个回归问题：选中文本 `AI 扩写` 后接受无效，以及导出预览模态无法向下滚动显示完整内容
+  - 同步更新 `GOAL.md`，将 Phase 5 标记为完成
+  - 将 `NEXT.md` 收口为“等待用户指示”，在没有新指令前不自动进入 Phase 6
+- 关键文件：
+  - `apps/web/src/shared/utils/content.ts`
+  - `apps/api/app/services/llm_service.py`
+  - `apps/api/tests/api/test_documents_phase2.py`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `docs/GOAL.md`
+  - `docs/PROGRESS.md`
+  - `docs/NEXT.md`
+- 验证结果：
+  - 用户手动验收：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（保留现有 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：29 passed
+- Status: DONE

@@ -11,7 +11,17 @@ import './shared/styles/main.css';
 
 const app = createApp(App);
 const pinia = createPinia();
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 const router = createAppRouter(pinia);
 
 async function bootstrap() {

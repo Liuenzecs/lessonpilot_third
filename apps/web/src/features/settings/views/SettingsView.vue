@@ -20,11 +20,15 @@ import {
   useUpdateAccountMutation,
 } from '@/features/settings/composables/useAccount';
 import type { BillingOrderRecord } from '@/features/settings/types';
+import { getAppErrorState, getErrorDescription } from '@/shared/api/errors';
+import StatePanel from '@/shared/components/StatePanel.vue';
+import { useToast } from '@/shared/composables/useToast';
 
 import '@/features/settings/styles/settings.css';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const toast = useToast();
 const accountQuery = useAccount();
 const subscriptionQuery = useSubscription();
 const ordersQuery = useSubscriptionOrders();
@@ -55,10 +59,6 @@ const invoiceForm = reactive({
   email: '',
   remark: '',
 });
-const profileMessage = ref('');
-const passwordMessage = ref('');
-const subscriptionMessage = ref('');
-const invoiceMessage = ref('');
 const deleteDialogOpen = ref(false);
 const deleteConfirmText = ref('');
 const deleteError = ref('');
@@ -106,6 +106,27 @@ const subscription = computed(() => subscriptionQuery.data.value);
 const orders = computed(() => ordersQuery.data.value?.items ?? []);
 const invoiceRequests = computed(() => invoiceRequestsQuery.data.value?.items ?? []);
 const paidOrders = computed(() => orders.value.filter((order) => order.status === 'paid'));
+const settingsErrorState = computed(() => {
+  if (account.value || subscription.value) {
+    return null;
+  }
+
+  const error = accountQuery.error.value ?? subscriptionQuery.error.value;
+  if (!error) {
+    return null;
+  }
+
+  return getAppErrorState(error, {
+    defaultTitle: '账户设置暂时打不开',
+    defaultDescription: '你可以重试，或者先去帮助中心看看。',
+  });
+});
+const showProfileSkeleton = computed(() => activeTab.value === 'profile' && accountQuery.isLoading.value && !account.value);
+const showPasswordSkeleton = computed(() => activeTab.value === 'password' && accountQuery.isLoading.value && !account.value);
+const showSubscriptionSkeleton = computed(
+  () => activeTab.value === 'subscription' && subscriptionQuery.isLoading.value && !subscription.value,
+);
+const showDataSkeleton = computed(() => activeTab.value === 'data' && accountQuery.isLoading.value && !account.value);
 const usagePercent = computed(() => {
   if (!subscription.value?.monthly_task_limit) {
     return 0;
@@ -116,11 +137,16 @@ const usagePercent = computed(() => {
   );
 });
 const isTrialEligible = computed(
-  () => Boolean(subscription.value && subscription.value.status !== 'trialing' && subscription.value.status !== 'active' && !subscription.value.trial_used),
+  () =>
+    Boolean(
+      subscription.value &&
+        subscription.value.status !== 'trialing' &&
+        subscription.value.status !== 'active' &&
+        !subscription.value.trial_used,
+    ),
 );
 
 async function saveProfile() {
-  profileMessage.value = '';
   const payload: { name?: string; email?: string } = {};
   if (profileForm.name.trim() !== account.value?.name) {
     payload.name = profileForm.name.trim();
@@ -129,83 +155,117 @@ async function saveProfile() {
     payload.email = profileForm.email.trim();
   }
   if (!payload.name && !payload.email) {
-    profileMessage.value = '没有需要保存的更改。';
+    toast.info('没有需要保存的更改');
     return;
   }
-  const updated = await updateAccountMutation.mutateAsync(payload);
-  authStore.setUser(updated);
-  profileMessage.value = payload.email ? '个人信息已保存，邮箱已重新进入待验证状态。' : '个人信息已保存。';
+
+  try {
+    const updated = await updateAccountMutation.mutateAsync(payload);
+    authStore.setUser(updated);
+    toast.success(
+      '个人信息已保存',
+      payload.email ? '邮箱已重新进入待验证状态，请留意新的验证邮件。' : '新的资料已经同步到当前账户。',
+    );
+  } catch (error) {
+    toast.error('保存个人信息失败', getErrorDescription(error, '请稍后重试。'));
+  }
 }
 
 async function resendVerification() {
-  profileMessage.value = '';
-  const response = await resendVerificationMutation.mutateAsync();
-  profileMessage.value = response.message;
+  try {
+    const response = await resendVerificationMutation.mutateAsync();
+    toast.success('验证邮件已发送', response.message);
+  } catch (error) {
+    toast.error('发送验证邮件失败', getErrorDescription(error, '请稍后重试。'));
+  }
 }
 
 async function changePassword() {
-  passwordMessage.value = '';
-  await changePasswordMutation.mutateAsync(passwordForm);
-  passwordMessage.value = '密码已更新。';
-  passwordForm.current_password = '';
-  passwordForm.new_password = '';
-  passwordForm.confirm_password = '';
+  try {
+    await changePasswordMutation.mutateAsync(passwordForm);
+    toast.success('密码已更新');
+    passwordForm.current_password = '';
+    passwordForm.new_password = '';
+    passwordForm.confirm_password = '';
+  } catch (error) {
+    toast.error('修改密码失败', getErrorDescription(error, '请检查当前密码和新密码后重试。'));
+  }
 }
 
 async function startTrial() {
-  subscriptionMessage.value = '';
-  const response = await startTrialMutation.mutateAsync();
-  subscriptionMessage.value = response.message;
+  try {
+    const response = await startTrialMutation.mutateAsync();
+    toast.success('试用已开启', response.message);
+  } catch (error) {
+    toast.error('开启试用失败', getErrorDescription(error, '请稍后重试。'));
+  }
 }
 
 async function checkoutOrRenew() {
-  subscriptionMessage.value = '';
-  const payload = {
-    plan: 'professional' as const,
-    billing_cycle: billingCycle.value,
-    channel: channel.value,
-  };
-  const mutation = subscription.value?.status === 'active' ? renewSubscriptionMutation : checkoutMutation;
-  const response = await mutation.mutateAsync(payload);
-  if (response.order?.checkout_url && response.order.status === 'pending') {
-    window.open(response.order.checkout_url, '_blank', 'noopener,noreferrer');
+  try {
+    const payload = {
+      plan: 'professional' as const,
+      billing_cycle: billingCycle.value,
+      channel: channel.value,
+    };
+    const mutation = subscription.value?.status === 'active' ? renewSubscriptionMutation : checkoutMutation;
+    const response = await mutation.mutateAsync(payload);
+    if (response.order?.checkout_url && response.order.status === 'pending') {
+      window.open(response.order.checkout_url, '_blank', 'noopener,noreferrer');
+    }
+    toast.success(
+      subscription.value?.status === 'active' ? '续费流程已发起' : '支付流程已发起',
+      response.message,
+    );
+  } catch (error) {
+    toast.error('发起支付失败', getErrorDescription(error, '请稍后重试。'));
   }
-  subscriptionMessage.value = response.message;
 }
 
 async function submitInvoiceRequest() {
-  invoiceMessage.value = '';
-  await createInvoiceRequestMutation.mutateAsync({
-    order_id: invoiceForm.order_id,
-    title: invoiceForm.title.trim(),
-    tax_number: invoiceForm.tax_number.trim(),
-    email: invoiceForm.email.trim(),
-    remark: invoiceForm.remark.trim() || null,
-  });
-  invoiceMessage.value = '发票申请已提交，我们会通过邮件联系你。';
-  invoiceForm.title = '';
-  invoiceForm.tax_number = '';
-  invoiceForm.remark = '';
+  try {
+    await createInvoiceRequestMutation.mutateAsync({
+      order_id: invoiceForm.order_id,
+      title: invoiceForm.title.trim(),
+      tax_number: invoiceForm.tax_number.trim(),
+      email: invoiceForm.email.trim(),
+      remark: invoiceForm.remark.trim() || null,
+    });
+    toast.success('发票申请已提交', '我们会通过邮件联系你。');
+    invoiceForm.title = '';
+    invoiceForm.tax_number = '';
+    invoiceForm.remark = '';
+  } catch (error) {
+    toast.error('提交发票申请失败', getErrorDescription(error, '请稍后重试。'));
+  }
 }
 
 async function exportAccountData() {
-  const blob = await exportAccountMutation.mutateAsync();
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'lessonpilot-account-export.json';
-  anchor.click();
-  URL.revokeObjectURL(url);
+  try {
+    const blob = await exportAccountMutation.mutateAsync();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'lessonpilot-account-export.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success('数据导出已开始');
+  } catch (error) {
+    toast.error('导出数据失败', getErrorDescription(error, '请稍后重试。'));
+  }
 }
 
 async function confirmDeleteAccount() {
   deleteError.value = '';
+
   try {
     await deleteAccountMutation.mutateAsync({ confirm_text: deleteConfirmText.value });
     authStore.clearSession();
+    toast.success('账户已删除');
     await router.push({ name: 'landing' });
   } catch {
     deleteError.value = '删除账户失败，请确认你已经输入 DELETE。';
+    toast.error('删除账户失败', '请确认你已经输入 DELETE。');
   }
 }
 
@@ -240,7 +300,28 @@ function orderStatusText(order: BillingOrderRecord) {
       </aside>
 
       <div class="settings-content">
-        <section v-if="activeTab === 'profile'" class="settings-panel app-card">
+        <StatePanel
+          v-if="settingsErrorState"
+          icon="⚙"
+          eyebrow="账户设置"
+          :title="settingsErrorState.title"
+          :description="settingsErrorState.description"
+          tone="error"
+        >
+          <template #actions>
+            <button class="button primary" type="button" @click="accountQuery.refetch()">重试</button>
+            <button class="button ghost" type="button" @click="router.push({ name: 'help' })">去帮助中心</button>
+          </template>
+        </StatePanel>
+
+        <section v-else-if="showProfileSkeleton || showPasswordSkeleton || showSubscriptionSkeleton || showDataSkeleton" class="settings-panel app-card settings-skeleton-panel">
+          <div class="settings-skeleton-line short" />
+          <div class="settings-skeleton-line" />
+          <div class="settings-skeleton-card" />
+          <div class="settings-skeleton-card" />
+        </section>
+
+        <section v-else-if="activeTab === 'profile'" class="settings-panel app-card">
           <h2>个人信息</h2>
           <label class="field">
             <span>姓名</span>
@@ -267,7 +348,6 @@ function orderStatusText(order: BillingOrderRecord) {
           <button class="button primary" type="button" :disabled="updateAccountMutation.isPending.value" @click="saveProfile">
             {{ updateAccountMutation.isPending.value ? '保存中...' : '保存个人信息' }}
           </button>
-          <p v-if="profileMessage" class="feedback success">{{ profileMessage }}</p>
         </section>
 
         <section v-else-if="activeTab === 'password'" class="settings-panel app-card">
@@ -292,7 +372,6 @@ function orderStatusText(order: BillingOrderRecord) {
           >
             {{ changePasswordMutation.isPending.value ? '提交中...' : '修改密码' }}
           </button>
-          <p v-if="passwordMessage" class="feedback success">{{ passwordMessage }}</p>
         </section>
 
         <section v-else-if="activeTab === 'subscription'" class="settings-panel app-card">
@@ -359,8 +438,6 @@ function orderStatusText(order: BillingOrderRecord) {
                 }}
               </button>
             </div>
-
-            <p v-if="subscriptionMessage" class="feedback success">{{ subscriptionMessage }}</p>
           </div>
 
           <div class="subscription-usage">
@@ -379,8 +456,18 @@ function orderStatusText(order: BillingOrderRecord) {
 
           <div class="data-card app-card">
             <h3>支付记录</h3>
-            <div v-if="ordersQuery.isLoading.value" class="subtitle">正在加载支付记录...</div>
-            <div v-else-if="orders.length === 0" class="subtitle">还没有支付记录。</div>
+            <div v-if="ordersQuery.isLoading.value" class="settings-skeleton-stack">
+              <div class="settings-skeleton-card" />
+              <div class="settings-skeleton-card" />
+            </div>
+            <StatePanel
+              v-else-if="orders.length === 0"
+              icon="🧾"
+              title="还没有支付记录"
+              description="当你完成试用支付或续费后，记录会显示在这里。"
+              tone="empty"
+              compact
+            />
             <div v-else class="billing-records">
               <div v-for="order in orders" :key="order.id" class="billing-record-row">
                 <div>
@@ -397,7 +484,14 @@ function orderStatusText(order: BillingOrderRecord) {
 
           <div class="data-card app-card">
             <h3>发票申请</h3>
-            <div v-if="paidOrders.length === 0" class="subtitle">完成支付后即可在这里提交发票申请。</div>
+            <StatePanel
+              v-if="paidOrders.length === 0"
+              icon="📬"
+              title="完成支付后可申请发票"
+              description="先完成一笔已支付订单，发票申请入口就会出现在这里。"
+              tone="empty"
+              compact
+            />
             <template v-else>
               <label class="field">
                 <span>关联订单</span>
@@ -431,10 +525,20 @@ function orderStatusText(order: BillingOrderRecord) {
               >
                 {{ createInvoiceRequestMutation.isPending.value ? '提交中...' : '提交发票申请' }}
               </button>
-              <p v-if="invoiceMessage" class="feedback success">{{ invoiceMessage }}</p>
             </template>
 
-            <div v-if="invoiceRequests.length" class="invoice-request-list">
+            <div v-if="invoiceRequestsQuery.isLoading.value" class="settings-skeleton-stack">
+              <div class="settings-skeleton-card" />
+            </div>
+            <StatePanel
+              v-else-if="paidOrders.length > 0 && invoiceRequests.length === 0"
+              icon="📄"
+              title="还没有发票申请记录"
+              description="提交完成后，发票处理进度会出现在这里。"
+              tone="empty"
+              compact
+            />
+            <div v-else-if="invoiceRequests.length" class="invoice-request-list">
               <div v-for="item in invoiceRequests" :key="item.id" class="billing-record-row">
                 <div>
                   <strong>{{ item.title }}</strong>

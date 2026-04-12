@@ -50,7 +50,7 @@ function getSuggestionHint(block: Block): string | null {
 </script>
 
 <template>
-  <div class="preview-block" :class="{ pending: block.status === 'pending' }">
+  <div class="preview-block" :class="[`type-${block.type}`, { pending: block.status === 'pending' }]">
     <template v-if="block.type === 'section'">
       <h4 class="preview-title">{{ block.title }}</h4>
     </template>
@@ -80,33 +80,36 @@ function getSuggestionHint(block: Block): string | null {
 
     <template v-else-if="block.type === 'choice_question'">
       <div class="question-preview">
-        <div class="preview-rich-text"><strong>选择题：</strong></div>
+        <div class="preview-question-label">选择题</div>
         <div class="preview-rich-text" v-html="block.prompt" />
         <ul class="preview-list">
           <li v-for="(option, index) in block.options" :key="`${block.id}-${index}`">
             {{ option }}
           </li>
         </ul>
-        <div class="muted">答案：{{ renderAnswers(block.answers) || '未填写' }}</div>
+        <div class="muted"><strong>答案：</strong>{{ renderAnswers(block.answers) || '未填写' }}</div>
+        <div class="preview-rich-text"><strong>解析：</strong></div>
         <div class="preview-rich-text" v-html="block.analysis" />
       </div>
     </template>
 
     <template v-else-if="block.type === 'fill_blank_question'">
       <div class="question-preview">
-        <div class="preview-rich-text"><strong>填空题：</strong></div>
+        <div class="preview-question-label">填空题</div>
         <div class="preview-rich-text" v-html="block.prompt" />
-        <div class="muted">答案：{{ renderAnswers(block.answers) || '未填写' }}</div>
+        <div class="muted"><strong>答案：</strong>{{ renderAnswers(block.answers) || '未填写' }}</div>
+        <div class="preview-rich-text"><strong>解析：</strong></div>
         <div class="preview-rich-text" v-html="block.analysis" />
       </div>
     </template>
 
     <template v-else-if="block.type === 'short_answer_question'">
       <div class="question-preview">
-        <div class="preview-rich-text"><strong>简答题：</strong></div>
+        <div class="preview-question-label">简答题</div>
         <div class="preview-rich-text" v-html="block.prompt" />
         <div class="preview-rich-text"><strong>参考答案：</strong></div>
         <div class="preview-rich-text" v-html="block.referenceAnswer" />
+        <div class="preview-rich-text"><strong>解析：</strong></div>
         <div class="preview-rich-text" v-html="block.analysis" />
       </div>
     </template>
