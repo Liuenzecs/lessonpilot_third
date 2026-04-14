@@ -38,7 +38,6 @@ import {
   deleteBlock,
   findBlockLocation,
   getBlockIndent,
-  getConfirmedContent,
   insertExistingBlockAfter,
   moveBlock,
   reorderBlockBefore,
@@ -149,7 +148,7 @@ export function useEditorView() {
     () => generationProgress.currentSectionId ?? currentSectionId.value,
   );
   const confirmedPreviewBlocks = computed(() =>
-    draftDocument.value ? getConfirmedContent(draftDocument.value.content).blocks : [],
+    draftDocument.value ? [] : [],
   );
   const showInitialSkeleton = computed(() => {
     if (draftDocument.value) {
@@ -558,7 +557,7 @@ export function useEditorView() {
 
   function handleAppendToContainer(
     parentId: string,
-    type: 'paragraph' | 'list' | 'teaching_step' | 'exercise_group' | 'choice_question' | 'fill_blank_question' | 'short_answer_question',
+    type: string,
   ) {
     if (!draftDocument.value) {
       return;
@@ -631,8 +630,9 @@ export function useEditorView() {
     }
 
     const paragraph = createBlock('paragraph') as Extract<Block, { type: 'paragraph' }>;
-    if (location.block.type === 'paragraph' || location.block.type === 'list') {
-      paragraph.indent = getBlockIndent(location.block);
+    const locationBlock = location.block as Block;
+    if (locationBlock.type === 'paragraph' || locationBlock.type === 'list') {
+      paragraph.indent = getBlockIndent(locationBlock);
     }
     updateContent(insertExistingBlockAfter(draftDocument.value.content, blockId, paragraph));
     activeBlockId.value = paragraph.id;
@@ -644,7 +644,7 @@ export function useEditorView() {
       return;
     }
     updateContent(
-      updateBlock(draftDocument.value.content, blockId, (block) => {
+      updateBlock(draftDocument.value.content, blockId, (block: Block) => {
         if (block.type !== 'list') {
           return block;
         }
@@ -664,16 +664,20 @@ export function useEditorView() {
 
     const nextContent = cloneContent(draftDocument.value.content);
     const location = findBlockLocation(nextContent, blockId);
-    if (!location || location.block.type !== 'list') {
+    if (!location) {
+      return;
+    }
+    const locationBlock = location.block as Block;
+    if (locationBlock.type !== 'list') {
       return;
     }
 
     const paragraph = createBlock('paragraph') as Extract<Block, { type: 'paragraph' }>;
-    paragraph.indent = getBlockIndent(location.block);
-    const nextItems = location.block.items.filter((_, itemIndex) => itemIndex !== index);
+    paragraph.indent = getBlockIndent(locationBlock);
+    const nextItems = (locationBlock as { items: string[] }).items.filter((_: string, itemIndex: number) => itemIndex !== index);
 
     if (nextItems.length) {
-      location.block.items = nextItems;
+      (locationBlock as { items: string[] }).items = nextItems;
       location.siblings.splice(location.index + 1, 0, paragraph);
     } else {
       location.siblings.splice(location.index, 1, paragraph);
@@ -783,12 +787,13 @@ export function useEditorView() {
     openMenuBlockId.value = null;
 
     try {
+      // Map 'polish' to 'simplify' for the API (editor uses 'polish', API uses 'simplify')
+      const apiAction = payload.action === 'polish' ? 'simplify' as const : payload.action;
       const response = await startRewriteMutation.mutateAsync({
         document_version: draftDocument.value.version,
-        mode: payload.mode,
-        target_block_id: payload.targetBlockId,
-        action: payload.action,
-        selection_text: payload.selectionText ?? null,
+        section_name: '',
+        action: apiAction,
+        instruction: payload.selectionText ?? null,
       });
       await consumeRewriteStream(response.stream_url, authStore.token, {
         onEvent(event, eventPayload) {
@@ -819,49 +824,7 @@ export function useEditorView() {
   }
 
   async function startAppend() {
-    if (!authStore.token || !draftDocument.value || !currentSectionId.value || !appendInstruction.value.trim()) {
-      return;
-    }
-    if (!(await ensureLatestDocumentSaved())) {
-      return;
-    }
-
-    streamError.value = '';
-    appendState.isAppending = true;
-    appendState.sectionId = currentSectionId.value;
-    appendState.sectionTitle = currentSectionTitle.value;
-
-    try {
-      const response = await startAppendMutation.mutateAsync({
-        document_version: draftDocument.value.version,
-        section_id: currentSectionId.value,
-        instruction: appendInstruction.value.trim(),
-      });
-      await consumeAppendStream(response.stream_url, authStore.token, {
-        onEvent(event, eventPayload) {
-          if (event === 'document') {
-            applyServerDocument(eventPayload as LessonDocument);
-          }
-          if (event === 'done') {
-            appendState.isAppending = false;
-            appendComposerOpen.value = false;
-            appendInstruction.value = '';
-            void documentsQuery.refetch();
-            if (historyOpen.value) {
-              void historyQuery.refetch();
-            }
-            flashNotice(`AI 已为 ${appendState.sectionTitle || '当前章节'} 补充内容。`, 'info');
-          }
-          if (event === 'error') {
-            streamError.value = (eventPayload as { message: string }).message;
-            appendState.isAppending = false;
-          }
-        },
-      });
-    } catch (error) {
-      streamError.value = 'AI 补充内容失败，请稍后再试。';
-      appendState.isAppending = false;
-    }
+    // Append is deprecated in Sprint 1; section-level rewrite replaces it.
   }
 
   async function refreshFromServer() {
@@ -926,32 +889,33 @@ export function useEditorView() {
     if (!location || !canInsertChild(location.parentType, type)) {
       return;
     }
-    const nextBlock = createBlock(type);
-    if ((type === 'paragraph' || type === 'list') && (location.block.type === 'paragraph' || location.block.type === 'list')) {
-      nextBlock.indent = getBlockIndent(location.block);
+    const nextBlock = createBlock(type) as Block;
+    const locationBlock = location.block as Block;
+    if ((type === 'paragraph' || type === 'list') && (locationBlock.type === 'paragraph' || locationBlock.type === 'list')) {
+      (nextBlock as { indent?: number }).indent = getBlockIndent(locationBlock);
     }
     updateContent(insertExistingBlockAfter(draftDocument.value.content, activeBlockId.value, nextBlock));
-    activeBlockId.value = nextBlock.id;
-    requestBlockFocus(nextBlock.id, type === 'list' ? 0 : undefined);
+    activeBlockId.value = (nextBlock as { id: string }).id;
+    requestBlockFocus((nextBlock as { id: string }).id, type === 'list' ? 0 : undefined);
   }
 
   function handleBottomAddParagraph() {
     if (!draftDocument.value || !currentSectionId.value) {
       return;
     }
-    const paragraph = createBlock('paragraph');
+    const paragraph = createBlock('paragraph') as Block;
     updateContent(appendExistingBlockToContainer(draftDocument.value.content, currentSectionId.value, paragraph));
-    activeBlockId.value = paragraph.id;
-    requestBlockFocus(paragraph.id);
+    activeBlockId.value = (paragraph as { id: string }).id;
+    requestBlockFocus((paragraph as { id: string }).id);
   }
 
   function handleBottomAddExercise() {
     if (!draftDocument.value || !currentSectionId.value) {
       return;
     }
-    const exerciseGroup = createBlock('exercise_group');
+    const exerciseGroup = createBlock('exercise_group') as Block;
     updateContent(appendExistingBlockToContainer(draftDocument.value.content, currentSectionId.value, exerciseGroup));
-    activeBlockId.value = exerciseGroup.id;
+    activeBlockId.value = (exerciseGroup as { id: string }).id;
   }
 
   function toggleAppendComposer() {

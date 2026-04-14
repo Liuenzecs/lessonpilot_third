@@ -131,7 +131,7 @@ function getSuggestionHint(block: Block): string | null {
     </div>
 
     <div v-if="isContainerBlock(block)" class="preview-children">
-      <BlockPreview v-for="child in block.children" :key="child.id" :block="child" />
+      <BlockPreview v-for="child in (block as any).children ?? []" :key="child.id" :block="child" />
     </div>
 
     <div

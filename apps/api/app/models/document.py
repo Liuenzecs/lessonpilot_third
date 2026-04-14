@@ -14,7 +14,7 @@ class Document(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     task_id: str = Field(
-        sa_column=Column(String(36), ForeignKey("tasks.id"), unique=True, index=True, nullable=False)
+        sa_column=Column(String(36), ForeignKey("tasks.id"), index=True, nullable=False)
     )
     user_id: str = Field(
         sa_column=Column(String(36), ForeignKey("users.id"), index=True, nullable=False)

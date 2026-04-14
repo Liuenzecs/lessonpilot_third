@@ -23,13 +23,11 @@ from app.services.document_service import (
     get_owned_document,
     list_document_history,
     list_documents_for_task,
-    load_content,
     restore_document_snapshot,
     serialize_document,
     serialize_snapshot,
     update_document,
 )
-from app.services.export_service import build_docx, build_pdf
 from app.services.rewrite_service import get_document_task, stream_rewrite
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -42,7 +40,7 @@ def get_documents(
     current_user: User = Depends(get_current_user),
 ) -> DocumentListResponse:
     documents = list_documents_for_task(session, task_id, current_user.id)
-    return DocumentListResponse(items=[serialize_document(document) for document in documents])
+    return DocumentListResponse(items=[serialize_document(doc) for doc in documents])
 
 
 @router.get("/{document_id}", response_model=DocumentRead)
@@ -84,10 +82,9 @@ def start_document_rewrite(
     query = urlencode(
         {
             "document_version": payload.document_version,
-            "mode": payload.mode,
-            "target_block_id": payload.target_block_id,
+            "section_name": payload.section_name,
             "action": payload.action,
-            "selection_text": payload.selection_text or "",
+            "instruction": payload.instruction or "",
         }
     )
     return DocumentRewriteStartResponse(
@@ -100,10 +97,9 @@ async def stream_document_rewrite(
     request: Request,
     document_id: str,
     document_version: int,
-    mode: str,
-    target_block_id: str,
-    action: str,
-    selection_text: str | None = None,
+    section_name: str,
+    action: str = "rewrite",
+    instruction: str | None = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
@@ -114,13 +110,18 @@ async def stream_document_rewrite(
     task = get_document_task(session, document)
     payload = DocumentRewritePayload(
         document_version=document_version,
-        mode=mode,
-        target_block_id=target_block_id,
+        section_name=section_name,
         action=action,
-        selection_text=selection_text,
+        instruction=instruction,
     )
     return StreamingResponse(
-        stream_rewrite(session, document, task, payload, request=request),
+        stream_rewrite(
+            session=session,
+            document=document,
+            task=task,
+            payload=payload,
+            request=request,
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
@@ -135,7 +136,7 @@ def get_document_history(
 ) -> DocumentHistoryResponse:
     document = get_owned_document(session, document_id, current_user.id)
     snapshots = list_document_history(session, document, limit=limit)
-    return DocumentHistoryResponse(items=[serialize_snapshot(snapshot) for snapshot in snapshots])
+    return DocumentHistoryResponse(items=[serialize_snapshot(s) for s in snapshots])
 
 
 @router.get("/{document_id}/history/{snapshot_id}", response_model=DocumentSnapshotRead)
@@ -171,25 +172,19 @@ def export_document(
     current_user: User = Depends(get_current_user),
 ) -> Response:
     document = get_owned_document(session, document_id, current_user.id)
-    task = session.exec(select(Task).where(Task.id == document.task_id, Task.user_id == current_user.id)).first()
+    task = session.exec(
+        select(Task).where(Task.id == document.task_id, Task.user_id == current_user.id)
+    ).first()
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
     if format == "docx":
-        payload = build_docx(task, load_content(document))
+        # 导出服务将在 Sprint 5 重写，此处暂时返回占位
         filename = quote(f"{task.title}.docx")
         return Response(
-            content=payload,
+            content=b"",
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
         )
-    if format == "pdf":
-        payload = build_pdf(task, load_content(document))
-        filename = quote(f"{task.title}.pdf")
-        return Response(
-            content=payload,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
-        )
 
-    raise HTTPException(status_code=400, detail="Only docx and pdf export are supported")
+    raise HTTPException(status_code=400, detail="Only docx export is supported in this sprint")

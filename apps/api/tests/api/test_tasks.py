@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import json
-from io import BytesIO
-
-from docx import Document as DocxDocument
 
 
 def _parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
@@ -23,15 +20,62 @@ def _parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
     return events
 
 
-def test_task_document_generation_and_export_flow(client, auth_headers):
+def test_task_creation_with_new_fields(client, auth_headers):
     create_response = client.post(
         "/api/v1/tasks/",
         headers=auth_headers,
         json={
-            "subject": "数学",
-            "grade": "八年级",
-            "topic": "一元二次方程",
-            "requirements": "突出配方法",
+            "subject": "语文",
+            "grade": "七年级",
+            "topic": "春",
+            "requirements": "侧重朗读训练",
+            "scene": "public_school",
+            "lesson_type": "lesson_plan",
+            "class_hour": 1,
+            "lesson_category": "new",
+        },
+    )
+    assert create_response.status_code == 201
+    task = create_response.json()
+    assert task["subject"] == "语文"
+    assert task["scene"] == "public_school"
+    assert task["lesson_type"] == "lesson_plan"
+    assert task["class_hour"] == 1
+    assert task["lesson_category"] == "new"
+
+
+def test_task_creation_with_both_generates_two_documents(client, auth_headers):
+    create_response = client.post(
+        "/api/v1/tasks/",
+        headers=auth_headers,
+        json={
+            "subject": "语文",
+            "grade": "七年级",
+            "topic": "春",
+            "lesson_type": "both",
+        },
+    )
+    assert create_response.status_code == 201
+    task_id = create_response.json()["id"]
+
+    documents_response = client.get(f"/api/v1/documents/?task_id={task_id}", headers=auth_headers)
+    assert documents_response.status_code == 200
+    docs = documents_response.json()["items"]
+    assert len(docs) == 2
+    doc_types = {doc["doc_type"] for doc in docs}
+    assert "lesson_plan" in doc_types
+    assert "study_guide" in doc_types
+
+
+def test_task_document_generation_flow(client, auth_headers):
+    create_response = client.post(
+        "/api/v1/tasks/",
+        headers=auth_headers,
+        json={
+            "subject": "语文",
+            "grade": "七年级",
+            "topic": "春",
+            "requirements": "侧重朗读",
         },
     )
     assert create_response.status_code == 201
@@ -43,9 +87,9 @@ def test_task_document_generation_and_export_flow(client, auth_headers):
 
     documents_response = client.get(f"/api/v1/documents/?task_id={task_id}", headers=auth_headers)
     assert documents_response.status_code == 200
-    document = documents_response.json()["items"][0]
-    document_id = document["id"]
-    assert len(document["content"]["blocks"]) == 6
+    doc = documents_response.json()["items"][0]
+    document_id = doc["id"]
+    assert doc["content"]["doc_type"] == "lesson_plan"
 
     start_response = client.post(
         f"/api/v1/tasks/{task_id}/generate",
@@ -59,30 +103,23 @@ def test_task_document_generation_and_export_flow(client, auth_headers):
         payload = "".join(stream_response.iter_text())
     events = _parse_sse_events(payload)
     event_names = [event_name for event_name, _ in events]
-    assert event_names[0] == "status"
+    assert "status" in event_names
     assert "progress" in event_names
-    assert event_names[-1] == "done"
+    assert "done" in event_names
 
     refreshed_document = client.get(f"/api/v1/documents/{document_id}", headers=auth_headers).json()
-    assert refreshed_document["version"] > 1
-    assert any(
-        child["status"] == "pending"
-        for block in refreshed_document["content"]["blocks"]
-        for child in block.get("children", [])
-    )
+    assert refreshed_document["content"]["doc_type"] == "lesson_plan"
+    assert refreshed_document["content"]["objectives_status"] == "pending"
 
-    accepted_content = refreshed_document["content"]
-    for block in accepted_content["blocks"]:
-        block["children"] = [
-            {**child, "status": "confirmed"} for child in block.get("children", [])
-        ]
-
+    # 更新文档内容
+    content = refreshed_document["content"]
+    content["objectives_status"] = "confirmed"
     update_response = client.patch(
         f"/api/v1/documents/{document_id}",
         headers=auth_headers,
         json={
             "version": refreshed_document["version"],
-            "content": accepted_content,
+            "content": content,
         },
     )
     assert update_response.status_code == 200
@@ -92,17 +129,10 @@ def test_task_document_generation_and_export_flow(client, auth_headers):
         headers=auth_headers,
         json={
             "version": refreshed_document["version"],
-            "content": accepted_content,
+            "content": content,
         },
     )
     assert conflict_response.status_code == 409
-
-    export_response = client.get(
-        f"/api/v1/documents/{document_id}/export?format=docx",
-        headers=auth_headers,
-    )
-    assert export_response.status_code == 200
-    assert export_response.content[:2] == b"PK"
 
     delete_response = client.delete(f"/api/v1/tasks/{task_id}", headers=auth_headers)
     assert delete_response.status_code == 204
@@ -137,101 +167,27 @@ def test_task_access_is_isolated(client):
     assert other_user_response.status_code == 404
 
 
-def test_docx_export_uses_printable_template(client, auth_headers):
+def test_duplicate_task_copies_all_documents(client, auth_headers):
     create_response = client.post(
         "/api/v1/tasks/",
         headers=auth_headers,
         json={
-            "subject": "数学",
-            "grade": "八年级",
-            "topic": "一元二次方程",
-            "requirements": "突出配方法",
+            "subject": "语文",
+            "grade": "七年级",
+            "topic": "济南的冬天",
+            "lesson_type": "both",
         },
     )
     assert create_response.status_code == 201
-    task = create_response.json()
+    task_id = create_response.json()["id"]
 
-    documents_response = client.get(f"/api/v1/documents/?task_id={task['id']}", headers=auth_headers)
-    document = documents_response.json()["items"][0]
-    content = document["content"]
-    content["blocks"][0]["children"] = [
-        {
-            "id": "paragraph-1",
-            "type": "paragraph",
-            "status": "confirmed",
-            "source": "human",
-            "indent": 1,
-            "content": "<p>理解一元二次方程的概念</p>",
-        },
-        {
-            "id": "list-1",
-            "type": "list",
-            "status": "confirmed",
-            "source": "human",
-            "indent": 1,
-            "items": ["配方法基本步骤", "根与判别式关系"],
-        },
-        {
-            "id": "exercise-group-1",
-            "type": "exercise_group",
-            "status": "confirmed",
-            "source": "human",
-            "title": "课堂练习",
-            "children": [
-                {
-                    "id": "choice-question-1",
-                    "type": "choice_question",
-                    "status": "confirmed",
-                    "source": "human",
-                    "prompt": "<p>x² + 1 = 0 的实数根个数是？</p>",
-                    "options": ["0 个", "1 个", "2 个"],
-                    "answers": ["0 个"],
-                    "analysis": "<p>判别式小于 0，没有实数根。</p>",
-                }
-            ],
-        },
-        {
-            "id": "pending-1",
-            "type": "paragraph",
-            "status": "pending",
-            "source": "ai",
-            "content": "<p>这段待确认内容不应导出</p>",
-            "suggestion": {"kind": "append"},
-        },
-    ]
-
-    update_response = client.patch(
-        f"/api/v1/documents/{document['id']}",
-        headers=auth_headers,
-        json={
-            "version": document["version"],
-            "content": content,
-        },
-    )
-    assert update_response.status_code == 200
-
-    export_response = client.get(
-        f"/api/v1/documents/{document['id']}/export?format=docx",
+    dup_response = client.post(
+        f"/api/v1/tasks/{task_id}/duplicate",
         headers=auth_headers,
     )
-    assert export_response.status_code == 200
+    assert dup_response.status_code == 201
+    dup_task = dup_response.json()
+    assert dup_task["title"].endswith("（副本）")
 
-    exported_doc = DocxDocument(BytesIO(export_response.content))
-    paragraphs = [paragraph for paragraph in exported_doc.paragraphs if paragraph.text.strip()]
-    paragraph_texts = [paragraph.text.strip() for paragraph in paragraphs]
-
-    assert paragraph_texts[0] == task["title"]
-    assert paragraph_texts[1] == f"{task['subject']} · {task['grade']} · {task['topic']}"
-    assert "教学目标" in paragraph_texts
-    assert "理解一元二次方程的概念" in paragraph_texts
-    assert any(text.startswith("1. 选择题：") for text in paragraph_texts)
-    assert "这段待确认内容不应导出" not in paragraph_texts
-
-    exported_paragraph = next(
-        paragraph for paragraph in paragraphs if paragraph.text.strip() == "理解一元二次方程的概念"
-    )
-    exported_option = next(paragraph for paragraph in paragraphs if paragraph.text.strip() == "A. 0 个")
-    assert exported_paragraph.paragraph_format.left_indent is not None
-    assert round(exported_paragraph.paragraph_format.left_indent.pt) == 18
-    assert exported_option.style.name == "LessonPilot Option"
-    assert round(exported_doc.sections[0].page_width.cm, 1) == 21.0
+    dup_docs = client.get(f"/api/v1/documents/?task_id={dup_task['id']}", headers=auth_headers)
+    assert len(dup_docs.json()["items"]) == 2

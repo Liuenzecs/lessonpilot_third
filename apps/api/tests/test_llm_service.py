@@ -1,103 +1,80 @@
 from __future__ import annotations
 
+import asyncio
 import json
-from pathlib import Path
 
-from app.schemas.content import ExerciseGroupBlock
+from app.schemas.content import LessonPlanContent, StudyGuideContent
 from app.services.llm_service import (
-    _normalize_generated_payload,
-    _render_prompt_template,
-    apply_suggestion_metadata,
+    FakeProvider,
+    LessonPlanContext,
+    StudyGuideContext,
+    _load_prompt,
+    _render,
+    get_provider,
 )
 
 
-def test_normalize_generated_payload_adds_missing_metadata():
-    payload = _normalize_generated_payload(
-        {
-            "blocks": [
-                {
-                    "type": "teaching_step",
-                    "title": "情境导入",
-                    "durationMinutes": 5,
-                    "children": [
-                        {
-                            "type": "paragraph",
-                            "content": "<p>引导学生回顾旧知。</p>",
-                        }
-                    ],
-                }
-            ]
-        }
-    )
-
-    block = payload["blocks"][0]
-    assert block["id"]
-    assert block["status"] == "pending"
-    assert block["source"] == "ai"
-    assert block["children"][0]["id"]
-    assert block["children"][0]["status"] == "pending"
-    assert block["children"][0]["source"] == "ai"
+def test_get_provider_returns_fake_by_default(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "fake")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    provider = get_provider()
+    assert isinstance(provider, FakeProvider)
+    get_settings.cache_clear()
 
 
-def test_normalize_generated_payload_accepts_bare_blocks_array():
-    payload = _normalize_generated_payload(
-        json.loads(
-            '[{"type":"list","items":["A","B"],"status":"pending","source":"ai"}]'
+def test_render_replaces_placeholders():
+    template = "学科：{subject}，年级：{grade}，课题：{topic}"
+    result = _render(template, subject="语文", grade="七年级", topic="春")
+    assert result == "学科：语文，年级：七年级，课题：春"
+
+
+def test_load_prompt_exists():
+    for name in [
+        "lesson_plan_generation_prompt.md",
+        "study_guide_generation_prompt.md",
+        "section_rewrite_prompt.md",
+    ]:
+        content = _load_prompt(name)
+        assert len(content) > 50
+
+
+def test_fake_provider_generates_valid_lesson_plan_json():
+    async def _run():
+        provider = FakeProvider()
+        ctx = LessonPlanContext(
+            subject="语文",
+            grade="七年级",
+            topic="春",
         )
-    )
+        chunks: list[str] = []
+        async for chunk in provider.generate_lesson_plan(ctx):
+            chunks.append(chunk)
+        raw = "".join(chunks)
+        data = json.loads(raw)
+        content = LessonPlanContent.model_validate(data)
+        assert content.header.title == "春"
+        assert len(content.objectives) > 0
+        assert len(content.teaching_process) > 0
 
-    assert len(payload["blocks"]) == 1
-    assert payload["blocks"][0]["type"] == "list"
-    assert payload["blocks"][0]["id"]
-
-
-def test_apply_suggestion_metadata_marks_nested_blocks():
-    blocks = _normalize_generated_payload(
-        {
-            "blocks": [
-                {
-                    "type": "exercise_group",
-                    "title": "题组",
-                    "children": [
-                        {
-                            "type": "choice_question",
-                            "prompt": "<p>题干</p>",
-                            "options": ["A", "B"],
-                            "answers": ["A"],
-                            "analysis": "<p>解析</p>",
-                        }
-                    ],
-                }
-            ]
-        }
-    )["blocks"]
-
-    payload = {"blocks": blocks}
-    validated = apply_suggestion_metadata(
-        [ExerciseGroupBlock.model_validate(payload["blocks"][0])],
-        kind="replace",
-        target_block_id="target-1",
-        action="rewrite",
-    )
-
-    assert validated[0].suggestion is not None
-    assert validated[0].suggestion.kind == "replace"
-    assert validated[0].suggestion.target_block_id == "target-1"
-    assert validated[0].children[0].suggestion is not None
-    assert validated[0].children[0].suggestion.target_block_id == "target-1"
+    asyncio.run(_run())
 
 
-def test_render_prompt_template_preserves_literal_json_braces():
-    api_root = Path(__file__).resolve().parents[1]
-    prompt = _render_prompt_template(
-        api_root / "app" / "prompts" / "lesson_section_generation_prompt.md",
-        subject="数学",
-        grade="八年级",
-        topic="一元二次方程",
-        requirements="重点讲解配方法",
-        section_title="导入环节",
-    )
+def test_fake_provider_generates_valid_study_guide_json():
+    async def _run():
+        provider = FakeProvider()
+        ctx = StudyGuideContext(
+            subject="语文",
+            grade="七年级",
+            topic="春",
+        )
+        chunks: list[str] = []
+        async for chunk in provider.generate_study_guide(ctx):
+            chunks.append(chunk)
+        raw = "".join(chunks)
+        data = json.loads(raw)
+        content = StudyGuideContent.model_validate(data)
+        assert content.header.title == "春"
+        assert len(content.learning_objectives) > 0
 
-    assert '{"blocks":[...]}' in prompt
-    assert "Subject: 数学" in prompt
-    assert "{subject}" not in prompt
+    asyncio.run(_run())

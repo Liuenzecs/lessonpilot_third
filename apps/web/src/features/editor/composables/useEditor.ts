@@ -3,8 +3,6 @@ import type { ComputedRef, Ref } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 
 import type {
-  DocumentAppendPayload,
-  DocumentAppendStartResponse,
   DocumentHistoryResponse,
   DocumentRewritePayload,
   DocumentRewriteStartResponse,
@@ -59,13 +57,9 @@ export function useStartDocumentRewriteMutation(getDocumentId: () => string) {
   });
 }
 
-export function useStartDocumentAppendMutation(getDocumentId: () => string) {
+export function useStartDocumentAppendMutation(_getDocumentId: () => string) {
   return useMutation({
-    mutationFn: (payload: DocumentAppendPayload) =>
-      request<DocumentAppendStartResponse>(`/api/v1/documents/${getDocumentId()}/append`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+    mutationFn: (_payload: unknown) => Promise.reject(new Error('Append is no longer supported')),
   });
 }
 

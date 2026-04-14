@@ -25,10 +25,10 @@ def _create_task_and_document(client, auth_headers):
         "/api/v1/tasks/",
         headers=auth_headers,
         json={
-            "subject": "数学",
-            "grade": "八年级",
-            "topic": "一元二次方程",
-            "requirements": "突出题组训练",
+            "subject": "语文",
+            "grade": "七年级",
+            "topic": "春",
+            "requirements": "侧重朗读训练",
         },
     )
     assert create_response.status_code == 201
@@ -38,29 +38,7 @@ def _create_task_and_document(client, auth_headers):
     return task_id, document
 
 
-def _seed_paragraph_block(client, auth_headers, document):
-    content = document["content"]
-    first_section = content["blocks"][0]
-    paragraph_id = "paragraph-seed-1"
-    first_section["children"] = [
-        {
-            "id": paragraph_id,
-            "type": "paragraph",
-            "status": "confirmed",
-            "source": "human",
-            "content": "<p>原始段落内容</p>",
-        }
-    ]
-    update_response = client.patch(
-        f"/api/v1/documents/{document['id']}",
-        headers=auth_headers,
-        json={"version": document["version"], "content": content},
-    )
-    assert update_response.status_code == 200
-    return update_response.json(), paragraph_id
-
-
-def test_generation_supports_exercise_groups_and_questions(client, auth_headers):
+def test_generation_produces_lesson_plan_content(client, auth_headers):
     task_id, document = _create_task_and_document(client, auth_headers)
 
     start_response = client.post(
@@ -76,89 +54,54 @@ def test_generation_supports_exercise_groups_and_questions(client, auth_headers)
     assert events[-1][0] == "done"
 
     refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
-    exercise_groups = [
-        child
-        for section in refreshed["content"]["blocks"]
-        for child in section.get("children", [])
-        if child["type"] == "exercise_group"
-    ]
-    assert exercise_groups
-    assert exercise_groups[0]["children"][0]["type"] in {
-        "choice_question",
-        "fill_blank_question",
-        "short_answer_question",
-    }
+    content = refreshed["content"]
+    assert content["doc_type"] == "lesson_plan"
+    assert len(content["objectives"]) > 0
+    assert len(content["teaching_process"]) > 0
 
 
-def test_rewrite_flow_and_history_restore(client, auth_headers):
+def test_section_rewrite_flow(client, auth_headers):
     _, document = _create_task_and_document(client, auth_headers)
-    updated_document, paragraph_id = _seed_paragraph_block(client, auth_headers, document)
 
+    # 先生成内容
+    task_id = document["task_id"]
+    start_response = client.post(
+        f"/api/v1/tasks/{task_id}/generate",
+        headers=auth_headers,
+        json={},
+    )
+    with client.stream("GET", start_response.json()["stream_url"], headers=auth_headers) as resp:
+        "".join(resp.iter_text())
+
+    refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
+
+    # Section 级重写
     rewrite_start = client.post(
-        f"/api/v1/documents/{updated_document['id']}/rewrite",
+        f"/api/v1/documents/{refreshed['id']}/rewrite",
         headers=auth_headers,
         json={
-            "document_version": updated_document["version"],
-            "mode": "block",
-            "target_block_id": paragraph_id,
+            "document_version": refreshed["version"],
+            "section_name": "objectives",
             "action": "rewrite",
         },
     )
     assert rewrite_start.status_code == 200
 
-    with client.stream("GET", rewrite_start.json()["stream_url"], headers=auth_headers) as stream_response:
-        events = _parse_sse_events("".join(stream_response.iter_text()))
+    with client.stream("GET", rewrite_start.json()["stream_url"], headers=auth_headers) as resp:
+        events = _parse_sse_events("".join(resp.iter_text()))
     assert events[-1][0] == "done"
 
-    rewritten_document = client.get(
-        f"/api/v1/documents/{updated_document['id']}",
-        headers=auth_headers,
-    ).json()
-    children = rewritten_document["content"]["blocks"][0]["children"]
-    assert children[0]["id"] == paragraph_id
-    assert children[1]["status"] == "pending"
-    assert children[1]["id"] != paragraph_id
-    assert children[1]["suggestion"]["kind"] == "replace"
-    assert children[1]["suggestion"]["targetBlockId"] == paragraph_id
 
-    selection_start = client.post(
-        f"/api/v1/documents/{updated_document['id']}/rewrite",
-        headers=auth_headers,
-        json={
-            "document_version": rewritten_document["version"],
-            "mode": "selection",
-            "target_block_id": paragraph_id,
-            "action": "polish",
-            "selection_text": "原始段落内容",
-        },
-    )
-    assert selection_start.status_code == 200
+def test_history_and_restore(client, auth_headers):
+    _, document = _create_task_and_document(client, auth_headers)
 
-    with client.stream("GET", selection_start.json()["stream_url"], headers=auth_headers) as stream_response:
-        selection_events = _parse_sse_events("".join(stream_response.iter_text()))
-    assert selection_events[-1][0] == "done"
-
-    current_document = client.get(
-        f"/api/v1/documents/{updated_document['id']}",
-        headers=auth_headers,
-    ).json()
-    selection_pending = [
-        child
-        for child in current_document["content"]["blocks"][0]["children"]
-        if child["status"] == "pending"
-        and child["suggestion"]["kind"] == "replace"
-        and child["suggestion"]["action"] == "polish"
-    ]
-    assert selection_pending
-    assert selection_pending[0]["id"] != paragraph_id
-    assert selection_pending[0]["suggestion"]["mode"] == "selection"
-    assert selection_pending[0]["suggestion"]["selectionText"] == "原始段落内容"
-
-    for index in range(11):
+    # 多次更新文档以产生历史
+    current_document = document
+    for _ in range(12):
         content = current_document["content"]
-        content["blocks"][0]["children"][0]["content"] = f"<p>第 {index} 次保存</p>"
+        content["objectives_status"] = "confirmed"
         patch_response = client.patch(
-            f"/api/v1/documents/{updated_document['id']}",
+            f"/api/v1/documents/{current_document['id']}",
             headers=auth_headers,
             json={"version": current_document["version"], "content": content},
         )
@@ -166,7 +109,7 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
         current_document = patch_response.json()
 
     history_response = client.get(
-        f"/api/v1/documents/{updated_document['id']}/history?limit=10",
+        f"/api/v1/documents/{current_document['id']}/history?limit=10",
         headers=auth_headers,
     )
     assert history_response.status_code == 200
@@ -174,23 +117,17 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
     assert len(history_items) == 10
     assert history_items[0]["version"] == current_document["version"]
 
+    # 恢复快照
     snapshot_id = history_items[-1]["id"]
-    snapshot_response = client.get(
-        f"/api/v1/documents/{updated_document['id']}/history/{snapshot_id}",
-        headers=auth_headers,
-    )
-    assert snapshot_response.status_code == 200
-
     restored = client.post(
-        f"/api/v1/documents/{updated_document['id']}/history/{snapshot_id}/restore",
+        f"/api/v1/documents/{current_document['id']}/history/{snapshot_id}/restore",
         headers=auth_headers,
     )
     assert restored.status_code == 200
     assert restored.json()["version"] > current_document["version"]
 
     latest_history = client.get(
-        f"/api/v1/documents/{updated_document['id']}/history?limit=1",
+        f"/api/v1/documents/{current_document['id']}/history?limit=1",
         headers=auth_headers,
     ).json()["items"][0]
     assert latest_history["source"] == "restore"
-

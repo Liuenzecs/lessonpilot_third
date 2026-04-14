@@ -589,3 +589,75 @@
   - `npx vue-tsc --noEmit`：passed
   - `pnpm build`：✓ built in 11.61s
 - Status: DONE
+
+## [Sprint 1] — 内容模型 + AI 服务重写
+- 完成日期：2026-04-14
+- 完成内容：
+
+  **Phase 1：后端新内容 Schema**
+  - 重写 `schemas/content.py`：删除 8 种 block 体系，替换为 `LessonPlanContent`（教案）+ `StudyGuideContent`（学案）结构化模型
+  - 新增公共类型：`TeachingObjective`（三维目标）、`TeachingProcessStep`（教学过程步骤）、`AssessmentItem`（测评题）、`KeyPoints`（重难点）
+  - 保留 `SectionStatus`（confirmed/pending）概念，提升到 section 级别
+  - 新增空模板创建函数：`create_empty_lesson_plan()`、`create_empty_study_guide()`
+
+  **Phase 1（续）：Schema 更新**
+  - 重写 `schemas/task.py`：新增 `scene`（使用场景）、`lesson_type`（教案/学案/都生成）、`class_hour`（课时）、`lesson_category`（课型）
+  - 重写 `schemas/document.py`：DocumentRewritePayload 改为 section 级操作（section_name/action/instruction），移除 DocumentAppendPayload
+  - 新建 `schemas/lesson.py`：GenerationContext 和 SectionRewriteContext
+
+  **Phase 2：后端模型更新 + 迁移**
+  - 更新 `models/task.py`：新增 scene/lesson_type/class_hour/lesson_category 列
+  - 更新 `models/document.py`：移除 task_id unique 约束（支持 1:many）
+  - 新建 Alembic 迁移 `20260414_0006_sprint1_content_model.py`
+
+  **Phase 3：AI 服务重写**
+  - 重写 `services/llm_service.py`：Provider 架构（LLMProvider 基类 + FakeProvider/DeepSeekProvider/MiniMaxProvider）
+  - 真正的 token-by-token 流式输出（httpx AsyncClient stream=True）
+  - 新建 prompt 模板：教案生成、学案生成、section 级重写
+
+  **Phase 3（续）：Generation/Rewrite Service**
+  - 重写 `generation_service.py`：一次性流式生成完整教案/学案，支持同时生成教案+学案
+  - 重写 `rewrite_service.py`：Section 级重写/扩写/精简
+
+  **Phase 4：后端 Service/Endpoint 适配**
+  - 更新 `task_service.py`：create_task 根据 lesson_type 创建 1 或 2 个 document
+  - 更新 `document_service.py`：load_content 根据 doc_type 反序列化
+  - 更新 endpoints：tasks.py、documents.py 适配新参数和内容结构
+
+  **Phase 5：前端类型更新**
+  - 重写 `packages/shared-types/src/content.ts`：新的 LessonPlanContent/StudyGuideContent 类型 + 向后兼容导出
+  - 重写 `apps/web/src/shared/utils/content.ts`：Section 级操作 + block 系统兼容 stub
+  - 更新前端类型定义：editor/types.ts、task/types.ts
+  - 适配 useEditorView.ts 和 useEditor.ts
+
+  **Phase 6：测试 + 验证**
+  - 更新后端测试：content_schema、llm_service、tasks、documents、phase3_account、phase7_hardening
+  - 前端 type-check + build 通过
+  - 后端 ruff + pytest 通过（28 passed）
+
+- 关键文件：
+  - `apps/api/app/schemas/content.py`（REWRITE）
+  - `apps/api/app/schemas/task.py`（REWRITE）
+  - `apps/api/app/schemas/document.py`（REWRITE）
+  - `apps/api/app/schemas/lesson.py`（NEW）
+  - `apps/api/app/models/task.py`（UPDATE）
+  - `apps/api/app/models/document.py`（UPDATE）
+  - `apps/api/alembic/versions/20260414_0006_sprint1_content_model.py`（NEW）
+  - `apps/api/app/services/llm_service.py`（REWRITE）
+  - `apps/api/app/services/generation_service.py`（REWRITE）
+  - `apps/api/app/services/rewrite_service.py`（REWRITE）
+  - `apps/api/app/services/task_service.py`（UPDATE）
+  - `apps/api/app/services/document_service.py`（UPDATE）
+  - `apps/api/app/api/v1/endpoints/tasks.py`（UPDATE）
+  - `apps/api/app/api/v1/endpoints/documents.py`（UPDATE）
+  - `apps/api/app/prompts/lesson_plan_generation_prompt.md`（NEW）
+  - `apps/api/app/prompts/study_guide_generation_prompt.md`（NEW）
+  - `apps/api/app/prompts/section_rewrite_prompt.md`（NEW）
+  - `packages/shared-types/src/content.ts`（REWRITE）
+  - `apps/web/src/shared/utils/content.ts`（REWRITE）
+- 验证结果：
+  - `python -m ruff check app/`：All checks passed
+  - `python -m pytest tests/ -q`：28 passed
+  - `npx vue-tsc --noEmit`：passed
+  - `pnpm build`：✓ built in 10.87s
+- Status: DONE

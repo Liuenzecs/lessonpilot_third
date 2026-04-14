@@ -3,18 +3,18 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
-from app.schemas.content import ContentDocument
+from app.schemas.content import DocumentContent
 
 
 class DocumentRead(BaseModel):
     id: str
     task_id: str
     user_id: str
-    doc_type: str
+    doc_type: Literal["lesson_plan", "study_guide"]
     title: str
-    content: ContentDocument
+    content: DocumentContent
     version: int
     created_at: datetime
     updated_at: datetime
@@ -22,36 +22,23 @@ class DocumentRead(BaseModel):
 
 class DocumentUpdatePayload(BaseModel):
     version: int
-    content: ContentDocument
+    content: DocumentContent
 
 
 class DocumentRewritePayload(BaseModel):
-    document_version: int = Field(alias="document_version")
-    mode: Literal["block", "selection"]
-    target_block_id: str = Field(alias="target_block_id")
-    action: Literal["rewrite", "polish", "expand"]
-    selection_text: str | None = Field(default=None, alias="selection_text")
+    """Section 级重写请求。"""
 
-    model_config = {"populate_by_name": True}
-
-    @model_validator(mode="after")
-    def validate_selection_text(self) -> "DocumentRewritePayload":
-        if self.mode == "selection" and not (self.selection_text or "").strip():
-            raise ValueError("selection_text is required for selection rewrite mode")
-        return self
+    document_version: int
+    section_name: str = Field(
+        description="要重写的 section 名称，如 objectives/teaching_process 等"
+    )
+    action: Literal["rewrite", "expand", "simplify"] = "rewrite"
+    instruction: str | None = Field(
+        default=None, max_length=1000, description="老师的额外指示"
+    )
 
 
 class DocumentRewriteStartResponse(BaseModel):
-    stream_url: str
-
-
-class DocumentAppendPayload(BaseModel):
-    document_version: int
-    section_id: str = Field(min_length=1, max_length=64)
-    instruction: str = Field(min_length=1, max_length=2000)
-
-
-class DocumentAppendStartResponse(BaseModel):
     stream_url: str
 
 
@@ -59,7 +46,7 @@ class DocumentSnapshotRead(BaseModel):
     id: str
     document_id: str
     version: int
-    content: ContentDocument
+    content: DocumentContent
     source: str
     created_at: datetime
 

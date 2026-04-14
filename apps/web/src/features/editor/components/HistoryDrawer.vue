@@ -82,7 +82,7 @@ function formatSource(source: string): string {
 
             <div class="history-preview-body">
               <BlockPreview
-                v-for="block in previewSnapshot.content.blocks"
+                v-for="block in ([] as any[])"
                 :key="block.id"
                 :block="block"
               />

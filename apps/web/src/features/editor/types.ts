@@ -1,12 +1,12 @@
-import type { ContentDocument } from '@lessonpilot/shared-types';
+import type { DocumentContent } from '@lessonpilot/shared-types';
 
 export interface LessonDocument {
   id: string;
   task_id: string;
   user_id: string;
-  doc_type: string;
+  doc_type: 'lesson_plan' | 'study_guide';
   title: string;
-  content: ContentDocument;
+  content: DocumentContent;
   version: number;
   created_at: string;
   updated_at: string;
@@ -18,28 +18,17 @@ export interface DocumentListResponse {
 
 export interface DocumentUpdatePayload {
   version: number;
-  content: ContentDocument;
+  content: DocumentContent;
 }
 
 export interface DocumentRewritePayload {
   document_version: number;
-  mode: 'block' | 'selection';
-  target_block_id: string;
-  action: 'rewrite' | 'polish' | 'expand';
-  selection_text?: string | null;
+  section_name: string;
+  action: 'rewrite' | 'expand' | 'simplify';
+  instruction?: string | null;
 }
 
 export interface DocumentRewriteStartResponse {
-  stream_url: string;
-}
-
-export interface DocumentAppendPayload {
-  document_version: number;
-  section_id: string;
-  instruction: string;
-}
-
-export interface DocumentAppendStartResponse {
   stream_url: string;
 }
 
@@ -47,7 +36,7 @@ export interface DocumentSnapshotRecord {
   id: string;
   document_id: string;
   version: number;
-  content: ContentDocument;
+  content: DocumentContent;
   source: string;
   created_at: string;
 }

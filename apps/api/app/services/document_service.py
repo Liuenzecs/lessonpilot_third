@@ -5,7 +5,11 @@ from sqlmodel import Session, select
 
 from app.models import Document, DocumentSnapshot
 from app.models.base import utcnow
-from app.schemas.content import ContentDocument
+from app.schemas.content import (
+    DocumentContent,
+    LessonPlanContent,
+    StudyGuideContent,
+)
 from app.schemas.document import (
     DocumentRead,
     DocumentSnapshotRead,
@@ -30,10 +34,12 @@ def list_documents_for_task(session: Session, task_id: str, user_id: str) -> lis
     ).all()
 
 
-def load_content(document: Document) -> ContentDocument:
-    content = ContentDocument.model_validate(document.content)
-    content.version = document.version
-    return content
+def load_content(document: Document) -> DocumentContent:
+    """根据 doc_type 反序列化 document.content。"""
+    data = document.content
+    if document.doc_type == "study_guide":
+        return StudyGuideContent.model_validate(data)
+    return LessonPlanContent.model_validate(data)
 
 
 def serialize_document(document: Document) -> DocumentRead:
@@ -55,7 +61,7 @@ def serialize_snapshot(snapshot: DocumentSnapshot) -> DocumentSnapshotRead:
         id=snapshot.id,
         document_id=snapshot.document_id,
         version=snapshot.version,
-        content=ContentDocument.model_validate(snapshot.content),
+        content=LessonPlanContent.model_validate(snapshot.content),
         source=snapshot.source,
         created_at=snapshot.created_at,
     )
@@ -74,13 +80,13 @@ def _trim_snapshots(session: Session, document_id: str) -> None:
 def _create_snapshot(
     session: Session,
     document: Document,
-    content: ContentDocument,
+    content: DocumentContent,
     source: str,
 ) -> DocumentSnapshot:
     snapshot = DocumentSnapshot(
         document_id=document.id,
         version=document.version,
-        content=content.model_dump(mode="json", by_alias=True),
+        content=content.model_dump(by_alias=True),
         source=source,
     )
     session.add(snapshot)
@@ -92,13 +98,12 @@ def _create_snapshot(
 def save_document(
     session: Session,
     document: Document,
-    content: ContentDocument,
+    content: DocumentContent,
     *,
     snapshot_source: str | None = None,
 ) -> Document:
     next_version = document.version + 1
-    content.version = next_version
-    document.content = content.model_dump(mode="json", by_alias=True)
+    document.content = content.model_dump(by_alias=True)
     document.version = next_version
     document.updated_at = utcnow()
     session.add(document)
@@ -152,7 +157,13 @@ def restore_document_snapshot(
     document: Document,
     snapshot: DocumentSnapshot,
 ) -> Document:
-    content = ContentDocument.model_validate(snapshot.content)
+    content = load_content(document)
+    # 用 snapshot 的内容覆盖
+    snapshot_data = snapshot.content
+    if document.doc_type == "study_guide":
+        content = StudyGuideContent.model_validate(snapshot_data)
+    else:
+        content = LessonPlanContent.model_validate(snapshot_data)
     return save_document(session, document, content, snapshot_source="restore")
 
 
@@ -166,5 +177,5 @@ def update_document(
             status_code=status.HTTP_409_CONFLICT,
             detail="Document version conflict",
         )
-    content = ContentDocument.model_validate(payload.content)
+    content = payload.content
     return save_document(session, document, content, snapshot_source="save")

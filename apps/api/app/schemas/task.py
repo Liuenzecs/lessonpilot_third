@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.content import LessonCategory, LessonType, Scene
+
 
 class TaskCreatePayload(BaseModel):
     subject: str = Field(min_length=1, max_length=80)
@@ -11,6 +13,10 @@ class TaskCreatePayload(BaseModel):
     topic: str = Field(min_length=1, max_length=255)
     requirements: str | None = Field(default=None, max_length=2000)
     title: str | None = Field(default=None, max_length=255)
+    scene: Scene = "public_school"
+    lesson_type: LessonType = "lesson_plan"
+    class_hour: int = Field(default=1, ge=1, le=10)
+    lesson_category: LessonCategory = "new"
 
 
 class TaskUpdatePayload(BaseModel):
@@ -27,6 +33,10 @@ class TaskRead(BaseModel):
     topic: str
     requirements: str | None
     status: str
+    scene: str
+    lesson_type: str
+    class_hour: int
+    lesson_category: str
     created_at: datetime
     updated_at: datetime
 
@@ -44,4 +54,3 @@ class GenerationStartPayload(BaseModel):
 
 class GenerationStartResponse(BaseModel):
     stream_url: str
-

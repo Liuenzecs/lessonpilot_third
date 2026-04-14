@@ -1,3 +1,8 @@
+"""AI 生成服务：流式生成教案/学案。
+
+一次性流式生成完整内容，通过 SSE 推送给前端。
+"""
+
 from __future__ import annotations
 
 import json
@@ -7,139 +12,241 @@ from fastapi import HTTPException, Request, status
 from sqlmodel import Session, select
 
 from app.models import Document, Task
-from app.models.base import utcnow
-from app.schemas.content import ContentDocument, SectionBlock
-from app.services.document_service import (
-    load_content,
-    record_current_snapshot,
-    save_document,
-    serialize_document,
+from app.schemas.content import (
+    DocumentContent,
+    LessonPlanContent,
+    StudyGuideContent,
+    create_empty_lesson_plan,
+    create_empty_study_guide,
 )
 from app.services.llm_service import (
-    SectionGenerationContext,
-    apply_suggestion_metadata,
+    LessonPlanContext,
+    StudyGuideContext,
     get_provider,
 )
 
+# ---------------------------------------------------------------------------
+# SSE 工具
+# ---------------------------------------------------------------------------
 
-class ClientDisconnected(Exception):
+
+def _format_sse(event: str, payload: object) -> str:
+    data = json.dumps(payload, ensure_ascii=False) if not isinstance(payload, str) else payload
+    return f"event: {event}\ndata: {data}\n\n"
+
+
+class _ClientDisconnected(Exception):
     pass
 
 
-async def ensure_client_connected(request: Request | None) -> None:
+async def _ensure_client_connected(request: Request | None) -> None:
     if request is not None and hasattr(request, "is_disconnected") and await request.is_disconnected():
-        raise ClientDisconnected()
+        raise _ClientDisconnected()
 
 
-def _format_sse(event: str, payload: dict) -> str:
-    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+# ---------------------------------------------------------------------------
+# 流式 JSON 拼装
+# ---------------------------------------------------------------------------
 
 
-def _find_target_section_ids(content: ContentDocument, section_id: str | None) -> list[str]:
-    sections = [block for block in content.blocks if isinstance(block, SectionBlock)]
-    if section_id is None:
-        return [block.id for block in sections]
-    matched = [block.id for block in sections if block.id == section_id]
-    if not matched:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
-    return matched
+async def _assemble_streamed_json(
+    stream: AsyncIterator[str],
+) -> str:
+    """从流式 token 拼装完整 JSON 字符串。"""
+    chunks: list[str] = []
+    async for chunk in stream:
+        chunks.append(chunk)
+    return "".join(chunks)
 
 
-def _find_section(content: ContentDocument, section_id: str) -> SectionBlock:
-    for block in content.blocks:
-        if isinstance(block, SectionBlock) and block.id == section_id:
-            return block
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
+def _parse_content_json(raw: str, doc_type: str) -> DocumentContent:
+    """解析 AI 输出的 JSON 为结构化内容模型。"""
+    text = raw.strip()
+    # 移除 code fence
+    if text.startswith("```"):
+        lines = text.split("\n")
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+
+    data = json.loads(text)
+    if doc_type == "study_guide":
+        return StudyGuideContent.model_validate(data)
+    return LessonPlanContent.model_validate(data)
 
 
-def _replace_pending_children(section: SectionBlock, generated_children) -> None:
-    preserved_children = [child for child in section.children if child.status == "confirmed"]
-    section.children = [*preserved_children, *generated_children]
+# ---------------------------------------------------------------------------
+# 公共查询
+# ---------------------------------------------------------------------------
 
 
-def get_task_document(session: Session, task_id: str, user_id: str) -> tuple[Task, Document]:
-    task = session.exec(select(Task).where(Task.id == task_id, Task.user_id == user_id)).first()
+def get_task_and_documents(
+    session: Session, task_id: str, user_id: str
+) -> tuple[Task, list[Document]]:
+    task = session.exec(
+        select(Task).where(Task.id == task_id, Task.user_id == user_id)
+    ).first()
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    document = session.exec(
-        select(Document).where(Document.task_id == task_id, Document.user_id == user_id)
-    ).first()
-    if document is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    return task, document
+    docs = session.exec(
+        select(Document).where(Document.task_id == task_id)
+    ).all()
+    return task, list(docs)
+
+
+# ---------------------------------------------------------------------------
+# 生成主流程
+# ---------------------------------------------------------------------------
 
 
 async def stream_generation(
+    *,
     session: Session,
     task: Task,
-    document: Document,
     request: Request | None = None,
-    section_id: str | None = None,
 ) -> AsyncIterator[str]:
+    """流式生成教案/学案。根据 task.lesson_type 决定生成教案、学案或两者。"""
     provider = get_provider()
-    task.status = "generating"
-    task.updated_at = utcnow()
-    session.add(task)
-    session.commit()
-    session.refresh(task)
-
-    yield _format_sse("status", {"state": "generating"})
-    yield _format_sse("document", serialize_document(document).model_dump(mode="json", by_alias=True))
 
     try:
-        content = load_content(document)
-        target_section_ids = _find_target_section_ids(content, section_id)
-        total = len(target_section_ids)
+        task.status = "generating"
+        session.add(task)
+        session.commit()
 
-        for index, current_section_id in enumerate(target_section_ids, start=1):
-            await ensure_client_connected(request)
-            content = load_content(document)
-            section = _find_section(content, current_section_id)
-            generated_blocks = await provider.generate_section(
-                SectionGenerationContext(
-                    subject=task.subject,
-                    grade=task.grade,
-                    topic=task.topic,
-                    requirements=task.requirements,
-                    section_title=section.title,
-                )
-            )
-            await ensure_client_connected(request)
-            pending_blocks = apply_suggestion_metadata(generated_blocks, kind="append")
-            _replace_pending_children(section, pending_blocks)
-            document = save_document(session, document, content)
+        yield _format_sse("status", {"status": "generating"})
+
+        doc_types: list[str] = []
+        if task.lesson_type in ("lesson_plan", "both"):
+            doc_types.append("lesson_plan")
+        if task.lesson_type in ("study_guide", "both"):
+            doc_types.append("study_guide")
+
+        for idx, doc_type in enumerate(doc_types):
+            await _ensure_client_connected(request)
+
             yield _format_sse(
                 "progress",
                 {
-                    "completed": index,
-                    "total": total,
-                    "current_section": section.title,
-                    "section_id": section.id,
+                    "progress": idx / len(doc_types),
+                    "message": f"正在生成{'教案' if doc_type == 'lesson_plan' else '学案'}...",
+                },
+            )
+
+            doc = _get_or_create_document(session, task, doc_type)
+
+            if doc_type == "lesson_plan":
+                ctx = LessonPlanContext(
+                    subject=task.subject,
+                    grade=task.grade,
+                    topic=task.topic,
+                    requirements=task.requirements or "",
+                    scene=task.scene,
+                    class_hour=task.class_hour,
+                    lesson_category=task.lesson_category,
+                )
+                stream = provider.generate_lesson_plan(ctx)
+            else:
+                ctx = StudyGuideContext(
+                    subject=task.subject,
+                    grade=task.grade,
+                    topic=task.topic,
+                    requirements=task.requirements or "",
+                    scene=task.scene,
+                    class_hour=task.class_hour,
+                )
+                stream = provider.generate_study_guide(ctx)
+
+            raw_json = await _assemble_streamed_json(stream)
+
+            try:
+                content = _parse_content_json(raw_json, doc_type)
+            except Exception:
+                content = _create_fallback_content(task, doc_type)
+
+            doc.content = content.model_dump(by_alias=True)
+            session.add(doc)
+            session.commit()
+            session.refresh(doc)
+
+            yield _format_sse(
+                "progress",
+                {
+                    "progress": (idx + 1) / len(doc_types),
+                    "message": f"{'教案' if doc_type == 'lesson_plan' else '学案'}生成完成",
                 },
             )
             yield _format_sse(
                 "document",
-                serialize_document(document).model_dump(mode="json", by_alias=True),
+                {
+                    "id": doc.id,
+                    "doc_type": doc.doc_type,
+                    "content": doc.content,
+                    "version": doc.version,
+                },
             )
 
         task.status = "ready"
-        task.updated_at = utcnow()
         session.add(task)
         session.commit()
-        session.refresh(task)
 
-        record_current_snapshot(session, document, "generation")
-        yield _format_sse("status", {"state": "ready"})
-        yield _format_sse("done", {"task_id": task.id, "document_id": document.id})
-    except ClientDisconnected:
+        yield _format_sse("status", {"status": "ready"})
+        yield _format_sse("done", {"message": "生成完成"})
+
+    except _ClientDisconnected:
         task.status = "ready"
-        task.updated_at = utcnow()
         session.add(task)
         session.commit()
         return
     except Exception as exc:
         task.status = "ready"
-        task.updated_at = utcnow()
         session.add(task)
         session.commit()
         yield _format_sse("error", {"message": str(exc)})
+
+
+# ---------------------------------------------------------------------------
+# 内部工具
+# ---------------------------------------------------------------------------
+
+
+def _get_or_create_document(
+    session: Session, task: Task, doc_type: str
+) -> Document:
+    stmt = select(Document).where(
+        Document.task_id == task.id,
+        Document.doc_type == doc_type,
+    )
+    doc = session.exec(stmt).first()
+    if doc:
+        return doc
+
+    content = _create_fallback_content(task, doc_type)
+    doc = Document(
+        task_id=task.id,
+        user_id=task.user_id,
+        doc_type=doc_type,
+        title=task.title,
+        content=content.model_dump(by_alias=True),
+    )
+    session.add(doc)
+    session.commit()
+    session.refresh(doc)
+    return doc
+
+
+def _create_fallback_content(task: Task, doc_type: str) -> DocumentContent:
+    if doc_type == "study_guide":
+        return create_empty_study_guide(
+            subject=task.subject,
+            grade=task.grade,
+            topic=task.topic,
+        )
+    return create_empty_lesson_plan(
+        subject=task.subject,
+        grade=task.grade,
+        topic=task.topic,
+        class_hour=task.class_hour,
+        lesson_category=task.lesson_category,
+    )

@@ -15,7 +15,7 @@ from app.schemas.task import (
     TaskRead,
     TaskUpdatePayload,
 )
-from app.services.generation_service import get_task_document, stream_generation
+from app.services.generation_service import get_task_and_documents, stream_generation
 from app.services.task_service import (
     create_task,
     delete_task,
@@ -37,6 +37,10 @@ def _to_task_read(task) -> TaskRead:
         topic=task.topic,
         requirements=task.requirements,
         status=task.status,
+        scene=task.scene,
+        lesson_type=task.lesson_type,
+        class_hour=task.class_hour,
+        lesson_category=task.lesson_category,
         created_at=task.created_at,
         updated_at=task.updated_at,
     )
@@ -105,8 +109,8 @@ def duplicate_owned_task(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskRead:
-    source_task, source_document = get_task_document(session, task_id, current_user.id)
-    duplicated_task = duplicate_task(session, source_task, source_document)
+    source_task = get_owned_task(session, task_id, current_user.id)
+    duplicated_task = duplicate_task(session, source_task)
     return _to_task_read(duplicated_task)
 
 
@@ -118,21 +122,19 @@ def start_generation(
     current_user: User = Depends(get_current_user),
 ) -> GenerationStartResponse:
     get_owned_task(session, task_id, current_user.id)
-    section_query = f"?section_id={payload.section_id}" if payload.section_id else ""
-    return GenerationStartResponse(stream_url=f"/api/v1/tasks/{task_id}/generate/stream{section_query}")
+    return GenerationStartResponse(stream_url=f"/api/v1/tasks/{task_id}/generate/stream")
 
 
 @router.get("/{task_id}/generate/stream")
 async def stream_task_generation(
     request: Request,
     task_id: str,
-    section_id: str | None = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    task, document = get_task_document(session, task_id, current_user.id)
+    task, _docs = get_task_and_documents(session, task_id, current_user.id)
     return StreamingResponse(
-        stream_generation(session, task, document, request=request, section_id=section_id),
+        stream_generation(session=session, task=task, request=request),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )

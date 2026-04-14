@@ -78,7 +78,8 @@ def test_task_duplicate_feedback_and_export(client, auth_headers):
         headers=auth_headers,
     ).json()["items"][0]
     assert duplicated_document["version"] == 1
-    assert duplicated_document["content"]["blocks"] == original_document["content"]["blocks"]
+    assert duplicated_document["content"]["doc_type"] == "lesson_plan"
+    assert duplicated_document["content"]["header"]["title"] == original_document["content"]["header"]["title"]
 
     feedback_response = client.post(
         "/api/v1/account/feedback",

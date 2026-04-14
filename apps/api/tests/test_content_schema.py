@@ -1,174 +1,123 @@
 from __future__ import annotations
 
-import pytest
-from pydantic import ValidationError
+from app.schemas.content import (
+    LessonPlanContent,
+    StudyGuideContent,
+    create_empty_lesson_plan,
+    create_empty_study_guide,
+    is_lesson_plan,
+    is_study_guide,
+)
 
-from app.schemas.content import ContentDocument
 
-
-def test_content_document_accepts_phase2_block_types():
+def test_lesson_plan_content_validates():
     payload = {
-        "version": 3,
-        "blocks": [
+        "doc_type": "lesson_plan",
+        "header": {
+            "title": "春",
+            "subject": "语文",
+            "grade": "七年级",
+            "classHour": 1,
+            "lessonCategory": "new",
+            "teacher": "",
+        },
+        "objectives": [
+            {"dimension": "knowledge", "content": "理解课文内容"},
+            {"dimension": "ability", "content": "掌握分析方法"},
+        ],
+        "objectives_status": "pending",
+        "key_points": {
+            "keyPoints": ["重点1"],
+            "difficulties": ["难点1"],
+        },
+        "key_points_status": "pending",
+        "preparation": ["课件"],
+        "preparation_status": "pending",
+        "teaching_process": [
             {
-                "id": "section-1",
-                "type": "section",
-                "title": "练习巩固",
-                "status": "confirmed",
-                "source": "human",
-                "children": [
-                    {
-                        "id": "group-1",
-                        "type": "exercise_group",
-                        "title": "基础题组",
-                        "status": "confirmed",
-                        "source": "human",
-                        "children": [
-                            {
-                                "id": "choice-1",
-                                "type": "choice_question",
-                                "status": "confirmed",
-                                "source": "human",
-                                "prompt": "<p>题干</p>",
-                                "options": ["A", "B", "C", "D"],
-                                "answers": ["B"],
-                                "analysis": "<p>解析</p>",
-                            },
-                            {
-                                "id": "blank-1",
-                                "type": "fill_blank_question",
-                                "status": "confirmed",
-                                "source": "human",
-                                "prompt": "<p>填空</p>",
-                                "answers": ["答案"],
-                                "analysis": "<p>解析</p>",
-                            },
-                            {
-                                "id": "short-1",
-                                "type": "short_answer_question",
-                                "status": "confirmed",
-                                "source": "human",
-                                "prompt": "<p>简答</p>",
-                                "referenceAnswer": "<p>参考答案</p>",
-                                "analysis": "<p>解析</p>",
-                            },
-                        ],
-                    }
-                ],
+                "phase": "导入新课",
+                "duration": 5,
+                "teacher_activity": "引入课题",
+                "student_activity": "思考",
+                "design_intent": "激发兴趣",
             }
         ],
+        "teaching_process_status": "pending",
+        "board_design": "板书",
+        "board_design_status": "pending",
+        "reflection": "",
+        "reflection_status": "pending",
     }
-
-    document = ContentDocument.model_validate(payload)
-    exercise_group = document.blocks[0].children[0]
-    assert exercise_group.type == "exercise_group"
-    assert exercise_group.children[0].type == "choice_question"
-    assert exercise_group.children[1].type == "fill_blank_question"
-    assert exercise_group.children[2].type == "short_answer_question"
+    content = LessonPlanContent.model_validate(payload)
+    assert content.doc_type == "lesson_plan"
+    assert len(content.objectives) == 2
+    assert content.teaching_process[0].phase == "导入新课"
+    assert content.objectives_status == "pending"
 
 
-def test_content_document_rejects_invalid_container_nesting():
+def test_study_guide_content_validates():
     payload = {
-        "version": 1,
-        "blocks": [
-            {
-                "id": "section-1",
-                "type": "section",
-                "title": "错误结构",
-                "status": "confirmed",
-                "source": "human",
-                "children": [
-                    {
-                        "id": "choice-1",
-                        "type": "choice_question",
-                        "status": "confirmed",
-                        "source": "human",
-                        "prompt": "<p>题干</p>",
-                        "options": ["A", "B"],
-                        "answers": ["A"],
-                        "analysis": "<p>解析</p>",
-                    }
-                ],
-            }
-        ],
+        "doc_type": "study_guide",
+        "header": {
+            "title": "春",
+            "subject": "语文",
+            "grade": "七年级",
+            "className": "",
+            "studentName": "",
+            "date": "",
+        },
+        "learning_objectives": ["我能理解课文内容"],
+        "learning_objectives_status": "pending",
+        "key_difficulties": ["重点1"],
+        "key_difficulties_status": "pending",
+        "prior_knowledge": ["旧知识"],
+        "prior_knowledge_status": "pending",
+        "learning_process": {
+            "selfStudy": [
+                {
+                    "level": "A",
+                    "itemType": "short_answer",
+                    "prompt": "概括主要内容",
+                    "options": [],
+                    "answer": "",
+                    "analysis": "",
+                }
+            ],
+            "collaboration": [],
+            "presentation": [],
+        },
+        "self_study_status": "pending",
+        "collaboration_status": "pending",
+        "presentation_status": "pending",
+        "assessment": [],
+        "assessment_status": "pending",
+        "extension": [],
+        "extension_status": "pending",
+        "self_reflection": "",
+        "self_reflection_status": "pending",
     }
-
-    with pytest.raises(ValidationError):
-        ContentDocument.model_validate(payload)
-
-
-def test_replace_suggestion_requires_target_and_action():
-    payload = {
-        "version": 1,
-        "blocks": [
-            {
-                "id": "section-1",
-                "type": "section",
-                "title": "教学目标",
-                "status": "confirmed",
-                "source": "human",
-                "children": [
-                    {
-                        "id": "paragraph-1",
-                        "type": "paragraph",
-                        "status": "pending",
-                        "source": "ai",
-                        "content": "<p>建议内容</p>",
-                        "suggestion": {"kind": "replace"},
-                    }
-                ],
-            }
-        ],
-    }
-
-    with pytest.raises(ValidationError):
-        ContentDocument.model_validate(payload)
+    content = StudyGuideContent.model_validate(payload)
+    assert content.doc_type == "study_guide"
+    assert len(content.learning_objectives) == 1
+    assert content.learning_process.self_study[0].level == "A"
 
 
-def test_selection_replace_suggestion_keeps_context_and_indent():
-    payload = {
-        "version": 2,
-        "blocks": [
-            {
-                "id": "section-1",
-                "type": "section",
-                "title": "导入环节",
-                "status": "confirmed",
-                "source": "human",
-                "children": [
-                    {
-                        "id": "paragraph-1",
-                        "type": "paragraph",
-                        "status": "confirmed",
-                        "source": "human",
-                        "content": "<p>原始段落</p>",
-                        "indent": 2,
-                    },
-                    {
-                        "id": "paragraph-2",
-                        "type": "paragraph",
-                        "status": "pending",
-                        "source": "ai",
-                        "content": "<p>AI 建议</p>",
-                        "indent": 2,
-                        "suggestion": {
-                            "kind": "replace",
-                            "targetBlockId": "paragraph-1",
-                            "action": "polish",
-                            "mode": "selection",
-                            "selectionText": "原始段落",
-                        },
-                    },
-                ],
-            }
-        ],
-    }
+def test_create_empty_lesson_plan():
+    content = create_empty_lesson_plan(
+        subject="语文", grade="七年级", topic="春"
+    )
+    assert content.header.title == "春"
+    assert content.header.subject == "语文"
+    assert content.doc_type == "lesson_plan"
+    assert is_lesson_plan(content)
+    assert not is_study_guide(content)
 
-    document = ContentDocument.model_validate(payload)
-    source_block = document.blocks[0].children[0]
-    suggestion_block = document.blocks[0].children[1]
-    assert source_block.indent == 2
-    assert suggestion_block.indent == 2
-    assert suggestion_block.suggestion is not None
-    assert suggestion_block.suggestion.mode == "selection"
-    assert suggestion_block.suggestion.selection_text == "原始段落"
+
+def test_create_empty_study_guide():
+    content = create_empty_study_guide(
+        subject="语文", grade="七年级", topic="春"
+    )
+    assert content.header.title == "春"
+    assert content.doc_type == "study_guide"
+    assert is_study_guide(content)
+    assert not is_lesson_plan(content)
