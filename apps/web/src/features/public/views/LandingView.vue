@@ -1,18 +1,24 @@
 <script setup lang="ts">
-import { getActivePinia } from 'pinia';
+import { BookOpenText, Clock3, Files, FolderOpen, GraduationCap, House } from 'lucide-vue-next';
+
 import { RouterLink } from 'vue-router';
 
-import { trackClientEvent } from '@/features/analytics/client';
+
 import HeroProductPreview from '@/features/public/components/HeroProductPreview.vue';
 import { landingFeatures, landingPainPoints, landingPersonas } from '@/features/public/content';
 
-const pinia = getActivePinia();
 
-function trackCta(ctaId: string, location: string) {
-  if (!pinia) {
-    return;
-  }
-  trackClientEvent(pinia, 'cta_click', '/', { cta_id: ctaId, location });
+const landingIcons = {
+  book: BookOpenText,
+  clock: Clock3,
+  files: Files,
+  folder: FolderOpen,
+  graduate: GraduationCap,
+  home: House,
+} as const;
+
+function resolveLandingIcon(icon: string) {
+  return landingIcons[icon as keyof typeof landingIcons] ?? BookOpenText;
 }
 </script>
 
@@ -26,10 +32,10 @@ function trackCta(ctaId: string, location: string) {
           AI 帮你生成结构化教案，你来调整和把关。选学科、定主题，剩下的交给 LessonPilot。
         </p>
         <div class="button-row landing-hero-actions">
-          <RouterLink class="button primary" :to="{ name: 'register' }" @click="trackCta('hero_start', 'hero')">
+          <RouterLink class="button primary" :to="{ name: 'register' }" @click="(() => {})">
             免费开始备课
           </RouterLink>
-          <RouterLink class="landing-link" :to="{ name: 'login' }" @click="trackCta('hero_login', 'hero')">
+          <RouterLink class="landing-link" :to="{ name: 'login' }" @click="(() => {})">
             已有账号？登录
           </RouterLink>
         </div>
@@ -45,7 +51,9 @@ function trackCta(ctaId: string, location: string) {
       </div>
       <div class="landing-pain-grid">
         <article v-for="item in landingPainPoints" :key="item.title" class="landing-pain-card app-card">
-          <div class="landing-card-emoji">{{ item.emoji }}</div>
+          <div class="landing-card-icon" aria-hidden="true">
+            <component :is="resolveLandingIcon(item.icon)" :size="26" />
+          </div>
           <h3>{{ item.title }}</h3>
           <p>{{ item.description }}</p>
         </article>
@@ -94,7 +102,9 @@ function trackCta(ctaId: string, location: string) {
       </div>
       <div class="persona-grid">
         <article v-for="persona in landingPersonas" :key="persona.title" class="persona-card app-card">
-          <div class="landing-card-emoji">{{ persona.emoji }}</div>
+          <div class="landing-card-icon" aria-hidden="true">
+            <component :is="resolveLandingIcon(persona.icon)" :size="26" />
+          </div>
           <h3>{{ persona.title }}</h3>
           <p>{{ persona.problem }}</p>
           <p class="persona-value">{{ persona.value }}</p>
@@ -103,12 +113,12 @@ function trackCta(ctaId: string, location: string) {
     </section>
 
     <section class="landing-cta section-card">
-      <p class="page-eyebrow">收尾 CTA</p>
+      <p class="page-eyebrow">立即开始</p>
       <h2>今晚的课，现在就能备好</h2>
       <RouterLink
         class="button primary landing-cta-button"
         :to="{ name: 'register' }"
-        @click="trackCta('footer_start', 'closing_cta')"
+        @click="(() => {})"
       >
         免费开始备课
       </RouterLink>

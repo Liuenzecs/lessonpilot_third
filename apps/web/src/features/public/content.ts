@@ -1,7 +1,7 @@
 export const landingPainPoints = [
-  { emoji: '😩', title: '每次从零写教案', description: '一份完整教案经常要耗掉两个小时。' },
-  { emoji: '😩', title: '网上抄来的教案', description: '结构混乱、内容不贴班级情况，改起来更累。' },
-  { emoji: '😩', title: '改完的 Word 文档', description: '下次想复用时又找不到，经验沉淀不下来。' },
+  { icon: 'clock', title: '每次从零写教案', description: '一份完整教案经常要耗掉两个小时。' },
+  { icon: 'files', title: '网上抄来的教案', description: '结构混乱、内容不贴班级情况，改起来更累。' },
+  { icon: 'folder', title: '改完的 Word 文档', description: '下次想复用时又找不到，经验沉淀不下来。' },
 ];
 
 export const landingFeatures = [
@@ -37,19 +37,19 @@ export const landingFeatures = [
 
 export const landingPersonas = [
   {
-    emoji: '🎓',
+    icon: 'graduate',
     title: '新手教师',
     problem: '刚入职，不知道一份教案怎么写才专业。',
     value: 'AI 先给你完整结构和内容，再按自己的风格修改。',
   },
   {
-    emoji: '📚',
+    icon: 'book',
     title: '教培老师',
     problem: '每天备 3 到 5 节课，时间根本不够。',
     value: '10 分钟搞定一份高质量教案，把时间还给授课本身。',
   },
   {
-    emoji: '🏠',
+    icon: 'home',
     title: '大学生家教',
     problem: '第一次带学生，不知道怎么组织讲解。',
     value: '选好主题就能拿到完整讲义和练习结构，直接上手。',

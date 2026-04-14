@@ -88,8 +88,9 @@ def test_apply_suggestion_metadata_marks_nested_blocks():
 
 
 def test_render_prompt_template_preserves_literal_json_braces():
+    api_root = Path(__file__).resolve().parents[1]
     prompt = _render_prompt_template(
-        Path("apps/api/app/prompts/lesson_section_generation_prompt.md"),
+        api_root / "app" / "prompts" / "lesson_section_generation_prompt.md",
         subject="数学",
         grade="八年级",
         topic="一元二次方程",

@@ -5,6 +5,7 @@ import { isContainerBlock } from '@lessonpilot/shared-types';
 import { computed } from 'vue';
 
 import { getBlockIndent } from '@/shared/utils/content';
+import { sanitizeRichHtml } from '@/shared/utils/sanitize';
 
 defineOptions({
   name: 'BlockPreview',
@@ -22,6 +23,10 @@ function toText(value: string): string {
 
 function renderAnswers(value: string[] | string): string {
   return Array.isArray(value) ? value.filter(Boolean).join('，') : value;
+}
+
+function renderHtml(value: string): string {
+  return sanitizeRichHtml(value);
 }
 
 function getIndentStyle(block: Block): { marginLeft?: string } {
@@ -67,7 +72,7 @@ function getSuggestionHint(block: Block): string | null {
     </template>
 
     <template v-else-if="block.type === 'paragraph'">
-      <div class="preview-rich-text" :style="getIndentStyle(block)" v-html="block.content" />
+      <div class="preview-rich-text" :style="getIndentStyle(block)" v-html="renderHtml(block.content)" />
     </template>
 
     <template v-else-if="block.type === 'list'">
@@ -81,7 +86,7 @@ function getSuggestionHint(block: Block): string | null {
     <template v-else-if="block.type === 'choice_question'">
       <div class="question-preview">
         <div class="preview-question-label">选择题</div>
-        <div class="preview-rich-text" v-html="block.prompt" />
+        <div class="preview-rich-text" v-html="renderHtml(block.prompt)" />
         <ul class="preview-list">
           <li v-for="(option, index) in block.options" :key="`${block.id}-${index}`">
             {{ option }}
@@ -89,28 +94,28 @@ function getSuggestionHint(block: Block): string | null {
         </ul>
         <div class="muted"><strong>答案：</strong>{{ renderAnswers(block.answers) || '未填写' }}</div>
         <div class="preview-rich-text"><strong>解析：</strong></div>
-        <div class="preview-rich-text" v-html="block.analysis" />
+        <div class="preview-rich-text" v-html="renderHtml(block.analysis)" />
       </div>
     </template>
 
     <template v-else-if="block.type === 'fill_blank_question'">
       <div class="question-preview">
         <div class="preview-question-label">填空题</div>
-        <div class="preview-rich-text" v-html="block.prompt" />
+        <div class="preview-rich-text" v-html="renderHtml(block.prompt)" />
         <div class="muted"><strong>答案：</strong>{{ renderAnswers(block.answers) || '未填写' }}</div>
         <div class="preview-rich-text"><strong>解析：</strong></div>
-        <div class="preview-rich-text" v-html="block.analysis" />
+        <div class="preview-rich-text" v-html="renderHtml(block.analysis)" />
       </div>
     </template>
 
     <template v-else-if="block.type === 'short_answer_question'">
       <div class="question-preview">
         <div class="preview-question-label">简答题</div>
-        <div class="preview-rich-text" v-html="block.prompt" />
+        <div class="preview-rich-text" v-html="renderHtml(block.prompt)" />
         <div class="preview-rich-text"><strong>参考答案：</strong></div>
-        <div class="preview-rich-text" v-html="block.referenceAnswer" />
+        <div class="preview-rich-text" v-html="renderHtml(block.referenceAnswer)" />
         <div class="preview-rich-text"><strong>解析：</strong></div>
-        <div class="preview-rich-text" v-html="block.analysis" />
+        <div class="preview-rich-text" v-html="renderHtml(block.analysis)" />
       </div>
     </template>
 

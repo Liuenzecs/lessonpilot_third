@@ -15,8 +15,23 @@ _engine_url: str | None = None
 
 
 def _build_engine(database_url: str):
+    settings = get_settings()
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    return create_engine(database_url, echo=False, connect_args=connect_args)
+    engine_kwargs = {
+        "echo": False,
+        "connect_args": connect_args,
+    }
+    if not database_url.startswith("sqlite"):
+        engine_kwargs.update(
+            {
+                "pool_pre_ping": True,
+                "pool_size": settings.db_pool_size,
+                "max_overflow": settings.db_max_overflow,
+                "pool_timeout": settings.db_pool_timeout,
+                "pool_recycle": settings.db_pool_recycle,
+            }
+        )
+    return create_engine(database_url, **engine_kwargs)
 
 
 def get_engine():
@@ -94,19 +109,12 @@ def run_migrations() -> None:
 
 def create_db_and_tables() -> None:
     from app.models import (  # noqa: F401
-        AnalyticsEvent,
         AuthToken,
-        BillingOrder,
-        BillingWebhookEvent,
         Document,
         DocumentSnapshot,
-        EmailDeliveryLog,
         Feedback,
-        InvoiceRequest,
-        QuotaAdjustment,
         Task,
         User,
-        UserSubscription,
     )
 
     run_migrations()

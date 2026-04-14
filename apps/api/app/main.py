@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_v1_router
 from app.core.config import get_settings
 from app.core.db import create_db_and_tables
-from app.core.sentry import init_sentry_api
 
 
 @asynccontextmanager
@@ -19,7 +18,6 @@ async def lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    init_sentry_api()
     app = FastAPI(title="LessonPilot API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,

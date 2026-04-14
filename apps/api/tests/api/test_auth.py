@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
 from sqlmodel import Session, select
 
+from app.core.config import get_settings
 from app.core.db import get_engine
+from app.main import create_app
 from app.models import AuthToken, User
 from app.services.auth_service import issue_reset_password_token, issue_verification_token
 
@@ -105,3 +109,15 @@ def test_forgot_and_reset_password_flow(client):
         json={"email": "teacher@example.com", "password": "NewPassword123"},
     )
     assert login_response.status_code == 200
+
+
+def test_production_requires_strong_jwt_secret(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET", "replace-with-a-long-random-secret")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///phase7-production-secret.db")
+    get_settings.cache_clear()
+
+    with pytest.raises(ValidationError, match="JWT_SECRET must be replaced"):
+        create_app()
+
+    get_settings.cache_clear()

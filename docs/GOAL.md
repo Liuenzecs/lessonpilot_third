@@ -8,58 +8,106 @@ AI 赋能的备课工具：**结构化教案编辑器 + AI 填充引擎**。
 
 ## 核心产品原则
 
-1. **结构感优先于自由输入** — 新手教师最缺的是结构感，默认体验是给骨架，AI 填肉，老师调整
-2. **AI 是引擎不是主角** — 不是和 AI 聊天生成教案，而是在结构化框架内由 AI 填充内容
-3. **老师掌控感** — 所有 AI 生成内容以"待确认"状态呈现，老师主动接受后才合入
-4. **Content JSON 是中枢** — 编辑器渲染它，AI 生成它，导出消费它，三者通过统一契约解耦
+1. **老师视角优先** — 从三种老师的实际工作流出发设计（公立校新手/大学生家教/机构老师）
+2. **结构感优先** — 给骨架，AI 填肉，老师调整
+3. **AI 是引擎不是主角** — 不是聊天生成，是在结构化框架内填充
+4. **老师掌控感** — AI 生成内容以"待确认"状态呈现，老师主动接受后合入
+5. **教学内容质量第一** — AI 输出的教案/学案内容要真正能用，不能是泛泛而谈
+
+## 目标用户
+
+| 用户 | 场景 | 教案需求 | 学案需求 |
+|------|------|---------|---------|
+| 公立校新手老师（0-3 年） | 学校要求提交教案 | 学校标准格式 | 正式导学案 |
+| 大学生家教老师 | 快速备课 | 简化版 | 讲义/练习 |
+| 机构新手老师/小机构老师 | 追求效率+质量 | 中等规范 | 讲义为主 |
+
+## 教案 + 学案
+
+- 教案和学案是**平级选项**，用户可选择：只生成教案 / 只生成学案 / 都生成
+- 使用场景（公立校/家教/培训机构）影响模板和导出格式
+- MVP 学科：**语文**
 
 ## 架构决策（不可违反）
 
-- Content JSON Block Tree 是唯一的数据层，编辑器只是视图层
-- 单体优先：前端 Vue 3 单 app，后端 FastAPI 单服务
-- AI 输出必须结构化：后端解析校验，前端只渲染确认后的数据
-- 不要实时协同、不要 CRDT/OT、不要 WebSocket 状态同步
-- API 版本前缀：`/api/v1/`
+- **教案/学案结构化 JSON 是中枢**：编辑器渲染它，AI 生成它，导出消费它
+- **单体优先**：前端 Vue 3 单 app，后端 FastAPI 单服务
+- **pnpm workspace 管理**：apps/ 放可部署应用，packages/ 放跨应用共享包
+- **AI 真正流式输出**：token-by-token 流式，不是 SSE 状态事件
+- **AI 输出结构化**：后端解析校验，前端只渲染确认后的数据
+- **API 版本前缀**：`/api/v1/`
 
 ## 技术栈
 
 - 前端：Vue 3 + TypeScript + Vite + Pinia + Vue Router + TanStack Query
-- 编辑器：Tiptap（ProseMirror 封装），通过 content JSON 解耦可替换
+- 编辑器：Tiptap（Section-based document editor）
 - 后端：FastAPI + Python 3.12+ + SQLModel + PostgreSQL
-- AI 通信：REST + SSE（不用 WebSocket）
-- 导出：python-docx（Word）+ weasyprint（PDF）
-- 数据库：PostgreSQL，一个 document 一个 JSONB content 字段
+- AI 通信：REST + SSE（真正的 token-by-token 流式）
+- AI 模型：DeepSeek + MiniMax（通过抽象 Provider 接口支持切换）
+- 导出：python-docx（Word，学校标准教案格式）
+- 共享类型：`@lessonpilot/shared-types`（packages/shared-types/）
 
-## 阶段路线图
+## UI 设计方向
 
-- [x] **Phase 0**：骨架搭建
-- [x] **Phase 1 — 核心循环（能用）**
-  - 目标：一个老师能完整走完"注册 → 创建任务 → AI 生成 → 编辑 → 导出 Word"
-  - 后端：Auth（注册/登录/JWT）、Task CRUD、Document CRUD、AI 生成端点（SSE）、Word 导出
-  - 前端：登录/注册页、任务创建向导（学科→年级→主题）、备课台列表页、编辑器基础版、AI 生成进度 UI、自动保存、Word 导出按钮
-- [x] **Phase 2 — 编辑器深度完善（好用）**
-  - 目标：编辑器真正好用，成为产品核心
-  - 所有 Block 类型完整渲染、AI pending/confirm 流程、局部 AI 重写、Block 级操作、PDF 导出、键盘快捷键、版本历史
-  - 参考 `docs/design/editor-ui.md` 全面落地
-- [x] **Phase 3 — 公域页面 & Auth 完善（有门面）**
-  - 目标：产品有完整公开门面，可对外传播
-  - Landing 首页、定价页、FAQ/帮助中心、关于我们、隐私政策/服务条款、404、公域导航栏 + Footer、忘记密码、邮箱验证
-  - 参考 `docs/design/public-pages-ui.md` 全面落地
-- [x] **Phase 4 — 账户设置 & 计费（能赚钱）**
-  - 目标：产品可以收费
-  - 账户设置页、免费额度限制、订阅方案、支付集成（微信/支付宝）、用量追踪、超额升级引导、发票申请
-- [x] **Phase 5 — UX 打磨（精致）**
-  - 目标：从"能用"到"好用"
-  - 新用户引导、空状态设计、骨架屏、Toast 通知、错误页面、反馈悬浮按钮、响应式、微动效、Word 排版优化
-- [x] **Phase 6 — 运营基础设施（可运营）**
-  - 目标：产品可独立运营
-  - 事务性邮件、SEO、数据分析、错误监控（Sentry）、简易管理后台、性能优化
-- [ ] **Phase 7 — 高级功能（按需迭代）**
-  - 教案模板库、复制为新教案、全文搜索、更多 AI 功能、批量导出、移动端适配
+**中式现代风**：宣纸白 + 墨色 + 石青 + 胆黄配色，思源宋体标题，8-12px 圆角，大量留白。
 
-## MVP 不做的事
+## 实施路线图
 
-- 试卷/答题卡上传分析
-- PPT 导出
-- 实时协同（可能永远不做）
-- 多模型切换（先用好一个模型）
+基于 `docs/milestones/implementation-plan-v2.md`，分 6 个 Sprint 重做核心产品体验。
+
+- [x] **Sprint 0 — 项目清理与准备**
+  - 删除不需要的代码（billing、admin、analytics、onboarding、feedback、SSR、Sentry、SlowAPI）
+  - 精简后端和前端到 MVP 最小依赖
+  - 添加 MiniMax LLM Provider 配置
+- [ ] **Sprint 1 — 内容模型 + AI 服务重写**
+  - 新的教案/学案结构化内容 Schema
+  - AI Provider 抽象 + DeepSeek/MiniMax/Fake 实现
+  - 新 prompt 模板聚焦教学内容质量
+  - 真正 token-by-token 流式输出
+- [ ] **Sprint 2 — 前端 UI 重设计（中式现代风）**
+  - 全局设计系统重写
+  - Landing、认证页、备课台中式现代风重设计
+- [ ] **Sprint 3 — 创建页 + 流式生成体验**
+  - 一站式创建页（学科/年级/课题/教案学案/使用场景）
+  - 真正 token-by-token 流式生成消费
+- [ ] **Sprint 4 — Section Editor + AI 重写**
+  - 文档式编辑器重写（Tab 切换教案/学案）
+  - Section 级 AI 重写/扩写/精简
+- [ ] **Sprint 5 — 导出重写**
+  - 学校标准格式 Word 导出
+  - 教案表格式教学过程 + 学案分层题目
+- [ ] **Sprint 6 — 测试 + 收尾**
+  - 完整测试套件
+  - 手动验证核心流程
+
+## MVP 范围约束
+
+### 当前要做
+- 用户注册/登录
+- 一站式创建备课（学科/年级/课题 + 教案/学案选择 + 使用场景）
+- AI 流式生成教案/学案（语文，token-by-token）
+- Section 式文档编辑器
+- Section 级 AI 重写
+- 学校标准格式 Word 导出
+- 中式现代风 UI
+- 备课台（教案列表）
+
+### 暂时不做
+- PDF 导出
+- 历史版本
+- 管理后台
+- 分析管道
+- SSR
+- Sentry
+- 复杂计费系统
+- 暗色模式
+- Onboarding
+- 反馈 widget
+- 多学科（只做语文）
+
+## 规划文档
+
+- `docs/milestones/product-replan-v2.md` — 产品重新规划
+- `docs/milestones/implementation-plan-v2.md` — 实施计划（6 个 Sprint）
+- `docs/NEXT.md` — 当前任务
+- `docs/PROGRESS.md` — 进度记录

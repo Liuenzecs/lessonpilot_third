@@ -28,3 +28,7 @@ apps/web/frontend-runtime*.log
 apps/web/src/**/*.d.ts
 *.sqlite3
 *.db
+.coverage
+.tmp/
+claude.md
+.claude

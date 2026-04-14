@@ -480,3 +480,112 @@
   - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
   - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests`：35 passed
 - Status: DONE
+
+## [Milestone 1] — 里程碑重组与 Phase 7 审查加固启动
+- 完成日期：2026-04-13
+- 完成内容：
+  - 按最新项目约束将路线图从单层 `Phase 0-7` 重组为 `Milestone 1 / Milestone 2`
+  - 将 Phase 1-6 归档为 Milestone 1 已完成基础，并新增 `Milestone 1 / Phase 7 — 审查与加固`
+  - 在 `docs/milestones/milestone-1/` 建立里程碑归档文档，整理核实后的审查报告与正式实现清单
+  - 更新 `AGENTS.md`，明确当前活跃阶段、里程碑目录说明、旧 Phase 7 advice 的历史参考属性，以及未经用户确认不得进入 Milestone 2
+- 关键文件：
+  - `docs/GOAL.md`
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+  - `docs/milestones/milestone-1/README.md`
+  - `docs/milestones/milestone-1/phase-7-audit-hardening.md`
+  - `docs/milestones/milestone-1/review-report.md`
+  - `AGENTS.md`
+- 验证结果：
+  - Milestone 文档口径已切换完成
+  - 当前阶段保持 `Milestone 1 / Phase 7` 进行中，等待实现与后续手动验收
+- Status: IN PROGRESS
+
+## [Milestone 1 / Phase 7] — 审查加固实现中
+- 完成日期：2026-04-13
+- 完成内容：
+  - 完成 Milestone 1 / Phase 7 的核心实现：密钥治理文档收口、`dompurify` 净化层、`slowapi` 关键入口限流、Webhook HMAC 验签、`APP_ENV` + 生产环境 JWT secret 启动校验
+  - 完成鲁棒性加固：根级错误边界、`app.config.errorHandler`、编辑器自动保存“未同步 / 正在重试 / 已恢复”反馈、数据库连接池配置、SSE 断连处理、`pytest-cov` 与 Phase 7 测试
+  - 完成 UI 收口：Landing 内部文案替换、公域 emoji 改 SVG icon、UpgradeModal 并回主站视觉系统、`focus-visible`、认证页品牌面板、亮暗主题切换与本地偏好持久化
+  - 同步补齐 `AGENTS.md` 密钥约束与 `.env.example / apps/api/.env.example` 的 Phase 7 配置模板，新增 `pnpm-workspace.yaml` 的 `allowBuilds` 以方便本机正常安装 `esbuild` 与 `vue-demi`
+- 关键文件：
+  - `apps/api/app/core/config.py`
+  - `apps/api/app/core/db.py`
+  - `apps/api/app/core/rate_limit.py`
+  - `apps/api/app/core/streaming.py`
+  - `apps/api/app/api/v1/endpoints/auth.py`
+  - `apps/api/app/api/v1/endpoints/analytics.py`
+  - `apps/api/app/api/v1/endpoints/billing.py`
+  - `apps/api/app/api/v1/endpoints/tasks.py`
+  - `apps/api/app/api/v1/endpoints/documents.py`
+  - `apps/api/tests/api/test_phase7_hardening.py`
+  - `apps/web/src/entry-client.ts`
+  - `apps/web/src/shared/components/AppErrorBoundary.vue`
+  - `apps/web/src/shared/utils/sanitize.ts`
+  - `apps/web/src/features/editor/composables/useEditorView.ts`
+  - `apps/web/src/features/editor/components/EditorShellHeader.vue`
+  - `apps/web/src/features/public/views/LandingView.vue`
+  - `apps/web/src/features/public/components/PublicNav.vue`
+  - `apps/web/src/app/layouts/AuthLayout.vue`
+  - `apps/web/src/features/billing/components/UpgradeModal.vue`
+  - `apps/web/src/shared/styles/main.css`
+  - `.env.example`
+  - `apps/api/.env.example`
+  - `pnpm-workspace.yaml`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（仍保留现有大量 Vue 模板格式 warnings，但无 error）
+  - `pnpm approve-builds --all`：passed
+  - `pnpm --dir apps/web build`：passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/alembic/versions apps/api/tests`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests --cov`：42 passed，total 88% 覆盖率；关键安全与运维模块达到 80%+
+- Status: IN PROGRESS
+
+## [产品重规划] — 按 product-replan-v2.md 重做
+- 完成日期：2026-04-14
+- 完成内容：
+  - 原有 Phase 0-7 / Milestone 1 路线图被判定为产品体验不达标，按 `docs/milestones/product-replan-v2.md` 重新规划
+  - 新实施计划 `docs/milestones/implementation-plan-v2.md` 定义 6 个 Sprint（Sprint 0-6）
+  - Sprint 0（项目清理与准备）已完成
+- 关键文件：
+  - `docs/milestones/product-replan-v2.md`
+  - `docs/milestones/implementation-plan-v2.md`
+  - `docs/GOAL.md`、`docs/NEXT.md`、`docs/PROGRESS.md`、`CLAUDE.md`
+- Status: IN PROGRESS
+
+## [Sprint 0] — 项目清理与准备
+- 完成日期：2026-04-14
+- 完成内容：
+
+  **后端清理**：
+  - 删除 service 文件：`billing_service.py`、`admin_service.py`、`analytics_service.py`、`append_service.py`
+  - 删除 model 文件：`billing_order.py`、`billing_webhook_event.py`、`invoice_request.py`、`user_subscription.py`、`quota_adjustment.py`、`analytics_event.py`、`email_delivery_log.py`
+  - 删除 endpoint 文件：`billing.py`、`admin.py`、`analytics.py`
+  - 删除 schema 文件：`billing.py`、`admin.py`、`analytics.py`
+  - 删除 `core/rate_limit.py`、`core/sentry.py`、`core/streaming.py`
+  - 精简 `models/__init__.py` → 只导出 User、Task、Document、DocumentSnapshot、AuthToken、Feedback
+  - 精简 `router.py` → 只保留 auth、tasks、documents、health、account
+  - 精简 `config.py` → 移除 billing/admin/sentry 字段，添加 MiniMax Provider 配置
+  - 精简 `pyproject.toml` → 移除 weasyprint、sentry-sdk、slowapi、limits
+  - 更新 `main.py` → 移除 Sentry init 和 SlowAPI 中间件
+  - 精简 `mail_service.py` → 移除 EmailDeliveryLog 和 billing 邮件，保留验证/重置/反馈邮件
+  - 修复 `db.py` 对已删除模型的引用
+  - 更新测试：移除 billing/subscription/append/PDF 测试，修复 LLM 路径
+
+  **前端清理**：
+  - 删除 feature 目录：admin、analytics、onboarding、feedback、billing
+  - 删除 SSR 文件：`entry-server.ts`、`server.mjs`
+  - 删除 Sentry：`app/monitoring/sentry.ts`
+  - 删除 SEO：`app/seo.ts`、billing store、AdminLayout
+  - 精简 `package.json` → 移除 @sentry、@vue/server-renderer、express、compression
+  - 简化 build 为纯 SPA
+  - 清理 router → 移除 admin 路由和 SSR meta
+  - 从所有页面/composable 移除 billing/analytics/onboarding 引用
+  - 修复 `LandingView.vue` 语法错误、`useEditorView.ts` useSubscription 残留
+
+- 验证结果：
+  - `python -m ruff check app/`：All checks passed
+  - `python -m pytest tests/ -q`：24 passed
+  - `npx vue-tsc --noEmit`：passed
+  - `pnpm build`：✓ built in 11.61s
+- Status: DONE

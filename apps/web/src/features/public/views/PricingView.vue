@@ -1,30 +1,14 @@
 <script setup lang="ts">
-import { getActivePinia } from 'pinia';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
-import { useBillingDialogStore } from '@/app/stores/billing';
-import { trackClientEvent } from '@/features/analytics/client';
 import FaqAccordion from '@/features/public/components/FaqAccordion.vue';
 import { pricingFaqs } from '@/features/public/content';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const billingDialog = useBillingDialogStore();
 const billingCycle = ref<'monthly' | 'yearly'>('yearly');
-const pinia = getActivePinia();
-
-function trackPricingCta(ctaId: string) {
-  if (!pinia) {
-    return;
-  }
-  trackClientEvent(pinia, 'cta_click', '/pricing', {
-    cta_id: ctaId,
-    location: 'pricing_card',
-    billing_cycle: billingCycle.value,
-  });
-}
 
 const pricingCards = computed(() => [
   {
@@ -34,10 +18,7 @@ const pricingCards = computed(() => [
     badge: '',
     disabled: false,
     cta: authStore.isAuthenticated ? '进入备课台' : '免费开始',
-    action: () => {
-      trackPricingCta('free_plan');
-      return router.push(authStore.isAuthenticated ? { name: 'tasks' } : { name: 'register' });
-    },
+    action: () => router.push(authStore.isAuthenticated ? { name: 'tasks' } : { name: 'register' }),
     features: ['每月 5 份教案额度', '基础编辑', 'Word 导出'],
   },
   {
@@ -48,20 +29,11 @@ const pricingCards = computed(() => [
     disabled: false,
     cta: '开始试用或支付',
     action: () => {
-      trackPricingCta('professional_plan');
       if (authStore.isAuthenticated) {
-        billingDialog.openDialog({
-          reason: 'upgrade',
-          title: '升级到专业版',
-          description: '现在就解锁不限量备课、局部 AI、PDF 导出和版本历史。',
-          initialCycle: billingCycle.value,
-        });
+        void router.push({ name: 'settings' });
         return;
       }
-      void router.push({
-        name: 'register',
-        query: { upgrade: '1', cycle: billingCycle.value },
-      });
+      void router.push({ name: 'register' });
     },
     features: ['不限量教案生成', '局部 AI 重写与补充', 'Word + PDF 导出', '版本历史', '官方预设全覆盖'],
   },

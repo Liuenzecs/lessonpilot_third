@@ -81,6 +81,14 @@
   color: var(--danger);
 }
 
+.save-indicator.error {
+  color: var(--danger);
+}
+
+.save-indicator.retrying {
+  color: var(--primary);
+}
+
 .editor-conflict-actions {
   display: flex;
   gap: 10px;
@@ -104,7 +112,7 @@
   padding: 10px;
   border-radius: 18px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.98);
+  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
   box-shadow: 0 18px 32px rgba(29, 45, 68, 0.14);
   display: grid;
   gap: 6px;
@@ -642,7 +650,7 @@
   padding: 16px;
   border-radius: 20px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.88);
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
   overflow-y: auto;
 }
 
@@ -650,7 +658,7 @@
   padding: 14px;
   border-radius: 16px;
   border: 1px solid rgba(76, 95, 122, 0.12);
-  background: #fff;
+  background: var(--surface-strong);
   text-align: left;
 }
 

@@ -18,6 +18,7 @@ def client(monkeypatch: pytest.MonkeyPatch):
     runtime_dir.mkdir(exist_ok=True)
     database_path = runtime_dir / f"lessonpilot_test_{uuid4().hex}.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("JWT_SECRET", "test-secret-key-with-32-plus-bytes")
     monkeypatch.setenv("LLM_PROVIDER", "fake")
     get_settings.cache_clear()

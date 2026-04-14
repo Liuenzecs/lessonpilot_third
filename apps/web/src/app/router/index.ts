@@ -5,7 +5,6 @@ import type { Pinia } from 'pinia';
 import AuthLayout from '@/app/layouts/AuthLayout.vue';
 import PrivateLayout from '@/app/layouts/PrivateLayout.vue';
 import PublicLayout from '@/app/layouts/PublicLayout.vue';
-import AdminLayout from '@/app/layouts/AdminLayout.vue';
 import { useAuthStore } from '@/app/stores/auth';
 
 const LandingView = () => import('@/features/public/views/LandingView.vue');
@@ -30,10 +29,6 @@ const TaskCreateView = () => import('@/features/task/views/TaskCreateView.vue');
 const SettingsView = () => import('@/features/settings/views/SettingsView.vue');
 const EditorView = () => import('@/features/editor/views/EditorView.vue');
 
-const AdminOverviewView = () => import('@/features/admin/views/AdminOverviewView.vue');
-const AdminUsersView = () => import('@/features/admin/views/AdminUsersView.vue');
-const AdminUserDetailView = () => import('@/features/admin/views/AdminUserDetailView.vue');
-
 export function createAppRouter(pinia: Pinia, history: RouterHistory = createWebHistory()) {
   const router = createRouter({
     history,
@@ -46,61 +41,51 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
             path: '',
             name: 'landing',
             component: LandingView,
-            meta: { publicSsr: true, seoKey: 'landing' },
           },
           {
             path: 'pricing',
             name: 'pricing',
             component: PricingView,
-            meta: { publicSsr: true, seoKey: 'pricing' },
           },
           {
             path: 'help',
             name: 'help',
             component: HelpView,
-            meta: { publicSsr: true, seoKey: 'help' },
           },
           {
             path: 'about',
             name: 'about',
             component: AboutView,
-            meta: { publicSsr: true, seoKey: 'about' },
           },
           {
             path: 'privacy',
             name: 'privacy',
             component: PrivacyView,
-            meta: { publicSsr: true, seoKey: 'privacy' },
           },
           {
             path: 'terms',
             name: 'terms',
             component: TermsView,
-            meta: { publicSsr: true, seoKey: 'terms' },
           },
           {
             path: 'changelog',
             name: 'changelog',
             component: ChangelogView,
-            meta: { publicSsr: true, seoKey: 'changelog' },
           },
           {
             path: '500',
             name: 'server-error',
             component: ServerErrorView,
-            meta: { seoKey: 'notFound' },
           },
           {
             path: 'network-error',
             name: 'network-error',
             component: NetworkErrorView,
-            meta: { seoKey: 'notFound' },
           },
           {
             path: ':pathMatch(.*)*',
             name: 'not-found',
             component: NotFoundView,
-            meta: { publicSsr: true, seoKey: 'notFound' },
           },
         ],
       },
@@ -165,31 +150,6 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
         name: 'editor',
         component: EditorView,
         meta: { requiresAuth: true },
-      },
-      {
-        path: '/admin',
-        component: AdminLayout,
-        meta: { requiresAuth: true },
-        children: [
-          {
-            path: '',
-            name: 'admin-overview',
-            component: AdminOverviewView,
-            meta: { hideFeedback: true },
-          },
-          {
-            path: 'users',
-            name: 'admin-users',
-            component: AdminUsersView,
-            meta: { hideFeedback: true },
-          },
-          {
-            path: 'users/:userId',
-            name: 'admin-user-detail',
-            component: AdminUserDetailView,
-            meta: { hideFeedback: true },
-          },
-        ],
       },
     ],
   });

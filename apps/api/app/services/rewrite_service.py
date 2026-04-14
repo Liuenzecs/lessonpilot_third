@@ -4,7 +4,7 @@ import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
 from sqlmodel import Session, select
 
 from app.models import Document, Task
@@ -12,6 +12,15 @@ from app.schemas.content import Block, ContentDocument, ExerciseGroupBlock, Sect
 from app.schemas.document import DocumentRewritePayload
 from app.services.document_service import load_content, save_document, serialize_document
 from app.services.llm_service import RewriteContext, apply_suggestion_metadata, get_provider
+
+
+class ClientDisconnected(Exception):
+    pass
+
+
+async def ensure_client_connected(request: Request | None) -> None:
+    if request is not None and hasattr(request, "is_disconnected") and await request.is_disconnected():
+        raise ClientDisconnected()
 
 
 @dataclass(slots=True)
@@ -117,6 +126,7 @@ async def stream_rewrite(
     document: Document,
     task: Task,
     payload: DocumentRewritePayload,
+    request: Request | None = None,
 ) -> AsyncIterator[str]:
     provider = get_provider()
 
@@ -133,6 +143,7 @@ async def stream_rewrite(
     yield _format_sse("document", serialize_document(document).model_dump(mode="json", by_alias=True))
 
     try:
+        await ensure_client_connected(request)
         content = load_content(document)
         location = _validate_rewrite_target(content, payload)
         rewritten_block = await provider.rewrite_block(
@@ -150,6 +161,7 @@ async def stream_rewrite(
                 selection_text=payload.selection_text,
             )
         )
+        await ensure_client_connected(request)
 
         content.blocks = _remove_replace_suggestions(content.blocks, payload.target_block_id)
         location = _validate_rewrite_target(content, payload)
@@ -176,5 +188,7 @@ async def stream_rewrite(
         yield _format_sse("document", serialize_document(document).model_dump(mode="json", by_alias=True))
         yield _format_sse("status", {"state": "ready"})
         yield _format_sse("done", {"document_id": document.id, "target_block_id": payload.target_block_id})
+    except ClientDisconnected:
+        return
     except Exception as exc:
         yield _format_sse("error", {"message": str(exc)})

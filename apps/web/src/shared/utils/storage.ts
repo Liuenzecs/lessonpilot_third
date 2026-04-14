@@ -1,4 +1,5 @@
 const AUTH_STORAGE_KEY = 'lessonpilot.auth';
+export const THEME_STORAGE_KEY = 'lessonpilot-theme';
 
 export interface PersistedAuthState {
   token: string | null;
@@ -37,4 +38,21 @@ export function clearPersistedAuthState(): void {
     return;
   }
   localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+export type PersistedThemePreference = 'light' | 'dark';
+
+export function loadPersistedThemePreference(): PersistedThemePreference | null {
+  if (!canUseStorage()) {
+    return null;
+  }
+  const rawValue = localStorage.getItem(THEME_STORAGE_KEY);
+  return rawValue === 'light' || rawValue === 'dark' ? rawValue : null;
+}
+
+export function savePersistedThemePreference(theme: PersistedThemePreference): void {
+  if (!canUseStorage()) {
+    return;
+  }
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
 }

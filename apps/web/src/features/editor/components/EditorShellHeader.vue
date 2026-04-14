@@ -3,7 +3,7 @@ import type { TaskRecord } from '@/features/task/types';
 
 defineProps<{
   task: TaskRecord | null;
-  saveState: 'saved' | 'dirty' | 'saving' | 'conflict';
+  saveState: 'saved' | 'dirty' | 'saving' | 'retrying' | 'error' | 'conflict';
   outlineCollapsed: boolean;
   exportMenuOpen: boolean;
 }>();
@@ -19,15 +19,23 @@ defineEmits<{
   'retry-save': [];
 }>();
 
-function getSaveLabel(saveState: 'saved' | 'dirty' | 'saving' | 'conflict') {
+function getSaveLabel(
+  saveState: 'saved' | 'dirty' | 'saving' | 'retrying' | 'error' | 'conflict',
+) {
   if (saveState === 'saved') {
     return '已保存';
   }
   if (saveState === 'saving') {
     return '保存中...';
   }
+  if (saveState === 'retrying') {
+    return '正在重试...';
+  }
   if (saveState === 'dirty') {
     return '未保存的更改';
+  }
+  if (saveState === 'error') {
+    return '未同步';
   }
   return '版本冲突';
 }
@@ -57,12 +65,21 @@ function getSaveLabel(saveState: 'saved' | 'dirty' | 'saving' | 'conflict') {
 
     <div class="editor-shell-actions">
       <div class="editor-save-stack">
-        <div class="save-indicator" :class="{ conflict: saveState === 'conflict' }">
+        <div
+          class="save-indicator"
+          :class="{
+            conflict: saveState === 'conflict',
+            error: saveState === 'error',
+            retrying: saveState === 'retrying',
+          }"
+        >
           {{ getSaveLabel(saveState) }}
         </div>
 
-        <div v-if="saveState === 'conflict'" class="editor-conflict-actions">
-          <button class="button ghost" type="button" @click="$emit('refresh')">刷新最新版本</button>
+        <div v-if="saveState === 'conflict' || saveState === 'error'" class="editor-conflict-actions">
+          <button v-if="saveState === 'conflict'" class="button ghost" type="button" @click="$emit('refresh')">
+            刷新最新版本
+          </button>
           <button class="button secondary" type="button" @click="$emit('retry-save')">重试保存</button>
         </div>
       </div>

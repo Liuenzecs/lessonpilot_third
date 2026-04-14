@@ -1,10 +1,6 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
-
-from app.schemas.content import ContentDocument
-from app.services.export_service import _build_export_html
 
 
 def _parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
@@ -40,12 +36,6 @@ def _create_task_and_document(client, auth_headers):
     document_response = client.get(f"/api/v1/documents/?task_id={task_id}", headers=auth_headers)
     document = document_response.json()["items"][0]
     return task_id, document
-
-
-def _start_trial(client, auth_headers):
-    response = client.post("/api/v1/account/subscription/trial", headers=auth_headers)
-    assert response.status_code == 200
-    return response.json()
 
 
 def _seed_paragraph_block(client, auth_headers, document):
@@ -102,7 +92,6 @@ def test_generation_supports_exercise_groups_and_questions(client, auth_headers)
 
 def test_rewrite_flow_and_history_restore(client, auth_headers):
     _, document = _create_task_and_document(client, auth_headers)
-    _start_trial(client, auth_headers)
     updated_document, paragraph_id = _seed_paragraph_block(client, auth_headers, document)
 
     rewrite_start = client.post(
@@ -205,114 +194,3 @@ def test_rewrite_flow_and_history_restore(client, auth_headers):
     ).json()["items"][0]
     assert latest_history["source"] == "restore"
 
-
-def test_append_flow_and_error_cases(client, auth_headers):
-    _, document = _create_task_and_document(client, auth_headers)
-    _start_trial(client, auth_headers)
-    section_id = document["content"]["blocks"][0]["id"]
-
-    unauthorized = client.post(
-        f"/api/v1/documents/{document['id']}/append",
-        json={
-            "document_version": document["version"],
-            "section_id": section_id,
-            "instruction": "补充一段导入语",
-        },
-    )
-    assert unauthorized.status_code == 401
-
-    version_conflict = client.post(
-        f"/api/v1/documents/{document['id']}/append",
-        headers=auth_headers,
-        json={
-            "document_version": document["version"] + 1,
-            "section_id": section_id,
-            "instruction": "补充一段导入语",
-        },
-    )
-    assert version_conflict.status_code == 409
-
-    append_start = client.post(
-        f"/api/v1/documents/{document['id']}/append",
-        headers=auth_headers,
-        json={
-            "document_version": document["version"],
-            "section_id": section_id,
-            "instruction": "补充一段导入语",
-        },
-    )
-    assert append_start.status_code == 200
-
-    with client.stream("GET", append_start.json()["stream_url"], headers=auth_headers) as stream_response:
-        events = _parse_sse_events("".join(stream_response.iter_text()))
-    assert [name for name, _ in events] == ["status", "progress", "document", "progress", "document", "status", "done"]
-
-    appended_document = client.get(
-        f"/api/v1/documents/{document['id']}",
-        headers=auth_headers,
-    ).json()
-    appended_children = appended_document["content"]["blocks"][0]["children"]
-    assert appended_children
-    assert appended_children[-1]["status"] == "pending"
-    assert appended_children[-1]["source"] == "ai"
-    assert appended_children[-1]["suggestion"]["kind"] == "append"
-
-    latest_history = client.get(
-        f"/api/v1/documents/{document['id']}/history?limit=1",
-        headers=auth_headers,
-    ).json()["items"][0]
-    assert latest_history["source"] == "append_ai"
-
-    invalid_section_start = client.post(
-        f"/api/v1/documents/{document['id']}/append",
-        headers=auth_headers,
-        json={
-            "document_version": appended_document["version"],
-            "section_id": "missing-section",
-            "instruction": "补充一段导入语",
-        },
-    )
-    assert invalid_section_start.status_code == 200
-    with client.stream("GET", invalid_section_start.json()["stream_url"], headers=auth_headers) as stream_response:
-        invalid_events = _parse_sse_events("".join(stream_response.iter_text()))
-    assert invalid_events[-1][0] == "error"
-    assert invalid_events[-1][1]["message"] == "404: Section not found"
-
-
-def test_pdf_export_returns_pdf_and_excludes_pending(client, auth_headers):
-    task_id, document = _create_task_and_document(client, auth_headers)
-    _start_trial(client, auth_headers)
-    updated_document, _ = _seed_paragraph_block(client, auth_headers, document)
-
-    content = updated_document["content"]
-    content["blocks"][0]["children"].append(
-        {
-            "id": "pending-1",
-            "type": "paragraph",
-            "status": "pending",
-            "source": "ai",
-            "content": "<p>这段待确认内容不应导出</p>",
-            "suggestion": {"kind": "append"},
-        }
-    )
-    patch_response = client.patch(
-        f"/api/v1/documents/{updated_document['id']}",
-        headers=auth_headers,
-        json={"version": updated_document["version"], "content": content},
-    )
-    assert patch_response.status_code == 200
-
-    task = client.get(f"/api/v1/tasks/{task_id}", headers=auth_headers).json()
-    html = _build_export_html(
-        SimpleNamespace(**task),
-        ContentDocument.model_validate(patch_response.json()["content"]),
-    )
-    assert "这段待确认内容不应导出" not in html
-
-    export_response = client.get(
-        f"/api/v1/documents/{updated_document['id']}/export?format=pdf",
-        headers=auth_headers,
-    )
-    assert export_response.status_code == 200
-    assert export_response.headers["content-type"] == "application/pdf"
-    assert export_response.content[:4] == b"%PDF"

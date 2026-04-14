@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
 from sqlmodel import Session, select
 
 from app.models import Document, Task
@@ -20,6 +20,15 @@ from app.services.llm_service import (
     apply_suggestion_metadata,
     get_provider,
 )
+
+
+class ClientDisconnected(Exception):
+    pass
+
+
+async def ensure_client_connected(request: Request | None) -> None:
+    if request is not None and hasattr(request, "is_disconnected") and await request.is_disconnected():
+        raise ClientDisconnected()
 
 
 def _format_sse(event: str, payload: dict) -> str:
@@ -64,6 +73,7 @@ async def stream_generation(
     session: Session,
     task: Task,
     document: Document,
+    request: Request | None = None,
     section_id: str | None = None,
 ) -> AsyncIterator[str]:
     provider = get_provider()
@@ -82,6 +92,7 @@ async def stream_generation(
         total = len(target_section_ids)
 
         for index, current_section_id in enumerate(target_section_ids, start=1):
+            await ensure_client_connected(request)
             content = load_content(document)
             section = _find_section(content, current_section_id)
             generated_blocks = await provider.generate_section(
@@ -93,6 +104,7 @@ async def stream_generation(
                     section_title=section.title,
                 )
             )
+            await ensure_client_connected(request)
             pending_blocks = apply_suggestion_metadata(generated_blocks, kind="append")
             _replace_pending_children(section, pending_blocks)
             document = save_document(session, document, content)
@@ -119,6 +131,12 @@ async def stream_generation(
         record_current_snapshot(session, document, "generation")
         yield _format_sse("status", {"state": "ready"})
         yield _format_sse("done", {"task_id": task.id, "document_id": document.id})
+    except ClientDisconnected:
+        task.status = "ready"
+        task.updated_at = utcnow()
+        session.add(task)
+        session.commit()
+        return
     except Exception as exc:
         task.status = "ready"
         task.updated_at = utcnow()

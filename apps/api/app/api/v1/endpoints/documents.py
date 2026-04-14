@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 from sqlmodel import Session, select
 
@@ -10,8 +10,6 @@ from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models import Task, User
 from app.schemas.document import (
-    DocumentAppendPayload,
-    DocumentAppendStartResponse,
     DocumentHistoryResponse,
     DocumentListResponse,
     DocumentRead,
@@ -20,10 +18,6 @@ from app.schemas.document import (
     DocumentSnapshotRead,
     DocumentUpdatePayload,
 )
-from app.services.analytics_service import record_server_event
-from app.services.append_service import get_document_task as get_append_document_task
-from app.services.append_service import stream_append
-from app.services.billing_service import require_professional_feature
 from app.services.document_service import (
     get_document_snapshot,
     get_owned_document,
@@ -75,16 +69,18 @@ def patch_document(
 
 @router.post("/{document_id}/rewrite", response_model=DocumentRewriteStartResponse)
 def start_document_rewrite(
+    request: Request,
     document_id: str,
     payload: DocumentRewritePayload,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentRewriteStartResponse:
-    require_professional_feature(session, current_user, "局部 AI 重写")
+    _ = request
     document = get_owned_document(session, document_id, current_user.id)
     if payload.document_version != document.version:
         raise HTTPException(status_code=409, detail="Document version conflict")
 
+    from urllib.parse import urlencode
     query = urlencode(
         {
             "document_version": payload.document_version,
@@ -99,59 +95,9 @@ def start_document_rewrite(
     )
 
 
-@router.post("/{document_id}/append", response_model=DocumentAppendStartResponse)
-def start_document_append(
-    document_id: str,
-    payload: DocumentAppendPayload,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-) -> DocumentAppendStartResponse:
-    require_professional_feature(session, current_user, "AI 补充内容")
-    document = get_owned_document(session, document_id, current_user.id)
-    if payload.document_version != document.version:
-        raise HTTPException(status_code=409, detail="Document version conflict")
-
-    query = urlencode(
-        {
-            "document_version": payload.document_version,
-            "section_id": payload.section_id,
-            "instruction": payload.instruction,
-        }
-    )
-    return DocumentAppendStartResponse(
-        stream_url=f"/api/v1/documents/{document_id}/append/stream?{query}"
-    )
-
-
-@router.get("/{document_id}/append/stream")
-async def stream_document_append(
-    document_id: str,
-    document_version: int,
-    section_id: str,
-    instruction: str,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-) -> StreamingResponse:
-    require_professional_feature(session, current_user, "AI 补充内容")
-    document = get_owned_document(session, document_id, current_user.id)
-    if document.version != document_version:
-        raise HTTPException(status_code=409, detail="Document version conflict")
-
-    task = get_append_document_task(session, document)
-    payload = DocumentAppendPayload(
-        document_version=document_version,
-        section_id=section_id,
-        instruction=instruction,
-    )
-    return StreamingResponse(
-        stream_append(session, document, task, payload),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
-    )
-
-
 @router.get("/{document_id}/rewrite/stream")
 async def stream_document_rewrite(
+    request: Request,
     document_id: str,
     document_version: int,
     mode: str,
@@ -161,7 +107,6 @@ async def stream_document_rewrite(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    require_professional_feature(session, current_user, "局部 AI 重写")
     document = get_owned_document(session, document_id, current_user.id)
     if document.version != document_version:
         raise HTTPException(status_code=409, detail="Document version conflict")
@@ -175,7 +120,7 @@ async def stream_document_rewrite(
         selection_text=selection_text,
     )
     return StreamingResponse(
-        stream_rewrite(session, document, task, payload),
+        stream_rewrite(session, document, task, payload, request=request),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
@@ -188,7 +133,6 @@ def get_document_history(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentHistoryResponse:
-    require_professional_feature(session, current_user, "版本历史")
     document = get_owned_document(session, document_id, current_user.id)
     snapshots = list_document_history(session, document, limit=limit)
     return DocumentHistoryResponse(items=[serialize_snapshot(snapshot) for snapshot in snapshots])
@@ -201,7 +145,6 @@ def get_document_history_snapshot(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentSnapshotRead:
-    require_professional_feature(session, current_user, "版本历史")
     document = get_owned_document(session, document_id, current_user.id)
     snapshot = get_document_snapshot(session, document, snapshot_id)
     return serialize_snapshot(snapshot)
@@ -214,7 +157,6 @@ def restore_history_snapshot(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentRead:
-    require_professional_feature(session, current_user, "版本历史")
     document = get_owned_document(session, document_id, current_user.id)
     snapshot = get_document_snapshot(session, document, snapshot_id)
     updated_document = restore_document_snapshot(session, document, snapshot)
@@ -235,13 +177,6 @@ def export_document(
 
     if format == "docx":
         payload = build_docx(task, load_content(document))
-        record_server_event(
-            session,
-            event_name="docx_export_succeeded",
-            user=current_user,
-            page_path=f"/tasks/{task.id}/editor",
-            properties={"task_id": task.id},
-        )
         filename = quote(f"{task.title}.docx")
         return Response(
             content=payload,
@@ -249,15 +184,7 @@ def export_document(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
         )
     if format == "pdf":
-        require_professional_feature(session, current_user, "PDF 导出")
         payload = build_pdf(task, load_content(document))
-        record_server_event(
-            session,
-            event_name="pdf_export_succeeded",
-            user=current_user,
-            page_path=f"/tasks/{task.id}/editor",
-            properties={"task_id": task.id},
-        )
         filename = quote(f"{task.title}.pdf")
         return Response(
             content=payload,

@@ -16,7 +16,6 @@ from app.schemas.auth import (
     UserRead,
     VerifyEmailPayload,
 )
-from app.services.analytics_service import record_server_event
 from app.services.auth_service import (
     authenticate_user,
     issue_verification_token,
@@ -61,13 +60,6 @@ def register(
             verification_token,
             user_id=user.id,
         )
-    record_server_event(
-        session,
-        event_name="register_success",
-        user=user,
-        page_path="/register",
-        properties={"email_verified": user.email_verified},
-    )
     return AuthResponse(access_token=create_access_token(user.id), user=_to_user_read(user))
 
 
@@ -77,13 +69,6 @@ def login(
     session: Session = Depends(get_session),
 ) -> AuthResponse:
     user = authenticate_user(session, payload)
-    record_server_event(
-        session,
-        event_name="login_success",
-        user=user,
-        page_path="/login",
-        properties={"email_verified": user.email_verified},
-    )
     return AuthResponse(access_token=create_access_token(user.id), user=_to_user_read(user))
 
 

@@ -39,10 +39,6 @@ def test_account_profile_password_and_subscription(client, auth_headers):
     assert update_response.json()["email_verified"] is False
 
     _create_task(client, auth_headers)
-    subscription_response = client.get("/api/v1/account/subscription", headers=auth_headers)
-    assert subscription_response.status_code == 200
-    assert subscription_response.json()["plan"] == "free"
-    assert subscription_response.json()["tasks_used_this_month"] == 1
 
     change_password_response = client.post(
         "/api/v1/account/change-password",

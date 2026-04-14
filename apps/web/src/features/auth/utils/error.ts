@@ -41,6 +41,10 @@ export function getAuthErrorMessage(error: unknown, fallback: string): string {
     return '该邮箱已经注册，请直接登录或更换邮箱。';
   }
 
+  if (error.status === 429) {
+    return '请求过于频繁，请稍后再试。';
+  }
+
   if (detail.includes('Password must be at least 8 characters')) {
     return '密码至少 8 位，并且必须同时包含字母和数字。';
   }

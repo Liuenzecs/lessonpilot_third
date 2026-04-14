@@ -4,6 +4,7 @@ export type AppErrorKind =
   | 'network'
   | 'not_found'
   | 'unauthorized'
+  | 'rate_limited'
   | 'conflict'
   | 'billing'
   | 'server'
@@ -92,6 +93,15 @@ export function getAppErrorState(
       status: 401,
       title: '登录状态已失效',
       description: detail || '请重新登录后继续当前操作。',
+    };
+  }
+
+  if (error.status === 429) {
+    return {
+      kind: 'rate_limited',
+      status: 429,
+      title: '请求过于频繁',
+      description: detail || '请稍后再试，避免过快重复提交相同操作。',
     };
   }
 

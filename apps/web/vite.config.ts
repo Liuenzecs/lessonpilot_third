@@ -17,7 +17,6 @@ export default defineConfig({
     port: 5173,
   },
   build: {
-    ssrManifest: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
