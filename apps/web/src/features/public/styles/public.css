@@ -154,24 +154,24 @@
 
 .hero-preview-window {
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 12px;
   background: #f7f6f2;
-  border: 1px solid rgba(62, 98, 143, 0.12);
-  box-shadow: 0 20px 40px rgba(27, 43, 68, 0.12);
+  border: 1px solid rgba(58, 124, 165, 0.12);
+  box-shadow: 0 20px 40px rgba(44, 44, 44, 0.12);
 }
 
 .hero-preview-bar {
   display: flex;
   gap: 8px;
   padding: 16px 18px;
-  background: rgba(35, 51, 73, 0.06);
+  background: rgba(44, 44, 44, 0.06);
 }
 
 .hero-preview-bar span {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: rgba(62, 98, 143, 0.22);
+  background: rgba(58, 124, 165, 0.22);
 }
 
 .hero-preview-content {
@@ -184,20 +184,20 @@
   padding: 20px;
   display: grid;
   gap: 14px;
-  background: rgba(62, 98, 143, 0.07);
+  background: rgba(58, 124, 165, 0.07);
 }
 
 .hero-preview-sidebar-card,
 .feature-preview-panel {
-  border-radius: 18px;
+  border-radius: 10px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(76, 95, 122, 0.1);
+  border: 1px solid rgba(44, 44, 44, 0.1);
 }
 
 .hero-preview-sidebar-card.active,
 .feature-preview-panel.strong {
-  background: rgba(62, 98, 143, 0.12);
+  background: rgba(58, 124, 165, 0.12);
 }
 
 .hero-preview-label {
@@ -246,14 +246,14 @@
 }
 
 .hero-preview-export {
-  background: rgba(35, 51, 73, 0.07);
+  background: rgba(44, 44, 44, 0.07);
 }
 
 .hero-preview-section {
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 18px;
   background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(76, 95, 122, 0.1);
+  border: 1px solid rgba(44, 44, 44, 0.1);
 }
 
 .hero-preview-section.pending {
@@ -275,7 +275,7 @@
 .hero-preview-line {
   height: 11px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(62, 98, 143, 0.22), rgba(62, 98, 143, 0.08));
+  background: linear-gradient(90deg, rgba(58, 124, 165, 0.22), rgba(58, 124, 165, 0.08));
   margin-bottom: 10px;
 }
 
@@ -328,9 +328,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
+  border-radius: 10px;
   margin-bottom: 14px;
-  background: rgba(62, 98, 143, 0.1);
+  background: rgba(58, 124, 165, 0.1);
   color: var(--primary);
 }
 
@@ -441,7 +441,7 @@
   gap: 8px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(62, 98, 143, 0.08);
+  background: rgba(58, 124, 165, 0.08);
 }
 
 .pricing-toggle button {
@@ -464,7 +464,7 @@
 }
 
 .pricing-card.featured {
-  border-color: rgba(62, 98, 143, 0.28);
+  border-color: rgba(58, 124, 165, 0.28);
   transform: translateY(-6px);
 }
 
@@ -572,7 +572,7 @@
 }
 
 .public-footer {
-  background: #243349;
+  background: #2c2c2c;
   color: rgba(255, 255, 255, 0.88);
   margin-top: auto;
   padding: 40px 0 28px;
@@ -755,7 +755,7 @@
 .auth-wechat-button {
   width: 100%;
   border: 1px dashed var(--border-strong);
-  border-radius: 16px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.68);
   color: var(--muted);
   padding: 13px 16px;
@@ -810,7 +810,7 @@
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: rgba(62, 98, 143, 0.12);
+  background: rgba(58, 124, 165, 0.12);
   color: var(--primary);
   font-weight: 700;
 }
@@ -843,9 +843,9 @@
 
 .user-menu-item {
   border: 0;
-  border-radius: 14px;
+  border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(62, 98, 143, 0.08);
+  background: rgba(58, 124, 165, 0.08);
   text-align: left;
   color: var(--text);
 }
@@ -855,12 +855,12 @@
 }
 
 .verification-badge {
-  background: rgba(198, 84, 101, 0.12);
+  background: rgba(199, 84, 80, 0.12);
   color: var(--danger);
 }
 
 .verification-badge.verified {
-  background: rgba(46, 123, 102, 0.14);
+  background: rgba(90, 143, 108, 0.14);
   color: var(--success);
 }
 
