@@ -13,6 +13,10 @@ defineProps<{
   noticeTone: 'success' | 'info';
 }>();
 
+defineEmits<{
+  stop: [];
+}>();
+
 function getRewriteLabel(action: 'rewrite' | 'polish' | 'expand') {
   if (action === 'polish') {
     return '润色';
@@ -30,9 +34,12 @@ function getRewriteLabel(action: 'rewrite' | 'polish' | 'expand') {
       {{ noticeText }}
     </div>
 
-    <div v-if="isGenerating" class="generation-banner">
-      正在生成 {{ currentSection || '教案内容' }}
-      <template v-if="total">（{{ completed }}/{{ total }}）</template>
+    <div v-if="isGenerating" class="generation-banner generating">
+      <span>
+        正在生成 {{ currentSection || '教案内容' }}
+        <template v-if="total">（{{ completed }}/{{ total }}）</template>
+      </span>
+      <button class="button ghost stop-btn" type="button" @click="$emit('stop')">停止生成</button>
     </div>
 
     <div v-if="isRewriting" class="generation-banner secondary">
@@ -46,3 +53,19 @@ function getRewriteLabel(action: 'rewrite' | 'polish' | 'expand') {
     <div v-if="streamError" class="feedback">{{ streamError }}</div>
   </div>
 </template>
+
+<style scoped>
+.stop-btn {
+  margin-left: 12px;
+  padding: 2px 10px;
+  font-size: 0.8125rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+}
+
+.stop-btn:hover {
+  color: var(--danger, #c75450);
+  border-color: var(--danger, #c75450);
+}
+</style>

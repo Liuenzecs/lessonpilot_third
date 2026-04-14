@@ -106,6 +106,9 @@ def test_task_document_generation_flow(client, auth_headers):
     assert "status" in event_names
     assert "progress" in event_names
     assert "done" in event_names
+    # Sprint 3：流式 section 级事件
+    assert "section_delta" in event_names
+    assert "document" in event_names
 
     refreshed_document = client.get(f"/api/v1/documents/{document_id}", headers=auth_headers).json()
     assert refreshed_document["content"]["doc_type"] == "lesson_plan"

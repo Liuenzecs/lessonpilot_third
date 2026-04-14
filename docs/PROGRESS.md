@@ -661,3 +661,64 @@
   - `npx vue-tsc --noEmit`：passed
   - `pnpm build`：✓ built in 10.87s
 - Status: DONE
+
+## [Sprint 3] — 创建页 + 流式生成体验
+
+- 完成日期：2026-04-14
+- 完成内容：
+
+  **后端流式输出重写**：
+  - 重写 `generation_service.py`：删除 `_assemble_streamed_json()`，替换为逐 token 转发 + section 边界检测
+  - 新 SSE 事件协议：`section_start`、`section_delta`、`section_complete`、`document`、`done`、`error`
+  - 新增 `_SectionTracker` 类：通过正则检测 `"<section_name>_status"` 模式实现启发式 section 边界检测
+  - 新增教案/学案 section 名称→中文标题映射表
+
+  **前端 SSE 消费重写**：
+  - 重写 `useGeneration.ts`：新增 `StreamingEventHandlers` 接口（类型化事件回调）
+  - `consumeGenerationStream()` 支持 `AbortSignal` 参数用于停止生成
+  - 保留旧的 `consumeRewriteStream()` / `consumeAppendStream()` 不变
+
+  **编辑器流式集成**：
+  - 更新 `useEditorView.ts`：`generationProgress` 新增 `streamingText` 和 `docType` 字段
+  - 新增 `stopGeneration()` 函数（通过 AbortController 中断流式连接）
+  - 重写 `startGeneration()` 使用新的 `StreamingEventHandlers`
+
+  **StreamingText 组件**：
+  - 新建 `StreamingText.vue`：流式文本显示组件，带闪烁光标动画
+  - 中式现代风样式：`var(--text)` 文字色，`var(--primary)` 光标色
+
+  **collectSections() 修复**：
+  - 重写 `content.ts` 中的 `collectSections()`：从空 stub 改为真正的 section 提取
+  - 实现 `collectLessonPlanSections()` 和 `collectStudyGuideSections()`
+  - 将结构化内容字段映射为 `SectionBlock[]`（含 ParagraphBlock/ListBlock/TeachingStepBlock 等）
+  - 同步修复 `findSection()` 函数
+
+  **创建页重写**：
+  - 重写 `TaskCreateView.vue`：3 步向导 → 单页一站式布局
+  - 新增全部 9 个表单字段：学科/年级/课题/课时/课型/生成类型/使用场景/补充说明
+  - 新增选项常量：`LESSON_CATEGORY_OPTIONS`、`SCENE_OPTIONS`、`LESSON_TYPE_OPTIONS`
+
+  **EditorView + EditorStatusBanner 更新**：
+  - 集成 StreamingText 组件到编辑器主面板
+  - EditorStatusBanner 新增"停止生成"按钮
+  - CSS 更新：创建页一站式布局样式、流式文本样式、生成中 banner flex 布局
+
+- 关键文件：
+  - `apps/api/app/services/generation_service.py`（REWRITE）
+  - `apps/web/src/features/generation/composables/useGeneration.ts`（REWRITE）
+  - `apps/web/src/features/editor/composables/useEditorView.ts`（UPDATE）
+  - `apps/web/src/features/editor/components/StreamingText.vue`（NEW）
+  - `apps/web/src/shared/utils/content.ts`（REWRITE collectSections）
+  - `apps/web/src/features/task/views/TaskCreateView.vue`（REWRITE）
+  - `apps/web/src/shared/constants/options.ts`（UPDATE）
+  - `apps/web/src/features/editor/views/EditorView.vue`（UPDATE）
+  - `apps/web/src/features/editor/components/EditorStatusBanner.vue`（UPDATE）
+  - `apps/web/src/shared/styles/main.css`（UPDATE）
+  - `apps/web/src/features/editor/styles/editor.css`（UPDATE）
+  - `apps/api/tests/api/test_tasks.py`（UPDATE）
+- 验证结果：
+  - `python -m ruff check app/`：All checks passed
+  - `python -m pytest tests/ -q`：28 passed
+  - `npx vue-tsc --noEmit`：passed
+  - `pnpm build`：✓ built in 13.97s
+- Status: DONE

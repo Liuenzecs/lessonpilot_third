@@ -8,6 +8,7 @@ import EditorShellHeader from '@/features/editor/components/EditorShellHeader.vu
 import EditorStatusBanner from '@/features/editor/components/EditorStatusBanner.vue';
 import ExportPreviewModal from '@/features/editor/components/ExportPreviewModal.vue';
 import HistoryDrawer from '@/features/editor/components/HistoryDrawer.vue';
+import StreamingText from '@/features/editor/components/StreamingText.vue';
 import { useEditorView } from '@/features/editor/composables/useEditorView';
 import { getAppErrorState } from '@/shared/api/errors';
 import StatePanel from '@/shared/components/StatePanel.vue';
@@ -62,6 +63,7 @@ const {
   scrollToSection,
   isSectionShowingSkeleton,
   startGeneration,
+  stopGeneration,
   startRewrite,
   startAppend,
   refreshFromServer,
@@ -185,6 +187,7 @@ function findSectionIdByTitle(sectionTitle: string) {
           :stream-error="streamError"
           :notice-text="notice.text"
           :notice-tone="notice.tone"
+          @stop="stopGeneration"
         />
 
         <div v-if="showInitialSkeleton" class="generation-banner">
@@ -200,6 +203,13 @@ function findSectionIdByTitle(sectionTitle: string) {
               :is-current="generationProgress.currentSection === sectionTitle || !generationProgress.currentSection"
             />
           </template>
+
+          <StreamingText
+            v-if="generationProgress.isGenerating && generationProgress.streamingText"
+            :text="generationProgress.streamingText"
+            :active="generationProgress.isGenerating"
+            class="streaming-inline"
+          />
 
           <div
             v-for="section in sections"

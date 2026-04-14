@@ -59,17 +59,19 @@ AI 赋能的备课工具：**结构化教案编辑器 + AI 填充引擎**。
   - 删除不需要的代码（billing、admin、analytics、onboarding、feedback、SSR、Sentry、SlowAPI）
   - 精简后端和前端到 MVP 最小依赖
   - 添加 MiniMax LLM Provider 配置
-- [ ] **Sprint 1 — 内容模型 + AI 服务重写**
+- [x] **Sprint 1 — 内容模型 + AI 服务重写**
   - 新的教案/学案结构化内容 Schema
   - AI Provider 抽象 + DeepSeek/MiniMax/Fake 实现
   - 新 prompt 模板聚焦教学内容质量
   - 真正 token-by-token 流式输出
-- [ ] **Sprint 2 — 前端 UI 重设计（中式现代风）**
+- [x] **Sprint 2 — 前端 UI 重设计（中式现代风）**
   - 全局设计系统重写
   - Landing、认证页、备课台中式现代风重设计
-- [ ] **Sprint 3 — 创建页 + 流式生成体验**
+- [x] **Sprint 3 — 创建页 + 流式生成体验**
   - 一站式创建页（学科/年级/课题/教案学案/使用场景）
   - 真正 token-by-token 流式生成消费
+  - StreamingText 逐字显示 + 停止生成
+  - collectSections 修复（编辑器可渲染结构化内容）
 - [ ] **Sprint 4 — Section Editor + AI 重写**
   - 文档式编辑器重写（Tab 切换教案/学案）
   - Section 级 AI 重写/扩写/精简

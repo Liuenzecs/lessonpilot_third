@@ -4,53 +4,36 @@ import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useCreateTaskMutation } from '@/features/task/composables/useTasks';
+import type { LessonCategory, LessonType, Scene } from '@lessonpilot/shared-types';
 import { ApiError } from '@/shared/api/client';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
-import { GRADE_OPTIONS, SUBJECT_OPTIONS } from '@/shared/constants/options';
+import {
+  GRADE_OPTIONS,
+  LESSON_CATEGORY_OPTIONS,
+  LESSON_TYPE_OPTIONS,
+  SCENE_OPTIONS,
+  SUBJECT_OPTIONS,
+} from '@/shared/constants/options';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const createTaskMutation = useCreateTaskMutation();
 const toast = useToast();
 
-const step = ref(1);
 const submitError = ref('');
 const form = reactive({
   subject: '',
   grade: '',
   topic: '',
+  class_hour: 1,
+  lesson_category: 'new' as LessonCategory,
+  lesson_type: 'lesson_plan' as LessonType,
+  scene: 'public_school' as Scene,
   requirements: '',
 });
 
-const stepMeta = computed(() => {
-  if (step.value === 1) {
-    return {
-      title: '选择学科',
-      description: '先选这节课属于哪个学科。',
-    };
-  }
-  if (step.value === 2) {
-    return {
-      title: '选择年级',
-      description: '再告诉 LessonPilot 这节课面向哪个年级。',
-    };
-  }
-  return {
-    title: '输入课题主题',
-    description: '最后写下课题主题，也可以补一句具体要求。',
-  };
-});
-
-const canGoNext = computed(() => {
-  if (step.value === 1) {
-    return Boolean(form.subject);
-  }
-  if (step.value === 2) {
-    return Boolean(form.grade);
-  }
-  return Boolean(form.topic.trim());
-});
+const canSubmit = computed(() => Boolean(form.subject) && Boolean(form.grade) && form.topic.trim().length > 0);
 
 async function submit() {
   submitError.value = '';
@@ -60,7 +43,7 @@ async function submit() {
       ...form,
       requirements: form.requirements.trim() || null,
     });
-    toast.info('已进入编辑器，正在生成教案…', '你会先看到结构骨架，再逐段收到 AI 内容。');
+    toast.info('已进入编辑器，正在生成…', '你会看到 AI 逐步输出内容。');
     await router.push({ name: 'editor', params: { taskId: task.id } });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
@@ -76,103 +59,150 @@ async function submit() {
 </script>
 
 <template>
-  <div class="page-shell wizard-page">
-    <div class="wizard-frame app-card">
-      <div class="wizard-head">
+  <div class="page-shell create-page">
+    <div class="create-frame app-card">
+      <div class="create-head">
         <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
-          返回备课台
+          ← 返回备课台
         </button>
-
-        <div class="wizard-progress">
-          <div class="wizard-progress-label">步骤 {{ step }}/3</div>
-          <div class="wizard-progress-dots">
-            <span v-for="index in 3" :key="index" class="wizard-progress-dot" :class="{ active: index <= step }" />
-          </div>
-        </div>
+        <h1 class="page-title">创建新备课</h1>
       </div>
 
-      <section class="wizard-content">
-        <div class="wizard-copy">
-          <div class="wizard-eyebrow">创建向导</div>
-          <h1 class="page-title wizard-title">{{ stepMeta.title }}</h1>
-          <p class="subtitle wizard-subtitle">{{ stepMeta.description }}</p>
+      <form class="create-body" @submit.prevent="submit">
+        <!-- 基本信息行 -->
+        <div class="create-row">
+          <div class="create-field">
+            <label class="create-label">学科</label>
+            <div class="create-choice-grid compact">
+              <button
+                v-for="subject in SUBJECT_OPTIONS"
+                :key="subject"
+                type="button"
+                class="wizard-choice-card"
+                :class="{ active: form.subject === subject }"
+                @click="form.subject = subject"
+              >
+                {{ subject }}
+              </button>
+            </div>
+          </div>
+
+          <div class="create-field">
+            <label class="create-label">年级</label>
+            <div class="create-choice-grid compact">
+              <button
+                v-for="grade in GRADE_OPTIONS"
+                :key="grade"
+                type="button"
+                class="wizard-choice-card"
+                :class="{ active: form.grade === grade }"
+                @click="form.grade = grade"
+              >
+                {{ grade }}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div v-if="step === 1" class="wizard-choice-grid">
-          <button
-            v-for="subject in SUBJECT_OPTIONS"
-            :key="subject"
-            class="wizard-choice-card"
-            :class="{ active: form.subject === subject }"
-            type="button"
-            @click="form.subject = subject"
-          >
-            {{ subject }}
-          </button>
-        </div>
-
-        <div v-else-if="step === 2" class="wizard-choice-grid">
-          <button
-            v-for="grade in GRADE_OPTIONS"
-            :key="grade"
-            class="wizard-choice-card"
-            :class="{ active: form.grade === grade }"
-            type="button"
-            @click="form.grade = grade"
-          >
-            {{ grade }}
-          </button>
-        </div>
-
-        <div v-else class="wizard-form">
-          <label class="wizard-field">
-            <span class="wizard-field-label">课题主题</span>
+        <!-- 课题 + 课时 -->
+        <div class="create-row">
+          <div class="create-field grow">
+            <label class="create-label">课题主题 <span class="required">*</span></label>
             <input
               v-model.trim="form.topic"
-              class="wizard-topic-input"
+              class="create-input"
               type="text"
-              placeholder="例如：一元二次方程"
+              placeholder="例如：《春》—— 朱自清"
             />
-          </label>
+          </div>
 
-          <label class="wizard-field">
-            <span class="wizard-field-label">补充说明（可选）</span>
-            <textarea
-              v-model.trim="form.requirements"
-              class="wizard-requirements-input"
-              placeholder="例如：重点讲解配方法，练习部分增加一题分层题。"
+          <div class="create-field shrink">
+            <label class="create-label">课时</label>
+            <input
+              v-model.number="form.class_hour"
+              class="create-input"
+              type="number"
+              min="1"
+              max="10"
             />
-          </label>
+          </div>
+        </div>
+
+        <!-- 课型 -->
+        <div class="create-field">
+          <label class="create-label">课型</label>
+          <div class="create-choice-grid inline">
+            <button
+              v-for="opt in LESSON_CATEGORY_OPTIONS"
+              :key="opt.value"
+              type="button"
+              class="wizard-choice-card"
+              :class="{ active: form.lesson_category === opt.value }"
+              @click="form.lesson_category = opt.value"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 生成类型 -->
+        <div class="create-field">
+          <label class="create-label">生成内容</label>
+          <div class="create-toggle-group">
+            <button
+              v-for="opt in LESSON_TYPE_OPTIONS"
+              :key="opt.value"
+              type="button"
+              class="create-toggle-btn"
+              :class="{ active: form.lesson_type === opt.value }"
+              @click="form.lesson_type = opt.value"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 使用场景 -->
+        <div class="create-field">
+          <label class="create-label">使用场景</label>
+          <div class="create-choice-grid inline">
+            <button
+              v-for="opt in SCENE_OPTIONS"
+              :key="opt.value"
+              type="button"
+              class="wizard-choice-card"
+              :class="{ active: form.scene === opt.value }"
+              @click="form.scene = opt.value"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 补充说明 -->
+        <div class="create-field">
+          <label class="create-label">补充说明（可选）</label>
+          <textarea
+            v-model.trim="form.requirements"
+            class="create-textarea"
+            rows="3"
+            placeholder="例如：重点讲解配方法，练习部分增加一题分层题。"
+          />
         </div>
 
         <p v-if="submitError" class="feedback">{{ submitError }}</p>
-      </section>
 
-      <footer class="wizard-foot">
-        <button class="button ghost" type="button" :disabled="step === 1" @click="step -= 1">
-          上一步
-        </button>
-
-        <button
-          v-if="step < 3"
-          class="button primary"
-          type="button"
-          :disabled="!canGoNext"
-          @click="step += 1"
-        >
-          下一步
-        </button>
-
-        <button
-          v-else
-          class="button primary"
-          type="button"
-          :disabled="!canGoNext || createTaskMutation.isPending.value"
-          @click="submit"
-        >
-          {{ createTaskMutation.isPending.value ? '正在进入编辑器...' : '生成教案' }}
-        </button>
-      </footer>
+        <!-- 提交 -->
+        <div class="create-foot">
+          <button
+            class="button primary"
+            type="submit"
+            :disabled="!canSubmit || createTaskMutation.isPending.value"
+          >
+            {{ createTaskMutation.isPending.value ? '正在创建...' : '开始生成' }}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </template>

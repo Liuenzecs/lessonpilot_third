@@ -808,3 +808,16 @@
     flex-wrap: wrap;
   }
 }
+
+/* ---- 流式文本 ---- */
+
+.streaming-inline {
+  margin: 12px 0;
+}
+
+.generation-banner.generating {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

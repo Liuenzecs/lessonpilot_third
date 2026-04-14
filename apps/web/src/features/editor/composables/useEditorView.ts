@@ -87,7 +87,10 @@ export function useEditorView() {
     total: 0,
     currentSection: '',
     currentSectionId: null as string | null,
+    streamingText: '',
+    docType: '',
   });
+  let abortController: AbortController | null = null;
   const rewriteState = reactive<{
     isRewriting: boolean;
     targetBlockId: string | null;
@@ -711,59 +714,85 @@ export function useEditorView() {
     generationProgress.total = sections.value.length;
     generationProgress.currentSection = '';
     generationProgress.currentSectionId = sectionId ?? null;
+    generationProgress.streamingText = '';
+    generationProgress.docType = '';
+    abortController = new AbortController();
 
     try {
       const response = await startGenerationMutation.mutateAsync(sectionId);
-      await consumeGenerationStream(response.stream_url, authStore.token, {
-        onEvent(event, payload) {
-          if (event === 'status') {
-            const state = (payload as { state: string }).state;
-            generationProgress.isGenerating = state === 'generating';
-            if (state === 'ready') {
+      await consumeGenerationStream(
+        response.stream_url,
+        authStore.token,
+        {
+          onStatus(payload) {
+            if (payload.status === 'ready') {
               generationProgress.currentSectionId = null;
             }
-          }
-
-          if (event === 'progress') {
-            const progress = payload as {
-              completed: number;
-              total: number;
-              current_section: string;
-              section_id: string;
-            };
-            generationProgress.completed = progress.completed;
-            generationProgress.total = progress.total;
-            generationProgress.currentSection = progress.current_section;
-            generationProgress.currentSectionId = progress.section_id;
-            visibleSectionId.value = progress.section_id;
-          }
-
-          if (event === 'document') {
-            applyServerDocument(payload as LessonDocument);
-          }
-
-          if (event === 'done') {
+          },
+          onProgress(payload) {
+            generationProgress.total = Math.max(generationProgress.total, 1);
+            if (payload.doc_type) {
+              generationProgress.docType = payload.doc_type;
+            }
+          },
+          onSectionStart(payload) {
+            generationProgress.currentSection = payload.title;
+            generationProgress.currentSectionId = payload.section_name;
+            generationProgress.docType = payload.doc_type;
+            visibleSectionId.value = payload.section_name;
+          },
+          onSectionDelta(payload) {
+            generationProgress.streamingText += payload.text;
+          },
+          onSectionComplete(payload) {
+            generationProgress.completed++;
+            generationProgress.streamingText = '';
+          },
+          onDocument(payload) {
+            applyServerDocument(payload as unknown as LessonDocument);
+          },
+          onDone() {
             generationProgress.isGenerating = false;
             generationProgress.currentSectionId = null;
+            generationProgress.streamingText = '';
+            abortController = null;
             void taskQuery.refetch();
             void documentsQuery.refetch();
             if (historyOpen.value) {
               void historyQuery.refetch();
             }
             flashNotice(sectionId ? '本节 AI 内容已生成，等待你确认。' : '教案已生成，你可以开始编辑。');
-          }
-
-          if (event === 'error') {
-            streamError.value = (payload as { message: string }).message;
+          },
+          onError(payload) {
+            streamError.value = payload.message;
             generationProgress.isGenerating = false;
             generationProgress.currentSectionId = null;
-          }
+            generationProgress.streamingText = '';
+            abortController = null;
+          },
         },
-      });
+        abortController.signal,
+      );
     } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        // 用户主动停止
+        generationProgress.isGenerating = false;
+        generationProgress.streamingText = '';
+        abortController = null;
+        flashNotice('已停止生成。', 'info');
+        return;
+      }
       streamError.value = '生成流打开失败，请稍后重试。';
       generationProgress.isGenerating = false;
       generationProgress.currentSectionId = null;
+      generationProgress.streamingText = '';
+      abortController = null;
+    }
+  }
+
+  function stopGeneration() {
+    if (abortController) {
+      abortController.abort();
     }
   }
 
@@ -1043,6 +1072,7 @@ export function useEditorView() {
     scrollToSection,
     isSectionShowingSkeleton,
     startGeneration,
+    stopGeneration,
     startRewrite,
     startAppend,
     refreshFromServer,

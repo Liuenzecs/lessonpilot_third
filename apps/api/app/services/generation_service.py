@@ -1,11 +1,12 @@
 """AI 生成服务：流式生成教案/学案。
 
-一次性流式生成完整内容，通过 SSE 推送给前端。
+逐 token 转发 + section 级 SSE 事件，通过 SSE 推送给前端。
 """
 
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import AsyncIterator
 
 from fastapi import HTTPException, Request, status
@@ -24,6 +25,44 @@ from app.services.llm_service import (
     StudyGuideContext,
     get_provider,
 )
+
+# ---------------------------------------------------------------------------
+# Section 名称 → 中文标题映射
+# ---------------------------------------------------------------------------
+
+LESSON_PLAN_SECTIONS: list[tuple[str, str]] = [
+    ("objectives", "教学目标"),
+    ("key_points", "教学重难点"),
+    ("preparation", "教学准备"),
+    ("teaching_process", "教学过程"),
+    ("board_design", "板书设计"),
+    ("reflection", "教学反思"),
+]
+
+STUDY_GUIDE_SECTIONS: list[tuple[str, str]] = [
+    ("learning_objectives", "学习目标"),
+    ("key_difficulties", "重点难点预测"),
+    ("prior_knowledge", "知识链接"),
+    ("self_study", "自主学习"),
+    ("collaboration", "合作探究"),
+    ("presentation", "展示提升"),
+    ("assessment", "达标测评"),
+    ("extension", "拓展延伸"),
+    ("self_reflection", "自主反思"),
+]
+
+
+def _get_section_map(doc_type: str) -> dict[str, str]:
+    """返回 section_name → title 映射。"""
+    entries = LESSON_PLAN_SECTIONS if doc_type == "lesson_plan" else STUDY_GUIDE_SECTIONS
+    return {name: title for name, title in entries}
+
+
+def _get_section_order(doc_type: str) -> list[str]:
+    """返回 section 名称有序列表。"""
+    entries = LESSON_PLAN_SECTIONS if doc_type == "lesson_plan" else STUDY_GUIDE_SECTIONS
+    return [name for name, _ in entries]
+
 
 # ---------------------------------------------------------------------------
 # SSE 工具
@@ -45,18 +84,8 @@ async def _ensure_client_connected(request: Request | None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 流式 JSON 拼装
+# JSON 解析
 # ---------------------------------------------------------------------------
-
-
-async def _assemble_streamed_json(
-    stream: AsyncIterator[str],
-) -> str:
-    """从流式 token 拼装完整 JSON 字符串。"""
-    chunks: list[str] = []
-    async for chunk in stream:
-        chunks.append(chunk)
-    return "".join(chunks)
 
 
 def _parse_content_json(raw: str, doc_type: str) -> DocumentContent:
@@ -97,6 +126,46 @@ def get_task_and_documents(
 
 
 # ---------------------------------------------------------------------------
+# 流式 section 检测
+# ---------------------------------------------------------------------------
+
+
+class _SectionTracker:
+    """跟踪累积文本中的 section 边界。"""
+
+    def __init__(self, doc_type: str) -> None:
+        self.doc_type = doc_type
+        self.section_map = _get_section_map(doc_type)
+        self.section_order = _get_section_order(doc_type)
+        self.completed_sections: set[str] = set()
+        # 上次检测到的长度，避免重复扫描
+        self._last_scan_pos = 0
+        # 预编译正则：匹配 "section_name_status": "pending" 或 "confirmed"
+        self._status_pattern = re.compile(
+            r'"(' + "|".join(re.escape(n) for n in self.section_order) + r')_status"\s*:\s*"(?:pending|confirmed)"'
+        )
+
+    def detect_sections(self, accumulated: str) -> list[str]:
+        """检测新增的已完成 section，返回新检测到的 section_name 列表。"""
+        newly_detected: list[str] = []
+        # 只扫描新增加的文本区域（加一些 overlap 以防分割）
+        scan_start = max(0, self._last_scan_pos - 100)
+        scan_text = accumulated[scan_start:]
+        self._last_scan_pos = len(accumulated)
+
+        for match in self._status_pattern.finditer(scan_text):
+            section_name = match.group(1)
+            if section_name not in self.completed_sections:
+                self.completed_sections.add(section_name)
+                newly_detected.append(section_name)
+
+        return newly_detected
+
+    def get_title(self, section_name: str) -> str:
+        return self.section_map.get(section_name, section_name)
+
+
+# ---------------------------------------------------------------------------
 # 生成主流程
 # ---------------------------------------------------------------------------
 
@@ -131,6 +200,7 @@ async def stream_generation(
                 {
                     "progress": idx / len(doc_types),
                     "message": f"正在生成{'教案' if doc_type == 'lesson_plan' else '学案'}...",
+                    "doc_type": doc_type,
                 },
             )
 
@@ -158,10 +228,38 @@ async def stream_generation(
                 )
                 stream = provider.generate_study_guide(ctx)
 
-            raw_json = await _assemble_streamed_json(stream)
+            # 逐 token 流式转发 + section 边界检测
+            tracker = _SectionTracker(doc_type)
+            accumulated = ""
 
+            async for chunk in stream:
+                accumulated += chunk
+
+                # 发送 raw text delta
+                yield _format_sse("section_delta", {"text": chunk})
+
+                # 检测 section 边界
+                newly_completed = tracker.detect_sections(accumulated)
+                for section_name in newly_completed:
+                    yield _format_sse(
+                        "section_start",
+                        {
+                            "doc_type": doc_type,
+                            "section_name": section_name,
+                            "title": tracker.get_title(section_name),
+                        },
+                    )
+                    yield _format_sse(
+                        "section_complete",
+                        {
+                            "doc_type": doc_type,
+                            "section_name": section_name,
+                        },
+                    )
+
+            # 流结束：解析完整 JSON，校验，保存
             try:
-                content = _parse_content_json(raw_json, doc_type)
+                content = _parse_content_json(accumulated, doc_type)
             except Exception:
                 content = _create_fallback_content(task, doc_type)
 
