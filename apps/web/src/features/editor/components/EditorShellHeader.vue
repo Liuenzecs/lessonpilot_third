@@ -13,7 +13,7 @@ defineEmits<{
   'toggle-outline': [];
   'open-history': [];
   'toggle-export-menu': [];
-  export: [format: 'docx' | 'pdf'];
+  export: [format: 'docx'];
   'open-export-preview': [];
   refresh: [];
   'retry-save': [];
@@ -91,7 +91,6 @@ function getSaveLabel(
         <div v-if="exportMenuOpen" class="export-menu editor-export-menu">
           <div class="export-menu-title">导出为</div>
           <button class="menu-button" type="button" @click="$emit('export', 'docx')">Word 文档</button>
-          <button class="menu-button" type="button" @click="$emit('export', 'pdf')">PDF 文档</button>
           <button class="menu-button" type="button" @click="$emit('open-export-preview')">预览导出效果</button>
         </div>
       </div>

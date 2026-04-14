@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { DocumentContent, SectionInfo } from '@lessonpilot/shared-types';
 import type { DocumentSnapshotRecord } from '@/features/editor/types';
+import { computed } from 'vue';
+import { getSections } from '@/shared/utils/content';
 
-import BlockPreview from '@/features/editor/components/BlockPreview.vue';
-
-defineProps<{
+const props = defineProps<{
   open: boolean;
   loading: boolean;
   previewLoading: boolean;
@@ -19,22 +20,34 @@ defineEmits<{
 }>();
 
 function formatSource(source: string): string {
-  if (source === 'save') {
-    return '普通保存';
-  }
-  if (source === 'generation') {
-    return 'AI 生成';
-  }
-  if (source === 'rewrite') {
-    return 'AI 重写';
-  }
-  if (source === 'append_ai') {
-    return 'AI 补充';
-  }
-  if (source === 'restore') {
-    return '历史恢复';
-  }
+  if (source === 'save') return '普通保存';
+  if (source === 'generation') return 'AI 生成';
+  if (source === 'rewrite') return 'AI 重写';
+  if (source === 'restore') return '历史恢复';
   return source;
+}
+
+const previewSections = computed<SectionInfo[]>(() =>
+  props.previewSnapshot ? getSections(props.previewSnapshot.content) : [],
+);
+
+function getSectionText(content: DocumentContent, sectionName: string): string {
+  const data = (content as unknown as Record<string, unknown>)[sectionName];
+  if (typeof data === 'string') return data;
+  if (Array.isArray(data)) {
+    return data.map((item) => {
+      if (typeof item === 'string') return item;
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, unknown>;
+        if (obj.content) return String(obj.content);
+        if (obj.prompt) return String(obj.prompt);
+        return JSON.stringify(item);
+      }
+      return String(item);
+    }).join('\n');
+  }
+  if (typeof data === 'object' && data !== null) return JSON.stringify(data, null, 2);
+  return '';
 }
 </script>
 
@@ -81,11 +94,10 @@ function formatSource(source: string): string {
             </div>
 
             <div class="history-preview-body">
-              <BlockPreview
-                v-for="block in ([] as any[])"
-                :key="block.id"
-                :block="block"
-              />
+              <div v-for="section in previewSections" :key="section.name" class="preview-section">
+                <h4 class="preview-section-title">{{ section.title }}</h4>
+                <pre class="preview-section-text">{{ getSectionText(previewSnapshot.content, section.name) || '（空）' }}</pre>
+              </div>
             </div>
           </template>
 

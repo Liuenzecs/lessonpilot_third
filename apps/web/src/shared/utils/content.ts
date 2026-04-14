@@ -1,20 +1,16 @@
 /**
  * 教案/学案内容操作工具。
  *
- * 当前提供 section 级操作（教案/学案新模型）和 block 系统兼容 stub。
- * Sprint 4 编辑器重写时会扩展/替换这些工具。
+ * 直接操作 LessonPlanContent / StudyGuideContent 结构化模型，
+ * 不再经过 block 树中间层。
  */
 
 import type {
   AssessmentItem,
-  Block,
-  BlockType,
-  ContentDocument,
   DocumentContent,
   KeyPoints,
   LessonPlanContent,
-  LearningProcess,
-  SectionBlock,
+  SectionInfo,
   SectionStatus,
   StudyGuideContent,
   TeachingObjective,
@@ -31,27 +27,70 @@ export function cloneSerializable<T>(value: T): T {
 }
 
 // ---------------------------------------------------------------------------
-// 类型兼容（旧代码过渡期）
+// Section 名称 → 中文标题映射
 // ---------------------------------------------------------------------------
 
-/** 旧的 InsertableBlockType 类型 — 过渡期兼容。 */
-export type InsertableBlockType = string;
-/** 旧的 ContainerBlock 类型 — 过渡期兼容。 */
-export type ContainerBlock = never;
+const LESSON_PLAN_SECTION_MAP: Record<string, string> = {
+  objectives: '教学目标',
+  key_points: '教学重难点',
+  preparation: '教学准备',
+  teaching_process: '教学过程',
+  board_design: '板书设计',
+  reflection: '教学反思',
+};
 
-export interface BlockLocation {
-  block: unknown;
-  siblings: unknown[];
-  index: number;
-  parentBlock: unknown | null;
-  parentId: string | null;
-  parentType: string;
-  sectionId: string | null;
-  sectionTitle: string | null;
+const STUDY_GUIDE_SECTION_MAP: Record<string, string> = {
+  learning_objectives: '学习目标',
+  key_difficulties: '重点难点预测',
+  prior_knowledge: '知识链接',
+  self_study: '自主学习',
+  collaboration: '合作探究',
+  presentation: '展示提升',
+  assessment: '达标测评',
+  extension: '拓展延伸',
+  self_reflection: '自主反思',
+};
+
+export function getSectionTitle(docType: string, sectionName: string): string {
+  if (docType === 'study_guide') {
+    return STUDY_GUIDE_SECTION_MAP[sectionName] ?? sectionName;
+  }
+  return LESSON_PLAN_SECTION_MAP[sectionName] ?? sectionName;
 }
 
-export function getBlockIndent(_block: unknown): number {
-  return 0;
+// ---------------------------------------------------------------------------
+// 获取 Section 列表
+// ---------------------------------------------------------------------------
+
+export function getLessonPlanSections(content: LessonPlanContent): SectionInfo[] {
+  return [
+    { name: 'objectives', title: '教学目标', status: content.objectives_status },
+    { name: 'key_points', title: '教学重难点', status: content.key_points_status },
+    { name: 'preparation', title: '教学准备', status: content.preparation_status },
+    { name: 'teaching_process', title: '教学过程', status: content.teaching_process_status },
+    { name: 'board_design', title: '板书设计', status: content.board_design_status },
+    { name: 'reflection', title: '教学反思', status: content.reflection_status },
+  ];
+}
+
+export function getStudyGuideSections(content: StudyGuideContent): SectionInfo[] {
+  return [
+    { name: 'learning_objectives', title: '学习目标', status: content.learning_objectives_status },
+    { name: 'key_difficulties', title: '重点难点预测', status: content.key_difficulties_status },
+    { name: 'prior_knowledge', title: '知识链接', status: content.prior_knowledge_status },
+    { name: 'self_study', title: '自主学习', status: content.self_study_status },
+    { name: 'collaboration', title: '合作探究', status: content.collaboration_status },
+    { name: 'presentation', title: '展示提升', status: content.presentation_status },
+    { name: 'assessment', title: '达标测评', status: content.assessment_status },
+    { name: 'extension', title: '拓展延伸', status: content.extension_status },
+    { name: 'self_reflection', title: '自主反思', status: content.self_reflection_status },
+  ];
+}
+
+export function getSections(content: DocumentContent): SectionInfo[] {
+  if (isLessonPlan(content)) return getLessonPlanSections(content);
+  if (isStudyGuide(content)) return getStudyGuideSections(content);
+  return [];
 }
 
 // ---------------------------------------------------------------------------
@@ -71,10 +110,7 @@ export function updateLessonPlanSection<K extends LessonPlanSectionName>(
   section: K,
   value: LessonPlanContent[K],
 ): LessonPlanContent {
-  return {
-    ...content,
-    [section]: value,
-  };
+  return { ...content, [section]: value };
 }
 
 export function setLessonPlanSectionStatus(
@@ -82,10 +118,7 @@ export function setLessonPlanSectionStatus(
   section: LessonPlanSectionName,
   status: SectionStatus,
 ): LessonPlanContent {
-  return {
-    ...content,
-    [`${section}_status`]: status,
-  };
+  return { ...content, [`${section}_status`]: status };
 }
 
 export function acceptLessonPlanSection(
@@ -110,15 +143,37 @@ export type StudyGuideSectionName =
   | 'extension'
   | 'self_reflection';
 
+/** Map each StudyGuide section name to its value type. */
+export type StudyGuideSectionValue<K extends StudyGuideSectionName> =
+  K extends 'self_study' | 'collaboration' | 'presentation' | 'assessment' | 'extension'
+    ? AssessmentItem[]
+    : K extends 'self_reflection' | 'learning_objectives' | 'key_difficulties' | 'prior_knowledge'
+      ? string[]
+      : never;
+
+export function updateStudyGuideSection<K extends StudyGuideSectionName>(
+  content: StudyGuideContent,
+  section: K,
+  value: StudyGuideSectionValue<K>,
+): StudyGuideContent {
+  if (section === 'self_study') {
+    return { ...content, learning_process: { ...content.learning_process, selfStudy: value as AssessmentItem[] } };
+  }
+  if (section === 'collaboration') {
+    return { ...content, learning_process: { ...content.learning_process, collaboration: value as AssessmentItem[] } };
+  }
+  if (section === 'presentation') {
+    return { ...content, learning_process: { ...content.learning_process, presentation: value as AssessmentItem[] } };
+  }
+  return { ...content, [section]: value };
+}
+
 export function setStudyGuideSectionStatus(
   content: StudyGuideContent,
   section: StudyGuideSectionName,
   status: SectionStatus,
 ): StudyGuideContent {
-  return {
-    ...content,
-    [`${section}_status`]: status,
-  };
+  return { ...content, [`${section}_status`]: status };
 }
 
 export function acceptStudyGuideSection(
@@ -131,6 +186,20 @@ export function acceptStudyGuideSection(
 // ---------------------------------------------------------------------------
 // 通用 DocumentContent 操作
 // ---------------------------------------------------------------------------
+
+/** 更新任意 doc_type 的指定 section 内容。 */
+export function updateSection<T extends DocumentContent>(
+  content: T,
+  sectionName: string,
+  value: unknown,
+): T {
+  return { ...content, [sectionName]: value } as T;
+}
+
+/** 将指定 section 的 status 改为 confirmed。 */
+export function confirmSection<T extends DocumentContent>(content: T, sectionName: string): T {
+  return { ...content, [`${sectionName}_status`]: 'confirmed' } as T;
+}
 
 /** 获取所有 section 名和对应的 status。 */
 export function getSectionStatuses(
@@ -157,382 +226,30 @@ export function confirmAllSections<T extends DocumentContent>(content: T): T {
   return updated as T;
 }
 
-// ---------------------------------------------------------------------------
-// Section 提取（将结构化内容模型转为 SectionBlock[]）
-// ---------------------------------------------------------------------------
-
-let _blockIdCounter = 0;
-
-function nextBlockId(): string {
-  _blockIdCounter++;
-  return `blk-${_blockIdCounter}`;
-}
-
-function makeParagraphBlock(text: string, status: SectionStatus = 'confirmed'): Block {
-  return {
-    id: nextBlockId(),
-    type: 'paragraph',
-    status,
-    source: 'ai',
-    content: text,
-  };
-}
-
-function makeListBlock(items: string[], status: SectionStatus = 'confirmed'): Block {
-  return {
-    id: nextBlockId(),
-    type: 'list',
-    status,
-    source: 'ai',
-    items,
-  };
-}
-
-function makeTeachingStepBlock(
-  step: TeachingProcessStep,
-  status: SectionStatus = 'confirmed',
-): Block {
-  const children: Block[] = [];
-  if (step.teacher_activity) {
-    children.push(makeParagraphBlock(`教师：${step.teacher_activity}`, status));
-  }
-  if (step.student_activity) {
-    children.push(makeParagraphBlock(`学生：${step.student_activity}`, status));
-  }
-  if (step.design_intent) {
-    children.push(makeParagraphBlock(`设计意图：${step.design_intent}`, status));
-  }
-  return {
-    id: nextBlockId(),
-    type: 'teaching_step',
-    status,
-    source: 'ai',
-    title: step.phase,
-    durationMinutes: step.duration,
-    children,
-  };
-}
-
-function collectLessonPlanSections(content: LessonPlanContent): SectionBlock[] {
-  const sections: SectionBlock[] = [];
-
-  // 教学目标
-  sections.push({
-    id: 'section-objectives',
-    type: 'section',
-    title: '教学目标',
-    status: content.objectives_status,
-    source: 'ai',
-    children: content.objectives.map((obj) =>
-      makeParagraphBlock(`【${obj.dimension === 'knowledge' ? '知识与技能' : obj.dimension === 'ability' ? '过程与方法' : '情感态度与价值观'}】${obj.content}`, content.objectives_status),
-    ),
-  });
-
-  // 教学重难点
-  const kpChildren: Block[] = [];
-  if (content.key_points.keyPoints.length > 0) {
-    kpChildren.push(makeListBlock(content.key_points.keyPoints.map((p) => `重点：${p}`), content.key_points_status));
-  }
-  if (content.key_points.difficulties.length > 0) {
-    kpChildren.push(makeListBlock(content.key_points.difficulties.map((d) => `难点：${d}`), content.key_points_status));
-  }
-  sections.push({
-    id: 'section-key_points',
-    type: 'section',
-    title: '教学重难点',
-    status: content.key_points_status,
-    source: 'ai',
-    children: kpChildren,
-  });
-
-  // 教学准备
-  sections.push({
-    id: 'section-preparation',
-    type: 'section',
-    title: '教学准备',
-    status: content.preparation_status,
-    source: 'ai',
-    children: content.preparation.length > 0
-      ? [makeListBlock(content.preparation, content.preparation_status)]
-      : [],
-  });
-
-  // 教学过程
-  sections.push({
-    id: 'section-teaching_process',
-    type: 'section',
-    title: '教学过程',
-    status: content.teaching_process_status,
-    source: 'ai',
-    children: content.teaching_process.map((step) =>
-      makeTeachingStepBlock(step, content.teaching_process_status),
-    ),
-  });
-
-  // 板书设计
-  sections.push({
-    id: 'section-board_design',
-    type: 'section',
-    title: '板书设计',
-    status: content.board_design_status,
-    source: 'ai',
-    children: content.board_design
-      ? [makeParagraphBlock(content.board_design, content.board_design_status)]
-      : [],
-  });
-
-  // 教学反思
-  sections.push({
-    id: 'section-reflection',
-    type: 'section',
-    title: '教学反思',
-    status: content.reflection_status,
-    source: 'ai',
-    children: content.reflection
-      ? [makeParagraphBlock(content.reflection, content.reflection_status)]
-      : [],
-  });
-
-  return sections;
-}
-
-function collectStudyGuideSections(content: StudyGuideContent): SectionBlock[] {
-  const sections: SectionBlock[] = [];
-
-  // 学习目标
-  sections.push({
-    id: 'section-learning_objectives',
-    type: 'section',
-    title: '学习目标',
-    status: content.learning_objectives_status,
-    source: 'ai',
-    children: content.learning_objectives.length > 0
-      ? [makeListBlock(content.learning_objectives, content.learning_objectives_status)]
-      : [],
-  });
-
-  // 重点难点预测
-  sections.push({
-    id: 'section-key_difficulties',
-    type: 'section',
-    title: '重点难点预测',
-    status: content.key_difficulties_status,
-    source: 'ai',
-    children: content.key_difficulties.length > 0
-      ? [makeListBlock(content.key_difficulties, content.key_difficulties_status)]
-      : [],
-  });
-
-  // 知识链接
-  sections.push({
-    id: 'section-prior_knowledge',
-    type: 'section',
-    title: '知识链接',
-    status: content.prior_knowledge_status,
-    source: 'ai',
-    children: content.prior_knowledge.length > 0
-      ? [makeListBlock(content.prior_knowledge, content.prior_knowledge_status)]
-      : [],
-  });
-
-  // 自主学习
-  sections.push({
-    id: 'section-self_study',
-    type: 'section',
-    title: '自主学习',
-    status: content.self_study_status,
-    source: 'ai',
-    children: content.learning_process.selfStudy.map((item) =>
-      makeParagraphBlock(`[${item.level}级] ${item.prompt}`, content.self_study_status),
-    ),
-  });
-
-  // 合作探究
-  sections.push({
-    id: 'section-collaboration',
-    type: 'section',
-    title: '合作探究',
-    status: content.collaboration_status,
-    source: 'ai',
-    children: content.learning_process.collaboration.map((item) =>
-      makeParagraphBlock(`[${item.level}级] ${item.prompt}`, content.collaboration_status),
-    ),
-  });
-
-  // 展示提升
-  sections.push({
-    id: 'section-presentation',
-    type: 'section',
-    title: '展示提升',
-    status: content.presentation_status,
-    source: 'ai',
-    children: content.learning_process.presentation.map((item) =>
-      makeParagraphBlock(`[${item.level}级] ${item.prompt}`, content.presentation_status),
-    ),
-  });
-
-  // 达标测评
-  sections.push({
-    id: 'section-assessment',
-    type: 'section',
-    title: '达标测评',
-    status: content.assessment_status,
-    source: 'ai',
-    children: content.assessment.map((item) =>
-      makeParagraphBlock(`[${item.level}级] ${item.prompt}`, content.assessment_status),
-    ),
-  });
-
-  // 拓展延伸
-  sections.push({
-    id: 'section-extension',
-    type: 'section',
-    title: '拓展延伸',
-    status: content.extension_status,
-    source: 'ai',
-    children: content.extension.map((item) =>
-      makeParagraphBlock(`[${item.level}级] ${item.prompt}`, content.extension_status),
-    ),
-  });
-
-  // 自主反思
-  sections.push({
-    id: 'section-self_reflection',
-    type: 'section',
-    title: '自主反思',
-    status: content.self_reflection_status,
-    source: 'ai',
-    children: content.self_reflection
-      ? [makeParagraphBlock(content.self_reflection, content.self_reflection_status)]
-      : [],
-  });
-
-  return sections;
+/** 获取 confirmed 内容（将所有 pending section 置为 confirmed）。 */
+export function getConfirmedContent<T extends DocumentContent>(content: T): T {
+  return confirmAllSections(content);
 }
 
 // ---------------------------------------------------------------------------
-// 旧 block 系统兼容 stub（Sprint 4 编辑器重写后移除）
+// Section 内容访问工具
 // ---------------------------------------------------------------------------
 
-export function cloneContent(content: ContentDocument): ContentDocument {
-  return cloneSerializable(content);
+/** 获取教案某个 section 的内容（类型安全）。 */
+export function getLessonPlanSectionContent(
+  content: LessonPlanContent,
+  name: LessonPlanSectionName,
+): TeachingObjective[] | KeyPoints | string[] | TeachingProcessStep[] | string {
+  return content[name];
 }
 
-export function collectSections(content: ContentDocument): SectionBlock[] {
-  if (isLessonPlan(content)) {
-    return collectLessonPlanSections(content);
-  }
-  if (isStudyGuide(content)) {
-    return collectStudyGuideSections(content);
-  }
-  return [];
-}
-
-export function findSection(content: ContentDocument, sectionId: string): SectionBlock | undefined {
-  return collectSections(content).find((s) => s.id === sectionId);
-}
-
-export function findBlockLocation(
-  _content: ContentDocument,
-  _targetBlockId: string,
-): BlockLocation | null {
-  return null;
-}
-
-export function canInsertChild(_parentType: string, _childType: string): boolean {
-  return false;
-}
-
-export function createBlock<T extends BlockType>(_type: T): unknown {
-  return null;
-}
-
-export function acceptPendingBlock(_content: ContentDocument, _blockId: string): ContentDocument {
-  return _content;
-}
-
-export function rejectPendingBlock(_content: ContentDocument, _blockId: string): ContentDocument {
-  return _content;
-}
-
-export function appendBlockToContainer(
-  _content: ContentDocument,
-  _parentId: string,
-  _type: string,
-): ContentDocument {
-  return _content;
-}
-
-export function appendExistingBlockToContainer(
-  _content: ContentDocument,
-  _sectionId: string,
-  _block: unknown,
-): ContentDocument {
-  return _content;
-}
-
-export function insertExistingBlockAfter(
-  _content: ContentDocument,
-  _blockId: string,
-  _newBlock: unknown,
-): ContentDocument {
-  return _content;
-}
-
-export function updateBlock(
-  _content: ContentDocument,
-  _blockId: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _updater?: (block: any) => any,
-): ContentDocument {
-  return _content;
-}
-
-export function deleteBlock(_content: ContentDocument, _blockId: string): ContentDocument {
-  return _content;
-}
-
-export function moveBlock(
-  _content: ContentDocument,
-  _blockId: string,
-  _direction: 'up' | 'down',
-): ContentDocument {
-  return _content;
-}
-
-export function reorderBlockBefore(
-  _content: ContentDocument,
-  _draggedId: string,
-  _targetId: string,
-  _parentId: string,
-): ContentDocument {
-  return _content;
-}
-
-export function convertBlockType(
-  _content: ContentDocument,
-  _blockId: string,
-  _targetType: BlockType,
-): ContentDocument {
-  return _content;
-}
-
-export function adjustBlockIndent(
-  _content: ContentDocument,
-  _blockId: string,
-  _direction: 'in' | 'out',
-): ContentDocument {
-  return _content;
-}
-
-export function getConfirmedContent(content: ContentDocument): ContentDocument {
-  return content;
-}
-
-export function getConfirmedChildren(_section: SectionBlock): Block[] {
-  return [];
-}
-
-export function getPendingChildren(_section: SectionBlock): Block[] {
-  return [];
+/** 获取学案某个 section 的内容（类型安全）。 */
+export function getStudyGuideSectionContent(
+  content: StudyGuideContent,
+  name: StudyGuideSectionName,
+): unknown {
+  if (name === 'self_study') return content.learning_process.selfStudy;
+  if (name === 'collaboration') return content.learning_process.collaboration;
+  if (name === 'presentation') return content.learning_process.presentation;
+  return content[name as keyof StudyGuideContent];
 }

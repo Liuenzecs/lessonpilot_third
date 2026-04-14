@@ -722,3 +722,58 @@
   - `npx vue-tsc --noEmit`：passed
   - `pnpm build`：✓ built in 13.97s
 - Status: DONE
+
+## [Sprint 4] — Section Editor + AI 重写
+
+- 完成日期：2026-04-15
+- 完成内容：
+
+  **后端 Rewrite 流式化**：
+  - 重写 `rewrite_service.py`：新增 `section_start`、`section_delta`、`section_complete` 流式事件，与 generation 流式协议对齐
+  - 重写过程中逐 token 转发给前端，保留最终 `document` 事件
+
+  **前端 Content 工具重写**：
+  - 重写 `packages/shared-types/src/content.ts`：删除旧 block 类型系统（Block、SectionBlock、BlockType 等 9 种类型），新增 `SectionInfo` 接口
+  - 重写 `apps/web/src/shared/utils/content.ts`：删除 `collectSections()` 和所有 block mutation stub（14 个空函数），新增结构化模型直接操作函数（`getSections`、`getSectionTitle`、`updateSection`、`confirmSection` 等）
+
+  **编辑器组件重写（核心）**：
+  - 删除 8 个旧 block 组件：`DocumentBlockItem.vue`、`BlockRenderer.vue`、`EditorSectionCard.vue`、`BlockPreview.vue`、`PendingBlockCard.vue`、`EditorQuickActionsBar.vue`、`EditorSectionSkeleton.vue`、`RichTextField.vue`
+  - 新建 `SectionPanel.vue`：可折叠 section 面板，根据 doc_type 和 section.name 动态渲染对应编辑器
+  - 新建 `SectionEditors/` 目录（7 个组件）：`ObjectivesEditor`、`KeyPointsEditor`、`GenericListEditor`、`TeachingProcessEditor`、`AssessmentEditor`、`LearningProcessEditor`、`RichTextEditor`
+  - 新建 `SectionAiActions.vue`：section 级 AI 操作下拉菜单（重写/扩写/精简 + 自定义指令）
+  - 新建 `EditorToolbar.vue`：全部展开/折叠、确认全部
+  - 重写 `EditorView.vue`：Tab 切换教案/学案、section 列表渲染、大纲导航、streaming text 集成
+  - 重写 `useEditorView.ts`（1088 → ~230 行）：拆分为 4 个 composable
+    - `useAutoSave.ts`（~180 行）：自动保存、debounce、冲突处理、重试
+    - `useEditorGeneration.ts`（~130 行）：AI 生成流式消费
+    - `useEditorRewrite.ts`（~90 行）：section 级 AI 重写流式消费
+  - 简化 `EditorShellHeader.vue`：移除 PDF 导出选项
+  - 更新 `EditorStatusBanner.vue`：action 类型适配（simplify 替换 polish）
+  - 重写 `ExportPreviewModal.vue`：直接展示结构化内容，不再依赖 block 树
+  - 重写 `HistoryDrawer.vue`：快照预览改为直接展示结构化内容
+  - 更新 `consumeRewriteStream()` 支持 `AbortSignal` 参数
+
+- 关键文件：
+  - `apps/api/app/services/rewrite_service.py`（UPDATE）
+  - `packages/shared-types/src/content.ts`（REWRITE）
+  - `apps/web/src/shared/utils/content.ts`（REWRITE）
+  - `apps/web/src/features/editor/views/EditorView.vue`（REWRITE）
+  - `apps/web/src/features/editor/composables/useEditorView.ts`（REWRITE）
+  - `apps/web/src/features/editor/composables/useAutoSave.ts`（NEW）
+  - `apps/web/src/features/editor/composables/useEditorGeneration.ts`（NEW）
+  - `apps/web/src/features/editor/composables/useEditorRewrite.ts`（NEW）
+  - `apps/web/src/features/editor/components/SectionPanel.vue`（NEW）
+  - `apps/web/src/features/editor/components/SectionAiActions.vue`（NEW）
+  - `apps/web/src/features/editor/components/EditorToolbar.vue`（NEW）
+  - `apps/web/src/features/editor/components/SectionEditors/*.vue`（NEW ×7）
+  - `apps/web/src/features/editor/components/EditorShellHeader.vue`（UPDATE）
+  - `apps/web/src/features/editor/components/EditorStatusBanner.vue`（UPDATE）
+  - `apps/web/src/features/editor/components/ExportPreviewModal.vue`（REWRITE）
+  - `apps/web/src/features/editor/components/HistoryDrawer.vue`（REWRITE）
+  - `apps/web/src/features/generation/composables/useGeneration.ts`（UPDATE）
+- 验证结果：
+  - `python -m ruff check app/`：All checks passed
+  - `python -m pytest tests/ -q`：28 passed
+  - `npx vue-tsc --noEmit`：passed
+  - `pnpm build`：✓ built in 21.66s
+- Status: DONE

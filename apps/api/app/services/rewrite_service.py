@@ -1,6 +1,7 @@
 """Section 级 AI 重写服务。
 
-支持 rewrite / expand / simplify 三种操作，流式输出。
+支持 rewrite / expand / simplify 三种操作，逐 token 流式输出。
+SSE 协议与 generation_service 对齐：section_start / section_delta / section_complete。
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from app.schemas.content import (
     StudyGuideContent,
 )
 from app.schemas.document import DocumentRewritePayload
+from app.services.generation_service import _get_section_map
 from app.services.llm_service import (
     RewriteSectionContext,
     get_provider,
@@ -95,17 +97,10 @@ async def stream_rewrite(
     request: Request | None = None,
 ) -> AsyncIterator[str]:
     provider = get_provider()
+    section_map = _get_section_map(document.doc_type)
+    section_title = section_map.get(payload.section_name, payload.section_name)
 
     yield _format_sse("status", {"state": "rewriting"})
-    yield _format_sse(
-        "progress",
-        {
-            "completed": 0,
-            "total": 1,
-            "section_name": payload.section_name,
-            "action": payload.action,
-        },
-    )
 
     try:
         await _ensure_client_connected(request)
@@ -128,11 +123,26 @@ async def stream_rewrite(
             instruction=payload.instruction or "",
         )
 
-        # 收集流式输出
+        # 逐 token 流式输出
+        yield _format_sse(
+            "section_start",
+            {"section_name": payload.section_name, "title": section_title},
+        )
+
         chunks: list[str] = []
         async for chunk in provider.rewrite_section(ctx):
             chunks.append(chunk)
+            yield _format_sse(
+                "section_delta",
+                {"section_name": payload.section_name, "delta": chunk},
+            )
+
         raw_json = "".join(chunks)
+
+        yield _format_sse(
+            "section_complete",
+            {"section_name": payload.section_name},
+        )
 
         # 解析并更新内容
         new_content = _set_section_content(content, payload.section_name, raw_json)
@@ -143,15 +153,6 @@ async def stream_rewrite(
 
         await _ensure_client_connected(request)
 
-        yield _format_sse(
-            "progress",
-            {
-                "completed": 1,
-                "total": 1,
-                "section_name": payload.section_name,
-                "action": payload.action,
-            },
-        )
         yield _format_sse(
             "document",
             {

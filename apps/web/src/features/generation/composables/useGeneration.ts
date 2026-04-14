@@ -135,10 +135,11 @@ export async function consumeRewriteStream(
   streamUrl: string,
   token: string,
   handlers: GenerationEventHandlers,
+  signal?: AbortSignal,
 ): Promise<void> {
   await _consumeSse(streamUrl, token, (event, dataValue) => {
     handlers.onEvent(event, JSON.parse(dataValue));
-  });
+  }, signal);
 }
 
 export async function consumeAppendStream(

@@ -5,7 +5,7 @@ defineProps<{
   total: number;
   currentSection: string;
   isRewriting: boolean;
-  rewriteAction: 'rewrite' | 'polish' | 'expand';
+  rewriteAction: 'rewrite' | 'expand' | 'simplify';
   isAppending: boolean;
   appendSectionTitle: string;
   streamError: string;
@@ -17,13 +17,9 @@ defineEmits<{
   stop: [];
 }>();
 
-function getRewriteLabel(action: 'rewrite' | 'polish' | 'expand') {
-  if (action === 'polish') {
-    return '润色';
-  }
-  if (action === 'expand') {
-    return '扩写';
-  }
+function getRewriteLabel(action: 'rewrite' | 'expand' | 'simplify') {
+  if (action === 'expand') return '扩写';
+  if (action === 'simplify') return '精简';
   return '重写';
 }
 </script>
@@ -44,10 +40,6 @@ function getRewriteLabel(action: 'rewrite' | 'polish' | 'expand') {
 
     <div v-if="isRewriting" class="generation-banner secondary">
       AI 正在{{ getRewriteLabel(rewriteAction) }}当前内容
-    </div>
-
-    <div v-if="isAppending" class="generation-banner secondary">
-      AI 正在为 {{ appendSectionTitle || '当前章节' }} 补充内容
     </div>
 
     <div v-if="streamError" class="feedback">{{ streamError }}</div>
