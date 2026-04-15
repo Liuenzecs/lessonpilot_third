@@ -43,7 +43,7 @@ async function submit() {
       ...form,
       requirements: form.requirements.trim() || null,
     });
-    toast.info('已进入编辑器，正在生成…', '你会看到 AI 逐步输出内容。');
+    toast.info('已进入编辑器，正在生成…', '内容将逐步生成到编辑器中。');
     await router.push({ name: 'editor', params: { taskId: task.id } });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {

@@ -33,7 +33,7 @@ function clearSearch() {
     <section class="section-card">
       <p class="page-eyebrow">帮助中心</p>
       <h1 class="page-title">搜索你的问题</h1>
-      <p class="subtitle">用大白话解释功能、AI 行为、账户和数据相关问题。</p>
+      <p class="subtitle">用大白话解释功能、生成行为、账户和数据相关问题。</p>
 
       <label class="help-search app-card">
         <span>🔍</span>

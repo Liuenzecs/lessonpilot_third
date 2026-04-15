@@ -97,14 +97,14 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
             generationProgress.streamingText = '';
             abortController = null;
             onRefetch();
-            toast.success(sectionName ? '本节 AI 内容已生成' : '教案已生成，你可以开始编辑。');
+            toast.success(sectionName ? '本节内容已生成' : '教案已生成，你可以开始编辑。');
           },
           onError(payload) {
             generationProgress.streamingText = '';
             generationProgress.isGenerating = false;
             generationProgress.currentSectionName = null;
             abortController = null;
-            toast.error('生成失败', payload.message);
+            toast.error('生成失败', '内容生成出现问题，请稍后重试。');
           },
         },
         abortController.signal,

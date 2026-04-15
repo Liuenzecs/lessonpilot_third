@@ -21,8 +21,8 @@ defineEmits<{
 
 function formatSource(source: string): string {
   if (source === 'save') return '普通保存';
-  if (source === 'generation') return 'AI 生成';
-  if (source === 'rewrite') return 'AI 重写';
+  if (source === 'generation') return '自动生成';
+  if (source === 'rewrite') return '重写';
   if (source === 'restore') return '历史恢复';
   return source;
 }

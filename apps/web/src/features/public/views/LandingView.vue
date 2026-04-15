@@ -26,10 +26,10 @@ function resolveLandingIcon(icon: string) {
   <div class="landing-page">
     <section class="landing-hero section-card">
       <div class="landing-hero-copy">
-        <p class="page-eyebrow">结构可见，AI 内联，操作极简</p>
+        <p class="page-eyebrow">结构可见，操作极简</p>
         <h1>10 分钟，搞定一份好教案</h1>
         <p class="landing-hero-text">
-          AI 帮你生成结构化教案，你来调整和把关。选学科、定主题，剩下的交给 LessonPilot。
+          输入课题，自动生成结构化教案，你来调整和把关。选学科、定主题，剩下的交给 LessonPilot。
         </p>
         <div class="button-row landing-hero-actions">
           <RouterLink class="button primary" :to="{ name: 'register' }" @click="(() => {})">

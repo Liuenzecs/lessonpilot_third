@@ -7,7 +7,7 @@ import { RouterLink } from 'vue-router';
     <div class="public-footer-grid">
       <div>
         <div class="public-footer-brand">LessonPilot</div>
-        <p class="public-footer-copy">AI 备课助手，让备课不再是负担。</p>
+        <p class="public-footer-copy">备课助手，让备课不再是负担。</p>
       </div>
 
       <div>

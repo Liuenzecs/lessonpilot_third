@@ -19,7 +19,7 @@ const homeTarget = computed(() => (authStore.isAuthenticated ? { name: 'tasks' }
       tone="empty"
     >
       <template #actions>
-        <RouterLink class="button primary" :to="homeTarget">回到备课台</RouterLink>
+        <RouterLink class="button primary" :to="homeTarget">返回备课台</RouterLink>
       </template>
     </StatePanel>
   </section>

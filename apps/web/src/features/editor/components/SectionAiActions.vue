@@ -51,10 +51,10 @@ function cancelClose() {
       type="button"
       class="ai-trigger-btn"
       :disabled="disabled"
-      title="AI 操作"
+      title="辅助编辑"
       @click="toggleMenu"
     >
-      AI
+      生成
     </button>
     <div v-if="showMenu" class="ai-menu">
       <button type="button" class="ai-menu-item" @click="trigger('rewrite')">

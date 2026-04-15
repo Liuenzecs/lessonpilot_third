@@ -14,12 +14,12 @@
 .workspace-start-card {
   display: grid;
   gap: 8px;
-  border: 1px solid rgba(58, 124, 165, 0.18);
+  border: 1px solid rgba(var(--primary-rgb),0.18);
   border-radius: 12px;
-  background: linear-gradient(160deg, rgba(58, 124, 165, 0.98), rgba(45, 98, 132, 0.92));
-  color: #fff;
+  background: linear-gradient(160deg, rgba(var(--primary-rgb), 0.98), rgba(var(--primary-rgb), 0.92));
+  color: var(--on-primary);
   text-align: left;
-  box-shadow: 0 18px 32px rgba(44, 44, 44, 0.22);
+  box-shadow: 0 18px 32px rgba(var(--text-rgb),0.22);
 }
 
 .workspace-start-title {
@@ -28,7 +28,7 @@
 }
 
 .workspace-start-subtitle {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(var(--white-rgb),0.82);
 }
 
 .workspace-hero-skeleton {
@@ -158,8 +158,8 @@
 .task-card:hover,
 .task-card:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(58, 124, 165, 0.22);
-  box-shadow: 0 22px 38px rgba(44, 44, 44, 0.1);
+  border-color: rgba(var(--primary-rgb),0.22);
+  box-shadow: 0 22px 38px rgba(var(--text-rgb),0.1);
   outline: none;
 }
 
@@ -198,7 +198,7 @@
 }
 
 .task-card-menu-trigger:hover {
-  background: rgba(58, 124, 165, 0.08);
+  background: rgba(var(--primary-rgb),0.08);
   color: var(--primary);
 }
 
@@ -223,7 +223,7 @@
 }
 
 .task-card-menu-panel button:hover {
-  background: rgba(58, 124, 165, 0.08);
+  background: rgba(var(--primary-rgb),0.08);
 }
 
 .task-card-menu-panel button.danger {

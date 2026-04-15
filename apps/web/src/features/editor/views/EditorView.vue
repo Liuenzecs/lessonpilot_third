@@ -130,7 +130,7 @@ function isRewritingSection(sectionName: string): boolean {
       tone="info"
     >
       <template #actions>
-        <button class="button primary" type="button" @click="router.push({ name: 'tasks' })">回到备课台</button>
+        <button class="button primary" type="button" @click="router.push({ name: 'tasks' })">返回备课台</button>
       </template>
     </StatePanel>
 

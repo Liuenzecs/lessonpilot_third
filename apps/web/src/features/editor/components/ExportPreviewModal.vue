@@ -56,7 +56,7 @@ function getSectionText(sectionName: string): string {
 
       <div class="export-preview-paper">
         <div class="export-preview-paper-head">
-          <h1 class="export-preview-title">{{ task?.title || '教案预览' }}</h1>
+          <h1 class="export-preview-title">{{ task?.title || '文档预览' }}</h1>
           <div class="export-preview-meta">
             {{ task?.subject || '未设置学科' }} · {{ task?.grade || '未设置年级' }} · {{ task?.topic || '未设置主题' }}
           </div>
@@ -73,7 +73,7 @@ function getSectionText(sectionName: string): string {
             v-else
             icon="📄"
             title="当前还没有已确认内容可以导出"
-            description="先接受 AI 建议或补充正文内容，再回来预览最终文档效果。"
+            description="先接受建议内容或补充正文内容，再回来预览最终文档效果。"
             tone="empty"
             compact
           />

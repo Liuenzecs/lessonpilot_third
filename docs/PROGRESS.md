@@ -978,3 +978,88 @@
   - `pnpm build`：passed
   - `pnpm test`：25 passed（18 content + 7 useEditorView）
 - Status: DONE
+
+## [Cycle 3] — UI/UX 润色
+- 完成日期：2026-04-16
+- 完成内容：
+
+  **3.1 去 AI 味**
+  - 编辑器 UI：替换 8 个文件中的 "AI" 文案
+    - `SectionAiActions.vue`：按钮 "AI" → "生成"，title "AI 操作" → "辅助编辑"
+    - `EditorStatusBanner.vue`："AI 正在重写" → "正在重写"，fallback "教案内容" → "内容"
+    - `useEditorGeneration.ts`：toast "本节 AI 内容已生成" → "本节内容已生成"，错误消息净化
+    - `useEditorRewrite.ts`：toast "AI 重写完成" → "重写完成"，错误 "AI 重写失败" → "重写失败"
+    - `HistoryDrawer.vue`：历史标签 "AI 生成" → "自动生成"，"AI 重写" → "重写"
+    - `ExportPreviewModal.vue`："先接受 AI 建议" → "先接受建议内容"，fallback "教案预览" → "文档预览"
+    - `TaskCreateView.vue`：toast "你会看到 AI 逐步输出内容" → "内容将逐步生成到编辑器中"
+    - `TaskListView.vue`："AI 帮你快速生成" → "快速生成教案"，"体验 AI 备课" → "开启高效备课"
+    - `HeroProductPreview.vue`："AI 生成中" → "生成中"，"AI 待确认" → "待确认"，"AI 补充内容" → "补充内容"
+  - 营销文案：替换 6 个文件中的 "AI" 表述
+    - `AuthLayout.vue`："AI 内联" → 删除，"AI 先给你骨架" → "自动生成骨架"
+    - `LandingView.vue`：eyebrow 和 hero text 重写
+    - `PublicFooter.vue`："AI 备课助手" → "备课助手"
+    - `AboutView.vue`："AI 备课工具" → "备课工具"
+    - `HelpView.vue`："AI 行为" → "生成行为"
+    - `PricingView.vue`："局部 AI 重写" → "局部重写"
+  - `content.ts`：重写 20+ 处 AI 文案
+    - 功能标题 "AI 生成结构化教案" → "一键生成结构化教案"
+    - 功能描述 "AI 帮你重写" → "一键重写"，"局部 AI 润色" → "局部润色"
+    - FAQ 标题 "AI 功能" → "生成与编辑"，重写所有 FAQ 问答
+    - 隐私政策 "AI 备课" → "备课服务"，"训练 AI 模型" → "训练模型"
+    - 条款 "AI 内容免责声明" → "内容免责声明"
+    - 更新日志 "AI 生成/AI 补充" → "自动生成/补充"
+
+  **3.2 术语统一**
+  - "回到备课台" → "返回备课台"：修复 4 个文件（EditorView、NotFoundView、NetworkErrorView、ServerErrorView）
+  - "查看帮助" → "去帮助中心"：修复 NetworkErrorView
+  - 学案 fallback 文案：EditorShellHeader "教案编辑器" → "文档编辑器"，ExportPreviewModal "教案预览" → "文档预览"
+
+  **3.3 设计令牌迁移**
+  - 新增令牌（main.css :root + dark）：
+    - 颜色：`--secondary`、`--warning`、`--on-primary`
+    - RGB 通道：`--primary-rgb`、`--text-rgb`、`--danger-rgb`、`--success-rgb`、`--secondary-rgb`、`--accent-rgb`、`--white-rgb`、`--cream-rgb`、`--shadow-dark-rgb`、`--backdrop-rgb`
+    - 语义令牌：`--text-secondary`、`--surface-secondary`、`--surface-cream`、`--secondary-soft`、`--secondary-border`
+    - 复合令牌：`--ring`、`--ring-visible`、`--shadow-dropdown`、`--shadow-elevated`
+  - 替换 main.css 中所有硬编码色值为 var() 引用
+  - 替换 public.css 中 ~30 处硬编码 rgba + hex 为令牌引用
+  - 替换 editor.css 中 ~30 处硬编码 rgba + hex 为令牌引用
+  - 替换 workspace.css 中 ~7 处硬编码色值为令牌引用
+  - 替换 settings.css 中 ~9 处硬编码色值为令牌引用
+  - 修复 2 个 phantom token（`--text-secondary`、`--surface-secondary`）定义缺失问题
+
+- 关键文件：
+  - `apps/web/src/shared/styles/main.css`（UPDATE — 令牌系统扩展）
+  - `apps/web/src/features/public/styles/public.css`（UPDATE — 色值迁移）
+  - `apps/web/src/features/editor/styles/editor.css`（UPDATE — 色值迁移）
+  - `apps/web/src/features/task/styles/workspace.css`（UPDATE — 色值迁移）
+  - `apps/web/src/features/settings/styles/settings.css`（UPDATE — 色值迁移）
+  - `apps/web/src/features/editor/components/SectionAiActions.vue`（UPDATE）
+  - `apps/web/src/features/editor/components/EditorStatusBanner.vue`（UPDATE）
+  - `apps/web/src/features/editor/composables/useEditorGeneration.ts`（UPDATE）
+  - `apps/web/src/features/editor/composables/useEditorRewrite.ts`（UPDATE）
+  - `apps/web/src/features/editor/components/HistoryDrawer.vue`（UPDATE）
+  - `apps/web/src/features/editor/components/ExportPreviewModal.vue`（UPDATE）
+  - `apps/web/src/features/editor/components/EditorShellHeader.vue`（UPDATE）
+  - `apps/web/src/features/task/views/TaskCreateView.vue`（UPDATE）
+  - `apps/web/src/features/task/views/TaskListView.vue`（UPDATE）
+  - `apps/web/src/features/public/components/HeroProductPreview.vue`（UPDATE）
+  - `apps/web/src/app/layouts/AuthLayout.vue`（UPDATE）
+  - `apps/web/src/features/public/views/LandingView.vue`（UPDATE）
+  - `apps/web/src/features/public/components/PublicFooter.vue`（UPDATE）
+  - `apps/web/src/features/public/views/AboutView.vue`（UPDATE）
+  - `apps/web/src/features/public/views/HelpView.vue`（UPDATE）
+  - `apps/web/src/features/public/views/PricingView.vue`（UPDATE）
+  - `apps/web/src/features/public/views/NotFoundView.vue`（UPDATE）
+  - `apps/web/src/features/public/views/NetworkErrorView.vue`（UPDATE）
+  - `apps/web/src/features/public/views/ServerErrorView.vue`（UPDATE）
+  - `apps/web/src/features/public/content.ts`（UPDATE）
+  - `docs/PROGRESS.md`（UPDATE）
+  - `docs/NEXT.md`（REWRITE）
+- 验证结果：
+  - `pytest`：90 passed
+  - `ruff check`：All checks passed
+  - `pnpm type-check`：passed
+  - `pnpm lint`：passed（仅有已有 warnings，无新增 error）
+  - `pnpm build`：passed
+  - `pnpm test`：25 passed（18 content + 7 useEditorView）
+- Status: DONE

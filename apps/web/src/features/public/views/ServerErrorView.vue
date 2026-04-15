@@ -14,7 +14,7 @@ import StatePanel from '@/shared/components/StatePanel.vue';
       tone="error"
     >
       <template #actions>
-        <RouterLink class="button primary" :to="{ name: 'tasks' }">回到备课台</RouterLink>
+        <RouterLink class="button primary" :to="{ name: 'tasks' }">返回备课台</RouterLink>
         <RouterLink class="button ghost" :to="{ name: 'help' }">去帮助中心</RouterLink>
       </template>
     </StatePanel>

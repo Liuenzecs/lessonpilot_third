@@ -15,7 +15,7 @@
             <div class="hero-preview-strong">一元二次方程</div>
           </div>
           <div class="hero-preview-sidebar-card">
-            <div class="hero-preview-label">AI 生成中</div>
+            <div class="hero-preview-label">生成中...</div>
             <div class="hero-preview-muted">导入环节 / 练习巩固</div>
           </div>
         </aside>
@@ -36,7 +36,7 @@
           </div>
 
           <div class="hero-preview-section pending">
-            <div class="hero-preview-chip">AI 待确认</div>
+            <div class="hero-preview-chip">待确认</div>
             <div class="hero-preview-section-title">导入环节（5 分钟）</div>
             <div class="hero-preview-line long" />
             <div class="hero-preview-line medium" />
@@ -49,7 +49,7 @@
 
           <div class="hero-preview-bottom">
             <span>开始备课</span>
-            <span>AI 补充内容</span>
+            <span>补充内容</span>
             <span>添加练习</span>
           </div>
         </section>

@@ -32,14 +32,14 @@ function getRewriteLabel(action: 'rewrite' | 'expand' | 'simplify') {
 
     <div v-if="isGenerating" class="generation-banner generating">
       <span>
-        正在生成 {{ currentSection || '教案内容' }}
+        正在生成 {{ currentSection || '内容' }}
         <template v-if="total">（{{ completed }}/{{ total }}）</template>
       </span>
       <button class="button ghost stop-btn" type="button" @click="$emit('stop')">停止生成</button>
     </div>
 
     <div v-if="isRewriting" class="generation-banner secondary">
-      AI 正在{{ getRewriteLabel(rewriteAction) }}当前内容
+      正在{{ getRewriteLabel(rewriteAction) }}当前内容
     </div>
 
     <div v-if="streamError" class="feedback">{{ streamError }}</div>

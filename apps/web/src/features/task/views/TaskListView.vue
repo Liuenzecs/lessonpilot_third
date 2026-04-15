@@ -130,7 +130,7 @@ async function exportTask(task: TaskRecord) {
 
         <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
           <span class="workspace-start-title">+ 开始备课</span>
-          <span class="workspace-start-subtitle">选择学科和主题，AI 帮你快速生成</span>
+          <span class="workspace-start-subtitle">选择学科和主题，快速生成教案</span>
         </button>
       </div>
 
@@ -154,7 +154,7 @@ async function exportTask(task: TaskRecord) {
       >
         <div class="workspace-empty-icon">📘</div>
         <h2>你的备课台还是空的</h2>
-        <p>创建第一份教案，体验 AI 备课。</p>
+        <p>创建第一份教案，开启高效备课。</p>
         <div class="button-row">
           <button class="button primary" type="button" @click="startFirstTask">开始第一次备课</button>
           <button class="button ghost" type="button" @click="router.push({ name: 'help' })">

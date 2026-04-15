@@ -17,7 +17,7 @@ import '@/features/public/styles/public.css';
         <p class="page-eyebrow">LessonPilot</p>
         <h1>今晚的课，今晚就能备好</h1>
         <p class="auth-brand-text">
-          结构可见，AI 内联，操作极简。老师不需要先学一套复杂工具，打开就能开始备课。
+          结构可见，操作极简。老师不需要先学一套复杂工具，打开就能开始备课。
         </p>
         <div class="auth-brand-points">
           <article class="auth-brand-point app-card">
@@ -30,8 +30,8 @@ import '@/features/public/styles/public.css';
           <article class="auth-brand-point app-card">
             <BookOpenText :size="20" />
             <div>
-              <strong>AI 先给你骨架</strong>
-              <p>结构化教案先生成，老师只需要编辑和把关。</p>
+              <strong>自动生成骨架</strong>
+              <p>结构化教案自动生成，老师只需要编辑和把关。</p>
             </div>
           </article>
           <article class="auth-brand-point app-card">

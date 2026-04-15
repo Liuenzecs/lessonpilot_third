@@ -54,7 +54,7 @@ function getSaveLabel(
       </div>
 
       <div class="editor-shell-title-group">
-        <h1 class="editor-shell-title">{{ task?.title || '教案编辑器' }}</h1>
+        <h1 class="editor-shell-title">{{ task?.title || '文档编辑器' }}</h1>
         <div class="editor-shell-meta">
           <span>{{ task?.subject || '未设置学科' }}</span>
           <span>·</span>
