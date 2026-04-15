@@ -479,17 +479,18 @@
 
 .ai-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: 100%;
   right: 0;
   min-width: 160px;
   padding: 6px;
+  padding-top: 6px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-strong);
   box-shadow: 0 12px 28px rgba(29, 45, 68, 0.12);
   display: grid;
   gap: 2px;
-  z-index: 20;
+  z-index: var(--z-dropdown);
 }
 
 .ai-menu-item {
@@ -701,10 +702,14 @@
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-strong);
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  min-height: 38px;
+  font-family: inherit;
 }
 
 .objective-content:focus {
@@ -747,10 +752,14 @@
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-strong);
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+  min-height: 38px;
+  font-family: inherit;
 }
 
 .item-input:focus {

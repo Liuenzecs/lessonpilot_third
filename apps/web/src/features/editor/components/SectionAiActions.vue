@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const showMenu = ref(false);
 const showInstruction = ref(false);
 const instruction = ref('');
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
 function trigger(action: 'rewrite' | 'expand' | 'simplify') {
   emit('action', { action, instruction: instruction.value.trim() });
@@ -29,14 +30,23 @@ function toggleMenu() {
   showInstruction.value = false;
 }
 
-function closeMenu() {
-  showMenu.value = false;
-  showInstruction.value = false;
+function scheduleClose() {
+  closeTimer = setTimeout(() => {
+    showMenu.value = false;
+    showInstruction.value = false;
+  }, 150);
+}
+
+function cancelClose() {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
 }
 </script>
 
 <template>
-  <div class="section-ai-actions" @mouseleave="closeMenu">
+  <div class="section-ai-actions" @mouseleave="scheduleClose" @mouseenter="cancelClose">
     <button
       type="button"
       class="ai-trigger-btn"

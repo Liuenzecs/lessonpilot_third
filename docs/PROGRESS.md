@@ -874,3 +874,45 @@
   - `npx vue-tsc --noEmit`：passed
   - `pnpm build`：passed
 - Status: DONE
+
+---
+
+## Cycle 硬化与拓展阶段（Sprint 0-6 之后）
+
+## [Cycle 1] — 关键 Bug 修复
+- 完成日期：2026-04-16
+- 完成内容：
+
+  **Bug 1：AI 菜单 mouseleave 消失**
+  - 根因：`SectionAiActions.vue` 的 `@mouseleave="closeMenu"` + CSS `top: calc(100% + 6px)` 造成 6px 空隙
+  - 修复：CSS 改为 `top: 100%` + `padding-top: 6px`（padding 属于元素内部，不触发 mouseleave）
+  - 修复：Vue 组件改为延迟关闭（setTimeout 150ms），mouseenter 时取消定时器
+  - 同时将 `z-index: 20` 替换为 `var(--z-dropdown)`
+
+  **Bug 2：列表编辑器不支持多行文本**
+  - `GenericListEditor.vue`：将 `<input type="text">` 替换为自动增高的 `<textarea>`
+    - Enter 键不再拦截，自然换行
+    - 保留 Backspace 在空项时的合并行为
+    - 新增项通过底部"+ 添加"按钮
+  - `ObjectivesEditor.vue`：同理替换为 `<textarea>`
+  - `editor.css`：为 `.item-input` 和 `.objective-content` 添加 `resize: none; overflow: hidden; min-height: 38px; font-family: inherit`
+  - 同时将硬编码的 `#fff` 替换为 `var(--surface-strong)`
+
+  **文档更新**：
+  - `CLAUDE.md`：当前进度改为 Cycle 硬化阶段，工作流程从 Sprint 改为 Cycle
+  - `PROGRESS.md`：追加 Sprint 0-6 完成分隔线 + Cycle 1 记录
+  - `NEXT.md`：重写为 Cycle 2 任务清单
+
+- 关键文件：
+  - `apps/web/src/features/editor/components/SectionAiActions.vue`（UPDATE）
+  - `apps/web/src/features/editor/styles/editor.css`（UPDATE）
+  - `apps/web/src/features/editor/components/SectionEditors/GenericListEditor.vue`（REWRITE）
+  - `apps/web/src/features/editor/components/SectionEditors/ObjectivesEditor.vue`（REWRITE）
+  - `CLAUDE.md`（UPDATE）
+  - `docs/PROGRESS.md`（UPDATE）
+  - `docs/NEXT.md`（REWRITE）
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（仅有 Vue 模板格式 warnings，无新增 error）
+  - `pnpm --dir apps/web build`：passed（✓ built in 13.16s）
+- Status: DONE

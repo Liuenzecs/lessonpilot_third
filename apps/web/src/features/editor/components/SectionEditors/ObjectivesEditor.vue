@@ -2,9 +2,10 @@
 /**
  * 教学目标编辑器（教案）。
  * 每条目标有维度（知识与技能/过程与方法/情感态度与价值观）和内容。
+ * 支持多行文本：Enter 换行，新增项通过底部按钮。
  */
 import type { TeachingObjective } from '@lessonpilot/shared-types';
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 const props = defineProps<{
   modelValue: TeachingObjective[];
@@ -19,6 +20,8 @@ const objectives = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 });
+
+const textareas = ref<HTMLTextAreaElement[]>([]);
 
 const dimensionLabels: Record<string, string> = {
   knowledge: '知识与技能',
@@ -38,10 +41,48 @@ function addObjective() {
     ...objectives.value,
     { dimension: 'knowledge', content: '' },
   ];
+  nextTick(() => {
+    const last = textareas.value[objectives.value.length - 1];
+    last?.focus();
+  });
 }
 
 function removeObjective(index: number) {
   objectives.value = objectives.value.filter((_, i) => i !== index);
+}
+
+/** Backspace 在空项且光标在开头时，合并到上一项 */
+function handleKeydown(e: KeyboardEvent, index: number) {
+  if (
+    e.key === 'Backspace' &&
+    !objectives.value[index].content &&
+    objectives.value.length > 1
+  ) {
+    const target = e.target as HTMLTextAreaElement;
+    if (target.selectionStart === 0 && target.selectionEnd === 0) {
+      e.preventDefault();
+      const prev = textareas.value[index - 1];
+      removeObjective(index);
+      nextTick(() => {
+        prev?.focus();
+      });
+    }
+  }
+}
+
+/** 自动调整 textarea 高度 */
+function autoResize(el: HTMLTextAreaElement | EventTarget | null) {
+  const textarea = el instanceof HTMLTextAreaElement ? el : null;
+  if (!textarea) return;
+  textarea.style.height = 'auto';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function setTextareaRef(el: unknown, index: number) {
+  if (el instanceof HTMLTextAreaElement) {
+    textareas.value[index] = el;
+    autoResize(el);
+  }
 }
 </script>
 
@@ -58,13 +99,15 @@ function removeObjective(index: number) {
           {{ label }}
         </option>
       </select>
-      <input
-        type="text"
+      <textarea
+        :ref="(el) => setTextareaRef(el, index)"
         class="objective-content"
         :value="obj.content"
         :disabled="disabled"
         placeholder="请输入教学目标内容"
-        @input="updateObjective(index, { content: ($event.target as HTMLInputElement).value })"
+        rows="1"
+        @input="updateObjective(index, { content: ($event.target as HTMLTextAreaElement).value }); autoResize($event.target)"
+        @keydown="handleKeydown($event, index)"
       />
       <button
         v-if="!disabled && objectives.length > 1"
