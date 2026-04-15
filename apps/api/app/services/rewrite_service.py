@@ -7,6 +7,7 @@ SSE 协议与 generation_service 对齐：section_start / section_delta / sectio
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi import HTTPException, Request, status
@@ -24,6 +25,8 @@ from app.services.llm_service import (
     RewriteSectionContext,
     get_provider,
 )
+
+logger = logging.getLogger("lessonpilot.rewrite")
 
 
 def _format_sse(event: str, payload: object) -> str:
@@ -62,6 +65,9 @@ def _set_section_content(
     try:
         new_value = json.loads(raw_json)
     except json.JSONDecodeError:
+        logger.warning(
+            "重写结果 JSON 解析失败 (section=%s)，保留原内容", section_name
+        )
         return content
     data[section_name] = new_value
     # 同时将 status 设为 pending
@@ -168,4 +174,5 @@ async def stream_rewrite(
     except _ClientDisconnected:
         return
     except Exception as exc:
-        yield _format_sse("error", {"message": str(exc)})
+        logger.exception("重写失败 (document=%s, section=%s): %s", document.id, payload.section_name, exc)
+        yield _format_sse("error", {"message": "重写过程中出现错误，请稍后重试。"})

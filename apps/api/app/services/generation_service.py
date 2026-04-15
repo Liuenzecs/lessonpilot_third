@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import AsyncIterator
 
@@ -25,6 +26,8 @@ from app.services.llm_service import (
     StudyGuideContext,
     get_provider,
 )
+
+logger = logging.getLogger("lessonpilot.generation")
 
 # ---------------------------------------------------------------------------
 # Section 名称 → 中文标题映射
@@ -261,7 +264,20 @@ async def stream_generation(
             try:
                 content = _parse_content_json(accumulated, doc_type)
             except Exception:
+                logger.warning(
+                    "AI 输出 JSON 解析失败 (task=%s, doc_type=%s)，使用空模板回退",
+                    task.id,
+                    doc_type,
+                )
                 content = _create_fallback_content(task, doc_type)
+                yield _format_sse(
+                    "warning",
+                    {
+                        "message": f"{'教案' if doc_type == 'lesson_plan' else '学案'}内容解析异常，"
+                        "已使用空模板。请尝试重新生成或手动编辑。",
+                        "doc_type": doc_type,
+                    },
+                )
 
             doc.content = content.model_dump(by_alias=True)
             session.add(doc)
@@ -298,10 +314,11 @@ async def stream_generation(
         session.commit()
         return
     except Exception as exc:
+        logger.exception("生成失败 (task=%s): %s", task.id, exc)
         task.status = "ready"
         session.add(task)
         session.commit()
-        yield _format_sse("error", {"message": str(exc)})
+        yield _format_sse("error", {"message": "生成过程中出现错误，请稍后重试。"})
 
 
 # ---------------------------------------------------------------------------

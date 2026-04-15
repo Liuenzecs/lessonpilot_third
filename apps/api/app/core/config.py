@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     feedback_notify_email: str = "feedback@lessonpilot.com"
     verify_email_token_expire_hours: int = 48
     reset_password_token_expire_minutes: int = 30
+    rate_limit_enabled: bool = True
+    rate_limit_login_per_minute: int = 10
+    rate_limit_generation_per_hour: int = 20
+    rate_limit_general_per_minute: int = 60
     llm_provider: Literal["fake", "deepseek", "minimax"] = "fake"
     deepseek_api_key: str = ""
     deepseek_model: str = "deepseek-chat"

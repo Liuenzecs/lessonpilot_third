@@ -916,3 +916,65 @@
   - `pnpm --dir apps/web lint`：passed（仅有 Vue 模板格式 warnings，无新增 error）
   - `pnpm --dir apps/web build`：passed（✓ built in 13.16s）
 - Status: DONE
+
+## [Cycle 2] — 后端加固
+- 完成日期：2026-04-16
+- 完成内容：
+
+  **2.1 速率限制**
+  - 新建 `apps/api/app/core/rate_limit.py`：轻量内存级滑动窗口限流中间件
+    - 登录端点：每 IP 每分钟 10 次
+    - AI 生成端点：每用户每小时 20 次
+    - 通用 API：每 IP 每分钟 60 次
+    - 支持通过 `rate_limit_enabled` 配置开关（测试环境可关闭）
+  - 修改 `apps/api/app/core/config.py`：添加 4 个限流配置项
+  - 修改 `apps/api/app/main.py`：注册 `RateLimitMiddleware`
+
+  **2.2 全局异常处理**
+  - 修改 `apps/api/app/main.py`：添加三个异常处理器
+    - `RequestValidationError` → 422 + 结构化错误详情
+    - `HTTPException` → 统一 JSON 响应格式
+    - 通用 `Exception` → 500 + 友好消息 + logger.exception 记录
+  - 修改 `apps/api/app/services/generation_service.py`：
+    - parse 失败时 `logger.warning` 记录
+    - 发送 SSE `warning` 事件通知前端
+    - 异常时净化错误消息，不暴露内部细节
+  - 修改 `apps/api/app/services/rewrite_service.py`：
+    - JSON 解析失败时 `logger.warning` 记录
+    - SSE error 事件净化为友好消息
+    - 全局 `logger.exception` 记录完整堆栈
+
+  **2.3 前端测试基础**
+  - 新建 `apps/web/vitest.config.ts`：vitest 配置（happy-dom、globals、coverage）
+  - 修改 `apps/web/package.json`：添加 vitest、@vue/test-utils、happy-dom + test 脚本
+  - 新建 `apps/web/src/shared/utils/__tests__/content.test.ts`：18 个测试
+    - cloneSerializable、getSectionTitle、getSections
+    - update/set/accept 系列、confirmAll、getSectionStatuses
+    - getStudyGuideSectionContent
+  - 新建 `apps/web/src/features/editor/composables/__tests__/useEditorView.test.ts`：7 个测试
+    - 返回属性完整性、空文档安全性、pending/sections 状态
+
+  **文档更新**：
+  - `PROGRESS.md`：追加 Cycle 2 记录
+  - `NEXT.md`：重写为 Cycle 3 任务清单
+
+- 关键文件：
+  - `apps/api/app/core/rate_limit.py`（NEW）
+  - `apps/api/app/core/config.py`（UPDATE）
+  - `apps/api/app/main.py`（UPDATE）
+  - `apps/api/app/services/generation_service.py`（UPDATE）
+  - `apps/api/app/services/rewrite_service.py`（UPDATE）
+  - `apps/web/vitest.config.ts`（NEW）
+  - `apps/web/package.json`（UPDATE）
+  - `apps/web/src/shared/utils/__tests__/content.test.ts`（NEW）
+  - `apps/web/src/features/editor/composables/__tests__/useEditorView.test.ts`（NEW）
+  - `docs/PROGRESS.md`（UPDATE）
+  - `docs/NEXT.md`（REWRITE）
+- 验证结果：
+  - `pytest`：90 passed
+  - `ruff check`：All checks passed
+  - `pnpm type-check`：passed
+  - `pnpm lint`：passed（仅有已有 warnings，无新增 error）
+  - `pnpm build`：passed
+  - `pnpm test`：25 passed（18 content + 7 useEditorView）
+- Status: DONE
