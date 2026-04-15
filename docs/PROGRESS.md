@@ -777,3 +777,45 @@
   - `npx vue-tsc --noEmit`：passed
   - `pnpm build`：✓ built in 21.66s
 - Status: DONE
+
+## [Sprint 5] — 导出重写
+
+- 完成日期：2026-04-15
+- 完成内容：
+
+  **后端导出服务重写**：
+  - 重写 `services/export_service.py`：删除全部旧 block 导出代码（~675 行），替换为基于 `LessonPlanContent` / `StudyGuideContent` 结构化模型的 Word 导出
+  - 教案 Word 导出：表头信息栏 + 三维目标（知识与技能/过程与方法/情感态度）+ 重难点 + 教学准备 + 表格式教学过程（5 列表格：环节/时长/教师活动/学生活动/设计意图）+ 板书设计 + 反思留空区
+  - 学案 Word 导出：学生信息表格 + 学习目标 + 重难点 + 知识链接 + 三段式学习流程（自主学习 A 级/合作探究 B 级/展示提升 C 级）+ 达标测评 + 拓展延伸 D 级 + 反思留空区
+  - 使用场景影响排版：公立校完整 5 列教学过程表格、家教简化为 4 列（省略设计意图列）、机构使用完整表格
+  - 只导出 status 为 confirmed 的 section（反思区始终保留留空）
+  - 中式现代风配色：墨色 `#2c2c2c` 正文、石青 `#3a7ca5` 标题、象牙 `#f0ebe0` 表头
+  - 删除 HTML 导出（`_build_export_html`）和 PDF 导出（`_build_simple_pdf`、`build_pdf`）
+
+  **后端端点更新**：
+  - 更新 `documents.py` 导出端点：接入真实 `build_docx()` 替换空字节占位
+  - 导出文件名包含教案/学案标识（如 `《春》_教案.docx`）
+
+  **前端导出更新**：
+  - 重写 `useExport.ts`：删除 `exportPdf`（MVP 不需要），新增 `exportMultipleDocx` 支持批量导出多个 document
+  - 更新 `EditorShellHeader.vue`：新增 `hasMultipleDocs` prop，多 document 时显示"导出全部（教案 + 学案）"选项
+  - 更新 `useEditorView.ts`：新增 `handleExportAll()` 依次导出教案和学案两个 document
+  - 更新 `EditorView.vue`：传递 `hasMultipleDocs` prop 和 `@export-all` event
+
+  **后端测试**：
+  - 新建 `tests/test_export.py`：10 个测试覆盖教案基本导出、空内容导出、公立校/家教场景差异、pending section 排除、confirmed section 包含、学案基本导出、学案学生信息、学案测评题、空学案
+
+- 关键文件：
+  - `apps/api/app/services/export_service.py`（REWRITE）
+  - `apps/api/app/api/v1/endpoints/documents.py`（UPDATE）
+  - `apps/web/src/features/export/composables/useExport.ts`（UPDATE）
+  - `apps/web/src/features/editor/components/EditorShellHeader.vue`（UPDATE）
+  - `apps/web/src/features/editor/composables/useEditorView.ts`（UPDATE）
+  - `apps/web/src/features/editor/views/EditorView.vue`（UPDATE）
+  - `apps/api/tests/test_export.py`（NEW）
+- 验证结果：
+  - `python -m ruff check app/`：All checks passed
+  - `python -m pytest tests/ -q`：38 passed
+  - `npx vue-tsc --noEmit`：passed
+  - `pnpm build`：✓ built in 14.31s
+- Status: DONE

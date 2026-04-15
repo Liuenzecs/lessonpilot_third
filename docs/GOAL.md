@@ -72,7 +72,7 @@ AI 赋能的备课工具：**结构化教案编辑器 + AI 填充引擎**。
   - 真正 token-by-token 流式生成消费
   - StreamingText 逐字显示 + 停止生成
   - collectSections 修复（编辑器可渲染结构化内容）
-- [ ] **Sprint 4 — Section Editor + AI 重写**
+- [x] **Sprint 4 — Section Editor + AI 重写**
   - 文档式编辑器重写（Tab 切换教案/学案）
   - Section 级 AI 重写/扩写/精简
 - [ ] **Sprint 5 — 导出重写**

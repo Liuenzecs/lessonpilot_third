@@ -17,7 +17,7 @@ import { useAutoSave } from '@/features/editor/composables/useAutoSave';
 import { useEditorGeneration } from '@/features/editor/composables/useEditorGeneration';
 import { useEditorRewrite } from '@/features/editor/composables/useEditorRewrite';
 import type { DocumentSnapshotRecord, LessonDocument } from '@/features/editor/types';
-import { exportDocx } from '@/features/export/composables/useExport';
+import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
 import { useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
@@ -255,6 +255,23 @@ export function useEditorView() {
     exportPreviewOpen.value = true;
   }
 
+  async function handleExportAll() {
+    if (!taskQuery.data.value) return;
+    if (!(await ensureLatestDocumentSaved())) return;
+    exportMenuOpen.value = false;
+    try {
+      const docs = documentsQuery.data.value?.items ?? [];
+      const items = docs.map((doc) => ({
+        documentId: doc.id,
+        title: `${taskQuery.data.value!.title}_${doc.doc_type === 'study_guide' ? '学案' : '教案'}`,
+      }));
+      await exportMultipleDocx(items);
+      toast.success('全部文档已开始下载');
+    } catch (error) {
+      toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
+    }
+  }
+
   async function restoreSnapshot(snapshotId: string) {
     try {
       const updatedDocument = await restoreSnapshotMutation.mutateAsync(snapshotId);
@@ -345,6 +362,7 @@ export function useEditorView() {
     startSectionRewrite,
     refreshFromServer,
     handleExport,
+    handleExportAll,
     openExportPreview,
     restoreSnapshot,
     confirmSectionByName,

@@ -23,11 +23,13 @@ from app.services.document_service import (
     get_owned_document,
     list_document_history,
     list_documents_for_task,
+    load_content,
     restore_document_snapshot,
     serialize_document,
     serialize_snapshot,
     update_document,
 )
+from app.services.export_service import build_docx
 from app.services.rewrite_service import get_document_task, stream_rewrite
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -179,12 +181,14 @@ def export_document(
         raise HTTPException(status_code=404, detail="Task not found")
 
     if format == "docx":
-        # 导出服务将在 Sprint 5 重写，此处暂时返回占位
-        filename = quote(f"{task.title}.docx")
+        content = load_content(document)
+        doc_type_label = "学案" if document.doc_type == "study_guide" else "教案"
+        filename = quote(f"{task.title}_{doc_type_label}.docx")
+        docx_bytes = build_docx(task, content)
         return Response(
-            content=b"",
+            content=docx_bytes,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
         )
 
-    raise HTTPException(status_code=400, detail="Only docx export is supported in this sprint")
+    raise HTTPException(status_code=400, detail="Only docx export is supported")

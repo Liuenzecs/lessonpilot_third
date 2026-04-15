@@ -48,6 +48,7 @@ const {
   startSectionRewrite,
   refreshFromServer,
   handleExport,
+  handleExportAll,
   openExportPreview,
   restoreSnapshot,
   confirmSectionByName,
@@ -94,11 +95,13 @@ function isRewritingSection(sectionName: string): boolean {
       :save-state="saveState"
       :outline-collapsed="outlineCollapsed"
       :export-menu-open="exportMenuOpen"
+      :has-multiple-docs="hasMultipleDocs"
       @back="router.push({ name: 'tasks' })"
       @toggle-outline="outlineCollapsed = !outlineCollapsed"
       @open-history="historyOpen = true"
       @toggle-export-menu="exportMenuOpen = !exportMenuOpen"
       @export="handleExport"
+      @export-all="handleExportAll"
       @open-export-preview="openExportPreview"
       @refresh="refreshFromServer"
       @retry-save="persistDocument"
