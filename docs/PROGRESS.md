@@ -819,3 +819,58 @@
   - `npx vue-tsc --noEmit`：passed
   - `pnpm build`：✓ built in 14.31s
 - Status: DONE
+
+## [Sprint 6] — 测试 + 收尾
+
+- 完成日期：2026-04-15
+- 完成内容：
+
+  **Phase 1：测试文件重组**：
+  - 重命名 `test_documents_phase2.py` → `test_documents.py`
+  - 重命名 `test_phase3_account.py` → `test_account.py`
+  - 重命名 `test_phase7_hardening.py` → `test_security.py`
+  - 清理旧 Phase 编号
+
+  **Phase 2：后端单元测试补齐**（38 → 90 个测试，+52 个）：
+  - 新建 `tests/test_security_unit.py`：6 个测试覆盖 hash_password/verify_password/JWT 生命周期
+  - 新建 `tests/test_auth_service.py`：13 个测试覆盖密码验证、注册、认证、token 生命周期、重置密码
+  - 新建 `tests/test_account_service.py`：11 个测试覆盖个人信息更新、密码修改、反馈创建、数据导出、账户删除
+  - 新建 `tests/test_task_service.py`：10 个测试覆盖创建（3 种 lesson_type）、分页、权限、复制、级联删除
+  - 新建 `tests/test_document_service.py`：10 个测试覆盖内容反序列化、版本管理、快照、冲突检测、历史裁剪
+  - 修复 `test_security.py` 中未使用变量 lint 错误
+
+  **Phase 3：覆盖率配置**：
+  - 在 `pyproject.toml` 添加 `[tool.coverage.run]` 和 `[tool.coverage.report]`
+  - 配置 `fail_under = 80`，`source = ["app"]`
+  - 运行 `pytest --cov`：总覆盖率 **88.86%**，超过 80% 门控
+
+  **Phase 4：前端验证**：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web lint`：passed（仅有 Vue 模板格式 warnings，无 error）
+  - `pnpm --dir apps/web build`：passed
+
+  **Phase 6：文档更新**：
+  - 更新 `GOAL.md`：Sprint 6 标记完成
+  - 更新 `PROGRESS.md`：追加 Sprint 6 完成记录
+  - 更新 `NEXT.md`：MVP 完成状态
+
+- 关键文件：
+  - `apps/api/tests/test_security_unit.py`（NEW）
+  - `apps/api/tests/test_auth_service.py`（NEW）
+  - `apps/api/tests/test_account_service.py`（NEW）
+  - `apps/api/tests/test_task_service.py`（NEW）
+  - `apps/api/tests/test_document_service.py`（NEW）
+  - `apps/api/tests/api/test_documents.py`（RENAMED）
+  - `apps/api/tests/api/test_account.py`（RENAMED）
+  - `apps/api/tests/api/test_security.py`（RENAMED）
+  - `apps/api/pyproject.toml`（UPDATE — 覆盖率配置）
+  - `docs/GOAL.md`（UPDATE）
+  - `docs/PROGRESS.md`（UPDATE）
+  - `docs/NEXT.md`（UPDATE）
+- 验证结果：
+  - `python -m ruff check app/ tests/`：All checks passed
+  - `python -m pytest tests/ -q`：90 passed
+  - `python -m pytest tests/ --cov`：88.86% total coverage（≥ 80% 门控）
+  - `npx vue-tsc --noEmit`：passed
+  - `pnpm build`：passed
+- Status: DONE

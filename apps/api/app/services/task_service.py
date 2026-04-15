@@ -152,6 +152,7 @@ def delete_task(session: Session, task: Task, *, commit: bool = True) -> None:
         ).all()
         for snapshot in snapshots:
             session.delete(snapshot)
+        session.flush()  # 确保 snapshots 删除先完成，避免 FK 冲突
         session.delete(doc)
     session.delete(task)
     if commit:

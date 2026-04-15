@@ -86,10 +86,10 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
           },
           onSectionComplete() {
             generationProgress.completed++;
-            generationProgress.streamingText = '';
           },
           onDocument(payload) {
             onApplyServerDocument(payload as unknown as LessonDocument);
+            generationProgress.streamingText = '';
           },
           onDone() {
             generationProgress.isGenerating = false;

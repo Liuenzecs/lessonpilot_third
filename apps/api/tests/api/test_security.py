@@ -69,7 +69,7 @@ def test_generation_stops_when_client_disconnects(client, auth_headers, monkeypa
                 events.append(chunk)
             return events
 
-    events = asyncio.run(consume())
+    asyncio.run(consume())
     # Generation completes because FakeProvider is instant.
     # The key assertion: task status returns to 'ready' after generation.
     with Session(get_engine()) as session:

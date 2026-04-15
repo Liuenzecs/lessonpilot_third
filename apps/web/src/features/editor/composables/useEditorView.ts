@@ -144,13 +144,24 @@ export function useEditorView() {
     { immediate: true },
   );
 
+  // Tab switching: load the selected document into draftDocument
+  watch(activeDocTabIndex, (newIndex) => {
+    const docs = documentsQuery.data.value?.items ?? [];
+    if (docs.length <= 1) return;
+    const doc = docs[newIndex];
+    if (doc) {
+      applyServerDocument(doc);
+      collapsedSections.value = {};
+    }
+  });
+
   // Auto-trigger generation for new tasks
   watch(
     [taskQuery.data, primaryDocument],
     ([task, doc]) => {
       if (!task || !doc || initialGenerationTriggered.value) return;
       const secs = getSections(doc.content);
-      const hasContent = secs.some((s) => s.status !== 'pending' || Boolean(getSectionData(s.name)));
+      const hasContent = secs.some((s) => s.status !== 'pending' || _sectionHasActualContent(getSectionData(s.name)));
       if (task.status === 'draft' && !hasContent) {
         initialGenerationTriggered.value = true;
         void startGeneration();
@@ -176,6 +187,15 @@ export function useEditorView() {
   });
 
   // Helpers
+  function _sectionHasActualContent(data: unknown): boolean {
+    if (Array.isArray(data)) return data.length > 0;
+    if (typeof data === 'string') return data.trim().length > 0;
+    if (data && typeof data === 'object') {
+      return Object.values(data as Record<string, unknown>).some((v) => _sectionHasActualContent(v));
+    }
+    return false;
+  }
+
   function getSectionData(sectionName: string): unknown {
     if (!draftDocument.value) return null;
     const content = draftDocument.value.content as Record<string, unknown>;
