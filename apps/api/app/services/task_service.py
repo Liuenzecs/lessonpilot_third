@@ -45,6 +45,7 @@ def create_task(session: Session, user_id: str, payload: TaskCreatePayload) -> T
         lesson_type=payload.lesson_type,
         class_hour=payload.class_hour,
         lesson_category=payload.lesson_category,
+        template_id=payload.template_id,
     )
     session.add(task)
     session.flush()
@@ -99,6 +100,7 @@ def duplicate_task(session: Session, source_task: Task) -> Task:
         lesson_type=source_task.lesson_type,
         class_hour=source_task.class_hour,
         lesson_category=source_task.lesson_category,
+        template_id=source_task.template_id,
     )
     session.add(duplicated_task)
     session.flush()

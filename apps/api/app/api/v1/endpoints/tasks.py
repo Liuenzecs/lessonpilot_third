@@ -41,6 +41,7 @@ def _to_task_read(task) -> TaskRead:
         lesson_type=task.lesson_type,
         class_hour=task.class_hour,
         lesson_category=task.lesson_category,
+        template_id=task.template_id,
         created_at=task.created_at,
         updated_at=task.updated_at,
     )

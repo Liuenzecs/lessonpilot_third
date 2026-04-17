@@ -35,6 +35,7 @@ class LessonPlanContext:
     scene: str = "public_school"
     class_hour: int = 1
     lesson_category: str = "new"
+    prompt_hints: str = ""
 
 
 @dataclass(slots=True)
@@ -47,6 +48,7 @@ class StudyGuideContext:
     requirements: str = ""
     scene: str = "public_school"
     class_hour: int = 1
+    prompt_hints: str = ""
 
 
 @dataclass(slots=True)
@@ -383,6 +385,7 @@ class DeepSeekProvider(LLMProvider):
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
             lesson_category=ctx.lesson_category,
+            prompt_hints=ctx.prompt_hints or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -405,6 +408,7 @@ class DeepSeekProvider(LLMProvider):
             requirements=ctx.requirements or "无特殊要求",
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
+            prompt_hints=ctx.prompt_hints or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -464,6 +468,7 @@ class MiniMaxProvider(LLMProvider):
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
             lesson_category=ctx.lesson_category,
+            prompt_hints=ctx.prompt_hints or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -486,6 +491,7 @@ class MiniMaxProvider(LLMProvider):
             requirements=ctx.requirements or "无特殊要求",
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
+            prompt_hints=ctx.prompt_hints or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,

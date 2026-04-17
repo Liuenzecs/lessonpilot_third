@@ -24,6 +24,10 @@ class Task(SQLModel, table=True):
     lesson_type: str = Field(default="lesson_plan", sa_column=Column(String(32), nullable=False))
     class_hour: int = Field(default=1, sa_column=Column(Integer, nullable=False))
     lesson_category: str = Field(default="new", sa_column=Column(String(32), nullable=False))
+    template_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(36), ForeignKey("templates.id"), nullable=True),
+    )
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False),

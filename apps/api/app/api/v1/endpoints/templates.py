@@ -4,7 +4,7 @@ from sqlmodel import Session
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.user import User
-from app.schemas.template import TemplateCreate, TemplateRead, TemplateUpdate, TemplateSectionRead
+from app.schemas.template import TemplateCreate, TemplateRead, TemplateSectionRead, TemplateUpdate
 from app.services import template_service
 
 router = APIRouter()

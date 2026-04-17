@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useCreateTaskMutation } from '@/features/task/composables/useTasks';
 import type { LessonCategory, LessonType, Scene } from '@lessonpilot/shared-types';
+import type { TemplateRecord } from '@/features/task/types';
 import { ApiError } from '@/shared/api/client';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
@@ -15,6 +16,7 @@ import {
   SCENE_OPTIONS,
   SUBJECT_OPTIONS,
 } from '@/shared/constants/options';
+import { request } from '@/shared/api/client';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -31,6 +33,38 @@ const form = reactive({
   lesson_type: 'lesson_plan' as LessonType,
   scene: 'public_school' as Scene,
   requirements: '',
+  template_id: null as string | null,
+});
+
+const templates = ref<TemplateRecord[]>([]);
+const templatesLoading = ref(false);
+
+async function fetchTemplates() {
+  if (!form.subject) {
+    templates.value = [];
+    return;
+  }
+  templatesLoading.value = true;
+  try {
+    const templateType = form.lesson_type === 'study_guide' ? 'study_guide' : 'lesson_plan';
+    templates.value = await request<TemplateRecord[]>(
+      `/api/v1/templates/?subject=${encodeURIComponent(form.subject)}&template_type=${templateType}`,
+    );
+  } catch {
+    templates.value = [];
+  } finally {
+    templatesLoading.value = false;
+  }
+}
+
+watch(() => form.subject, () => {
+  form.template_id = null;
+  void fetchTemplates();
+});
+
+watch(() => form.lesson_type, () => {
+  form.template_id = null;
+  void fetchTemplates();
 });
 
 const canSubmit = computed(() => Boolean(form.subject) && Boolean(form.grade) && form.topic.trim().length > 0);
@@ -179,6 +213,33 @@ async function submit() {
           </div>
         </div>
 
+        <!-- 模板选择 -->
+        <div v-if="templates.length > 0" class="create-field">
+          <label class="create-label">选择模板（可选）</label>
+          <div class="template-choice-grid">
+            <button
+              type="button"
+              class="template-card"
+              :class="{ active: form.template_id === null }"
+              @click="form.template_id = null"
+            >
+              <span class="template-card-name">自动匹配</span>
+              <span class="template-card-desc">根据场景自动选择最合适的模板</span>
+            </button>
+            <button
+              v-for="tpl in templates"
+              :key="tpl.id"
+              type="button"
+              class="template-card"
+              :class="{ active: form.template_id === tpl.id }"
+              @click="form.template_id = tpl.id"
+            >
+              <span class="template-card-name">{{ tpl.name }}</span>
+              <span class="template-card-desc">{{ tpl.description }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- 补充说明 -->
         <div class="create-field">
           <label class="create-label">补充说明（可选）</label>
@@ -206,3 +267,46 @@ async function submit() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.template-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.template-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-strong);
+}
+
+.template-card.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.template-card-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.template-card-desc {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: 1.4;
+}
+</style>

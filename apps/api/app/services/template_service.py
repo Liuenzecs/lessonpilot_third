@@ -1,12 +1,19 @@
 from sqlmodel import Session, select
+
 from app.models.template import Template, TemplateSection
 from app.schemas.template import TemplateCreate, TemplateUpdate
+
 
 def get_template(session: Session, template_id: str) -> Template | None:
     return session.get(Template, template_id)
 
 def get_templates(
-    session: Session, skip: int = 0, limit: int = 100, subject: str | None = None, grade: str | None = None, is_public: bool | None = None
+    session: Session,
+    skip: int = 0,
+    limit: int = 100,
+    subject: str | None = None,
+    grade: str | None = None,
+    is_public: bool | None = None,
 ) -> list[Template]:
     statement = select(Template)
     if subject:
@@ -50,5 +57,9 @@ def update_template(session: Session, db_template: Template, template_in: Templa
     return db_template
 
 def get_template_sections(session: Session, template_id: str) -> list[TemplateSection]:
-    statement = select(TemplateSection).where(TemplateSection.template_id == template_id).order_by(TemplateSection.order)
+    statement = (
+        select(TemplateSection)
+        .where(TemplateSection.template_id == template_id)
+        .order_by(TemplateSection.order)
+    )
     return session.exec(statement).all()

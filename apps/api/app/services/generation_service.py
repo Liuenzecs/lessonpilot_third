@@ -14,6 +14,7 @@ from fastapi import HTTPException, Request, status
 from sqlmodel import Session, select
 
 from app.models import Document, Task
+from app.models.template import TemplateSection
 from app.schemas.content import (
     DocumentContent,
     LessonPlanContent,
@@ -66,6 +67,24 @@ def _get_section_order(doc_type: str) -> list[str]:
     """返回 section 名称有序列表。"""
     entries = LESSON_PLAN_SECTIONS if doc_type == "lesson_plan" else STUDY_GUIDE_SECTIONS
     return [name for name, _ in entries]
+
+
+def _load_prompt_hints(session: Session, template_id: str | None, doc_type: str) -> str:
+    """从模板的 TemplateSection 读取 prompt_hints 并拼接。"""
+    if not template_id:
+        return ""
+    sections = session.exec(
+        select(TemplateSection)
+        .where(TemplateSection.template_id == template_id)
+        .order_by(TemplateSection.order)
+    ).all()
+    if not sections:
+        return ""
+    hints: list[str] = []
+    for sec in sections:
+        if sec.prompt_hints:
+            hints.append(f"【{sec.section_name}】{sec.prompt_hints}")
+    return "\n".join(hints)
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +218,8 @@ async def stream_generation(
 
             doc = _get_or_create_document(session, task, doc_type)
 
+            prompt_hints = _load_prompt_hints(session, task.template_id, doc_type)
+
             if doc_type == "lesson_plan":
                 ctx = LessonPlanContext(
                     subject=task.subject,
@@ -208,6 +229,7 @@ async def stream_generation(
                     scene=task.scene,
                     class_hour=task.class_hour,
                     lesson_category=task.lesson_category,
+                    prompt_hints=prompt_hints,
                 )
                 stream = provider.generate_lesson_plan(ctx)
             else:
@@ -218,6 +240,7 @@ async def stream_generation(
                     requirements=task.requirements or "",
                     scene=task.scene,
                     class_hour=task.class_hour,
+                    prompt_hints=prompt_hints,
                 )
                 stream = provider.generate_study_guide(ctx)
 
@@ -268,6 +291,10 @@ async def stream_generation(
                         "doc_type": doc_type,
                     },
                 )
+
+            quality_warnings = _validate_generated_content(content)
+            for warning_msg in quality_warnings:
+                yield format_sse("warning", {"message": warning_msg, "doc_type": doc_type})
 
             doc.content = content.model_dump(by_alias=True)
             session.add(doc)
@@ -339,6 +366,47 @@ def _get_or_create_document(
     session.commit()
     session.refresh(doc)
     return doc
+
+
+def _validate_generated_content(content: DocumentContent) -> list[str]:
+    """校验 AI 生成的教学内容质量，返回警告列表。"""
+    warnings: list[str] = []
+    data = content.model_dump(by_alias=True)
+
+    if content.doc_type == "lesson_plan":
+        objectives = data.get("objectives", [])
+        if not objectives:
+            warnings.append("教学目标为空，建议补充")
+
+        process = data.get("teaching_process", [])
+        if len(process) < 3:
+            warnings.append(f"教学过程仅有 {len(process)} 个环节，建议至少 3 个")
+        for i, phase in enumerate(process):
+            if not phase.get("teacher_activity"):
+                warnings.append(f"教学过程第 {i + 1} 个环节缺少教师活动")
+            if not phase.get("student_activity"):
+                warnings.append(f"教学过程第 {i + 1} 个环节缺少学生活动")
+
+        key_points = data.get("keyPoints") or data.get("key_points") or {}
+        kp_list = key_points.get("keyPoints") or key_points.get("key_points") or []
+        if not kp_list:
+            warnings.append("教学重点为空")
+
+    elif content.doc_type == "study_guide":
+        learning_objectives = data.get("learning_objectives", [])
+        if not learning_objectives:
+            warnings.append("学习目标为空，建议补充")
+
+        learning_process = data.get("learning_process", {})
+        self_study = learning_process.get("selfStudy", [])
+        if not self_study:
+            warnings.append("自主学习题目为空")
+
+        assessment = data.get("assessment", [])
+        if not assessment:
+            warnings.append("达标测评题目为空")
+
+    return warnings
 
 
 def _create_fallback_content(task: Task, doc_type: str) -> DocumentContent:

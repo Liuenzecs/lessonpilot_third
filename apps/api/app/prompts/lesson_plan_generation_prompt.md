@@ -12,6 +12,10 @@
 - 课时：{class_hour} 课时
 - 课型：{lesson_category}
 
+## 教学策略指导
+
+{prompt_hints}
+
 ## 使用场景说明
 
 - public_school（公立校）：教案需要详细规范，符合学校标准格式，教学过程完整
@@ -92,3 +96,5 @@
 4. 内容要贴合教材和年级特点，不能是泛泛而谈
 5. duration 的单位是分钟，总和应等于 class_hour × 40（每课时 40 分钟）
 6. 不要输出 markdown code fence，直接输出 JSON
+7. 教学过程至少包含 3 个环节，导入环节应联系学生已有经验
+8. 每个环节的 teacher_activity 和 student_activity 均不得为空
