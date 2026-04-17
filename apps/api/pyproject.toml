@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "lessonpilot-api"
 version = "0.1.0"
 description = "LessonPilot FastAPI backend"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.13.2",
   "email-validator>=2.2.0",
