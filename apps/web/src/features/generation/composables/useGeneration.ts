@@ -128,7 +128,7 @@ export async function consumeGenerationStream(
 }
 
 // ---------------------------------------------------------------------------
-// 旧版 Rewrite / Append 消费（保留不动）
+// 旧版 Rewrite 消费（保留不动）
 // ---------------------------------------------------------------------------
 
 export async function consumeRewriteStream(
@@ -142,12 +142,3 @@ export async function consumeRewriteStream(
   }, signal);
 }
 
-export async function consumeAppendStream(
-  streamUrl: string,
-  token: string,
-  handlers: GenerationEventHandlers,
-): Promise<void> {
-  await _consumeSse(streamUrl, token, (event, dataValue) => {
-    handlers.onEvent(event, JSON.parse(dataValue));
-  });
-}

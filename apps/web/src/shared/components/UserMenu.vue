@@ -3,14 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
-import { useAdminAccess } from '@/app/adminAccess';
 import { useLogoutMutation } from '@/features/auth/composables/useAuth';
 import { useTheme } from '@/shared/composables/useTheme';
 import { useToast } from '@/shared/composables/useToast';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { isAdmin } = useAdminAccess();
 const { isDark, toggleTheme } = useTheme();
 const logoutMutation = useLogoutMutation();
 const toast = useToast();
@@ -53,11 +51,6 @@ async function goToSettings() {
   await router.push({ name: 'settings' });
 }
 
-async function goToAdmin() {
-  open.value = false;
-  await router.push({ name: 'admin-overview' });
-}
-
 function handleToggleTheme() {
   toggleTheme();
   open.value = false;
@@ -85,7 +78,6 @@ onBeforeUnmount(() => {
     <div v-if="open" class="user-menu-panel app-card">
       <div class="user-menu-label">当前账户</div>
       <div class="user-menu-panel-name">{{ userName }}</div>
-      <button v-if="isAdmin" class="user-menu-item" type="button" @click="goToAdmin">管理后台</button>
       <button class="user-menu-item" type="button" @click="handleToggleTheme">
         切换到{{ isDark ? '亮色' : '暗色' }}模式
       </button>

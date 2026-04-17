@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -84,15 +83,6 @@ def _render(template: str, **kwargs: str) -> str:
 # ---------------------------------------------------------------------------
 # JSON delta 解析
 # ---------------------------------------------------------------------------
-
-_SECTION_PATTERN = re.compile(r'"section"\s*:\s*"([^"]+)"')
-
-
-def _extract_section_name(delta: str) -> str:
-    """从 JSON delta 中提取 section 名（用于 progress 事件）。"""
-    m = _SECTION_PATTERN.search(delta)
-    return m.group(1) if m else ""
-
 
 # ---------------------------------------------------------------------------
 # Provider Protocol
@@ -366,19 +356,6 @@ async def _stream_chat_completion(
                         yield content
                 except json.JSONDecodeError:
                     continue
-
-
-def _strip_code_fence(text: str) -> str:
-    """移除 markdown code fence。"""
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines)
-    return text
 
 
 # ---------------------------------------------------------------------------

@@ -20,27 +20,18 @@ from app.schemas.content import (
     StudyGuideContent,
 )
 from app.schemas.document import DocumentRewritePayload
+from app.services.document_service import _create_snapshot
 from app.services.generation_service import _get_section_map
 from app.services.llm_service import (
     RewriteSectionContext,
     get_provider,
 )
+from app.services.sse_utils import ClientDisconnected, ensure_client_connected, format_sse
 
 logger = logging.getLogger("lessonpilot.rewrite")
 
 
-def _format_sse(event: str, payload: object) -> str:
-    data = json.dumps(payload, ensure_ascii=False) if not isinstance(payload, str) else payload
-    return f"event: {event}\ndata: {data}\n\n"
-
-
-class _ClientDisconnected(Exception):
-    pass
-
-
-async def _ensure_client_connected(request: Request | None) -> None:
-    if request is not None and hasattr(request, "is_disconnected") and await request.is_disconnected():
-        raise _ClientDisconnected()
+# SSE utilities imported from sse_utils: format_sse, ClientDisconnected, ensure_client_connected
 
 
 # ---------------------------------------------------------------------------
@@ -106,10 +97,10 @@ async def stream_rewrite(
     section_map = _get_section_map(document.doc_type)
     section_title = section_map.get(payload.section_name, payload.section_name)
 
-    yield _format_sse("status", {"state": "rewriting"})
+    yield format_sse("status", {"state": "rewriting"})
 
     try:
-        await _ensure_client_connected(request)
+        await ensure_client_connected(request)
 
         # 解析当前内容
         if document.doc_type == "study_guide":
@@ -130,7 +121,7 @@ async def stream_rewrite(
         )
 
         # 逐 token 流式输出
-        yield _format_sse(
+        yield format_sse(
             "section_start",
             {"section_name": payload.section_name, "title": section_title},
         )
@@ -138,14 +129,14 @@ async def stream_rewrite(
         chunks: list[str] = []
         async for chunk in provider.rewrite_section(ctx):
             chunks.append(chunk)
-            yield _format_sse(
+            yield format_sse(
                 "section_delta",
                 {"section_name": payload.section_name, "delta": chunk},
             )
 
         raw_json = "".join(chunks)
 
-        yield _format_sse(
+        yield format_sse(
             "section_complete",
             {"section_name": payload.section_name},
         )
@@ -153,13 +144,15 @@ async def stream_rewrite(
         # 解析并更新内容
         new_content = _set_section_content(content, payload.section_name, raw_json)
         document.content = new_content.model_dump(by_alias=True)
+        document.version += 1
+        _create_snapshot(session, document, new_content, "rewrite")
         session.add(document)
         session.commit()
         session.refresh(document)
 
-        await _ensure_client_connected(request)
+        await ensure_client_connected(request)
 
-        yield _format_sse(
+        yield format_sse(
             "document",
             {
                 "id": document.id,
@@ -168,11 +161,11 @@ async def stream_rewrite(
                 "version": document.version,
             },
         )
-        yield _format_sse("status", {"state": "ready"})
-        yield _format_sse("done", {"document_id": document.id})
+        yield format_sse("status", {"state": "ready"})
+        yield format_sse("done", {"document_id": document.id})
 
-    except _ClientDisconnected:
+    except ClientDisconnected:
         return
     except Exception as exc:
         logger.exception("重写失败 (document=%s, section=%s): %s", document.id, payload.section_name, exc)
-        yield _format_sse("error", {"message": "重写过程中出现错误，请稍后重试。"})
+        yield format_sse("error", {"message": "重写过程中出现错误，请稍后重试。"})

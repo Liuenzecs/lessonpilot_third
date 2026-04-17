@@ -151,21 +151,10 @@ class StudyGuideContent(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# 联合类型 & 兼容层
+# 联合类型
 # ---------------------------------------------------------------------------
 
 DocumentContent = LessonPlanContent | StudyGuideContent
-
-
-class ContentDocument(BaseModel):
-    """兼容旧字段名的文档根节点。
-
-    新代码应直接使用 DocumentContent (LessonPlanContent | StudyGuideContent)。
-    此类仅作为 API 层过渡使用。
-    """
-
-    version: int = 1
-    content: DocumentContent | None = None
 
 
 def is_lesson_plan(doc: DocumentContent) -> bool:

@@ -8,7 +8,6 @@ from app.schemas.account import (
 )
 from app.schemas.auth import AuthResponse, LoginPayload, RegisterPayload, UserRead
 from app.schemas.content import (
-    ContentDocument,
     DocumentContent,
     LessonPlanContent,
     StudyGuideContent,
@@ -19,7 +18,6 @@ from app.schemas.document import (
     DocumentRewritePayload,
     DocumentUpdatePayload,
 )
-from app.schemas.lesson import GenerationContext, SectionRewriteContext
 from app.schemas.task import (
     GenerationStartPayload,
     GenerationStartResponse,
@@ -40,7 +38,6 @@ __all__ = [
     "UserRead",
     "FeedbackCreatePayload",
     "FeedbackRead",
-    "ContentDocument",
     "DocumentContent",
     "LessonPlanContent",
     "StudyGuideContent",
@@ -48,8 +45,6 @@ __all__ = [
     "DocumentRead",
     "DocumentRewritePayload",
     "DocumentUpdatePayload",
-    "GenerationContext",
-    "SectionRewriteContext",
     "GenerationStartPayload",
     "GenerationStartResponse",
     "PaginatedTasks",

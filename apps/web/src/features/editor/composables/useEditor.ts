@@ -57,12 +57,6 @@ export function useStartDocumentRewriteMutation(getDocumentId: () => string) {
   });
 }
 
-export function useStartDocumentAppendMutation(_getDocumentId: () => string) {
-  return useMutation({
-    mutationFn: (_payload: unknown) => Promise.reject(new Error('Append is no longer supported')),
-  });
-}
-
 export function useDocumentHistory(
   documentId: Ref<string> | ComputedRef<string>,
   enabled: Ref<boolean> | ComputedRef<boolean>,

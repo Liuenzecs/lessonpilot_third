@@ -26,6 +26,7 @@ from app.services.llm_service import (
     StudyGuideContext,
     get_provider,
 )
+from app.services.sse_utils import ClientDisconnected, ensure_client_connected, format_sse
 
 logger = logging.getLogger("lessonpilot.generation")
 
@@ -72,18 +73,7 @@ def _get_section_order(doc_type: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _format_sse(event: str, payload: object) -> str:
-    data = json.dumps(payload, ensure_ascii=False) if not isinstance(payload, str) else payload
-    return f"event: {event}\ndata: {data}\n\n"
-
-
-class _ClientDisconnected(Exception):
-    pass
-
-
-async def _ensure_client_connected(request: Request | None) -> None:
-    if request is not None and hasattr(request, "is_disconnected") and await request.is_disconnected():
-        raise _ClientDisconnected()
+# SSE utilities imported from sse_utils: format_sse, ClientDisconnected, ensure_client_connected
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +177,7 @@ async def stream_generation(
         session.add(task)
         session.commit()
 
-        yield _format_sse("status", {"status": "generating"})
+        yield format_sse("status", {"status": "generating"})
 
         doc_types: list[str] = []
         if task.lesson_type in ("lesson_plan", "both"):
@@ -196,9 +186,9 @@ async def stream_generation(
             doc_types.append("study_guide")
 
         for idx, doc_type in enumerate(doc_types):
-            await _ensure_client_connected(request)
+            await ensure_client_connected(request)
 
-            yield _format_sse(
+            yield format_sse(
                 "progress",
                 {
                     "progress": idx / len(doc_types),
@@ -239,12 +229,12 @@ async def stream_generation(
                 accumulated += chunk
 
                 # 发送 raw text delta
-                yield _format_sse("section_delta", {"text": chunk})
+                yield format_sse("section_delta", {"text": chunk})
 
                 # 检测 section 边界
                 newly_completed = tracker.detect_sections(accumulated)
                 for section_name in newly_completed:
-                    yield _format_sse(
+                    yield format_sse(
                         "section_start",
                         {
                             "doc_type": doc_type,
@@ -252,7 +242,7 @@ async def stream_generation(
                             "title": tracker.get_title(section_name),
                         },
                     )
-                    yield _format_sse(
+                    yield format_sse(
                         "section_complete",
                         {
                             "doc_type": doc_type,
@@ -270,7 +260,7 @@ async def stream_generation(
                     doc_type,
                 )
                 content = _create_fallback_content(task, doc_type)
-                yield _format_sse(
+                yield format_sse(
                     "warning",
                     {
                         "message": f"{'教案' if doc_type == 'lesson_plan' else '学案'}内容解析异常，"
@@ -284,14 +274,14 @@ async def stream_generation(
             session.commit()
             session.refresh(doc)
 
-            yield _format_sse(
+            yield format_sse(
                 "progress",
                 {
                     "progress": (idx + 1) / len(doc_types),
                     "message": f"{'教案' if doc_type == 'lesson_plan' else '学案'}生成完成",
                 },
             )
-            yield _format_sse(
+            yield format_sse(
                 "document",
                 {
                     "id": doc.id,
@@ -305,20 +295,20 @@ async def stream_generation(
         session.add(task)
         session.commit()
 
-        yield _format_sse("status", {"status": "ready"})
-        yield _format_sse("done", {"message": "生成完成"})
+        yield format_sse("status", {"status": "ready"})
+        yield format_sse("done", {"message": "生成完成"})
 
-    except _ClientDisconnected:
+    except ClientDisconnected:
         task.status = "ready"
         session.add(task)
         session.commit()
         return
     except Exception as exc:
         logger.exception("生成失败 (task=%s): %s", task.id, exc)
-        task.status = "ready"
+        task.status = "error"
         session.add(task)
         session.commit()
-        yield _format_sse("error", {"message": "生成过程中出现错误，请稍后重试。"})
+        yield format_sse("error", {"message": "生成过程中出现错误，请稍后重试。"})
 
 
 # ---------------------------------------------------------------------------

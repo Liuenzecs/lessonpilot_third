@@ -181,8 +181,8 @@ def delete_account(session: Session, user: User, payload: AccountDeletePayload) 
 
     tasks = session.exec(select(Task).where(Task.user_id == user.id)).all()
     for task in tasks:
-        document = session.exec(select(Document).where(Document.task_id == task.id)).first()
-        if document is not None:
+        documents = session.exec(select(Document).where(Document.task_id == task.id)).all()
+        for document in documents:
             snapshots = session.exec(
                 select(DocumentSnapshot).where(DocumentSnapshot.document_id == document.id)
             ).all()
