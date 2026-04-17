@@ -50,7 +50,7 @@ function resolveLandingIcon(icon: string) {
         <h2>备课，不该这么累</h2>
       </div>
       <div class="landing-pain-grid">
-        <article v-for="item in landingPainPoints" :key="item.title" class="landing-pain-card app-card">
+        <article v-for="item in landingPainPoints" :key="item.title" class="landing-pain-card">
           <div class="landing-card-icon" aria-hidden="true">
             <component :is="resolveLandingIcon(item.icon)" :size="26" />
           </div>
@@ -72,7 +72,7 @@ function resolveLandingIcon(icon: string) {
         class="feature-row"
         :class="{ reverse: index % 2 === 1 }"
       >
-        <div class="feature-preview app-card">
+        <div class="feature-preview">
           <div class="feature-preview-top">
             <span class="feature-index">{{ feature.index }}</span>
             <span class="feature-preview-badge">真实产品流程</span>
@@ -101,7 +101,7 @@ function resolveLandingIcon(icon: string) {
         <h2>谁在用 LessonPilot？</h2>
       </div>
       <div class="persona-grid">
-        <article v-for="persona in landingPersonas" :key="persona.title" class="persona-card app-card">
+        <article v-for="persona in landingPersonas" :key="persona.title" class="persona-card">
           <div class="landing-card-icon" aria-hidden="true">
             <component :is="resolveLandingIcon(persona.icon)" :size="26" />
           </div>

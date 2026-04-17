@@ -274,7 +274,7 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: var(--space-xl);
+
 }
 
 /* Forms */

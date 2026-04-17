@@ -14,12 +14,12 @@
 .workspace-start-card {
   display: grid;
   gap: 8px;
-  border: 1px solid rgba(var(--primary-rgb),0.18);
-  border-radius: 12px;
-  background: linear-gradient(160deg, rgba(var(--primary-rgb), 0.98), rgba(var(--primary-rgb), 0.92));
-  color: var(--on-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-strong);
+  color: var(--text);
   text-align: left;
-  box-shadow: 0 18px 32px rgba(var(--text-rgb),0.22);
+  box-shadow: var(--shadow-sm);
 }
 
 .workspace-start-title {
@@ -28,7 +28,7 @@
 }
 
 .workspace-start-subtitle {
-  color: rgba(var(--white-rgb),0.82);
+  color: var(--muted);
 }
 
 .workspace-hero-skeleton {
@@ -51,7 +51,7 @@
 .settings-skeleton-line,
 .settings-skeleton-card {
   background:
-    linear-gradient(90deg, rgba(208, 216, 228, 0.5) 0%, rgba(241, 244, 248, 0.96) 50%, rgba(208, 216, 228, 0.5) 100%);
+    linear-gradient(90deg, var(--surface) 0%, var(--surface-strong) 50%, var(--surface) 100%);
   background-size: 200% 100%;
   animation: workspace-shimmer 1.6s linear infinite;
 }
@@ -77,7 +77,7 @@
 
 .workspace-start-skeleton {
   min-height: 148px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .workspace-empty-state {
@@ -125,7 +125,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .workspace-search input,
@@ -158,8 +158,8 @@
 .task-card:hover,
 .task-card:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(var(--primary-rgb),0.22);
-  box-shadow: 0 22px 38px rgba(var(--text-rgb),0.1);
+  border-color: var(--border);
+  box-shadow: var(--shadow-elevated);
   outline: none;
 }
 
@@ -191,15 +191,15 @@
 
 .task-card-menu-trigger {
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: transparent;
   color: var(--muted);
   padding: 6px 8px;
 }
 
 .task-card-menu-trigger:hover {
-  background: rgba(var(--primary-rgb),0.08);
-  color: var(--primary);
+  background: var(--surface-strong);
+  color: var(--text);
 }
 
 .task-card-menu-panel {
@@ -215,7 +215,7 @@
 
 .task-card-menu-panel button {
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: transparent;
   padding: 10px 12px;
   text-align: left;
@@ -223,7 +223,7 @@
 }
 
 .task-card-menu-panel button:hover {
-  background: rgba(var(--primary-rgb),0.08);
+  background: var(--surface-strong);
 }
 
 .task-card-menu-panel button.danger {
@@ -238,7 +238,7 @@
 
 .task-card-skeleton {
   background:
-    linear-gradient(90deg, rgba(208, 216, 228, 0.5) 0%, rgba(241, 244, 248, 0.96) 50%, rgba(208, 216, 228, 0.5) 100%);
+    linear-gradient(90deg, var(--surface) 0%, var(--surface-strong) 50%, var(--surface) 100%);
   background-size: 200% 100%;
   animation: workspace-shimmer 1.6s linear infinite;
 }

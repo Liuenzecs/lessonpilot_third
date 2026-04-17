@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
 <template>
   <article
     ref="rootRef"
-    class="task-card app-card"
+    class="task-card"
     role="button"
     tabindex="0"
     @click="emit('open')"

@@ -116,7 +116,7 @@ async function exportTask(task: TaskRecord) {
       </div>
 
       <div class="task-grid">
-        <div v-for="index in 4" :key="index" class="task-card-skeleton app-card" />
+        <div v-for="index in 4" :key="index" class="task-card-skeleton" />
       </div>
     </template>
 
@@ -171,19 +171,19 @@ async function exportTask(task: TaskRecord) {
           </div>
 
           <div class="workspace-filters">
-            <label class="workspace-search app-card">
+            <label class="workspace-search">
               <span>🔍</span>
               <input v-model.trim="search" type="text" placeholder="搜索" />
             </label>
 
-            <label class="workspace-select app-card">
+            <label class="workspace-select">
               <span>学科</span>
               <select v-model="subjectFilter">
                 <option v-for="subject in availableSubjects" :key="subject" :value="subject">{{ subject }}</option>
               </select>
             </label>
 
-            <label class="workspace-select app-card">
+            <label class="workspace-select">
               <span>排序</span>
               <select v-model="sortOrder">
                 <option value="recent">最近修改</option>
