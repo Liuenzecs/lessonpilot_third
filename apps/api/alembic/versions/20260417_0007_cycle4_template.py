@@ -12,7 +12,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision = '0007_cycle4_template'
-down_revision = '0006_sprint1_content_model'
+down_revision = '20260414_0006'
 branch_labels = None
 depends_on = None
 

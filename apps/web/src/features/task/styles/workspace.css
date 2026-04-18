@@ -1,3 +1,5 @@
+/* workspace.css — Notion-style Workspace + Task Create */
+
 .workspace-page {
   display: grid;
   gap: 24px;
@@ -5,38 +7,56 @@
 
 .workspace-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 24px;
   align-items: center;
   padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.workspace-hero-copy {
+  display: grid;
+  gap: 8px;
 }
 
 .workspace-start-card {
   display: grid;
   gap: 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--surface-strong);
   color: var(--text);
   text-align: left;
-  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.workspace-start-card:hover {
+  border-color: rgba(var(--primary-rgb), 0.24);
+  box-shadow: var(--shadow);
 }
 
 .workspace-start-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
 }
 
 .workspace-start-subtitle {
   color: var(--muted);
+  font-size: var(--text-sm);
 }
 
 .workspace-hero-skeleton {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 24px;
   align-items: stretch;
   padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .workspace-hero-skeleton-copy {
@@ -56,36 +76,20 @@
   animation: workspace-shimmer 1.6s linear infinite;
 }
 
-.workspace-skeleton-chip {
-  width: 96px;
-  height: 28px;
-  border-radius: 999px;
-}
-
-.workspace-skeleton-line {
-  height: 16px;
-  border-radius: 999px;
-}
-
-.workspace-skeleton-line.long {
-  width: 74%;
-}
-
-.workspace-skeleton-line.medium {
-  width: 56%;
-}
-
-.workspace-start-skeleton {
-  min-height: 148px;
-  border-radius: var(--radius-lg);
-}
+.workspace-skeleton-chip { width: 96px; height: 28px; border-radius: var(--radius-pill); }
+.workspace-skeleton-line { height: 16px; border-radius: var(--radius-pill); }
+.workspace-skeleton-line.long { width: 74%; }
+.workspace-skeleton-line.medium { width: 56%; }
+.workspace-start-skeleton { min-height: 148px; border-radius: var(--radius-md); }
 
 .workspace-empty-state {
-  padding: 36px;
+  padding: 48px;
   text-align: center;
   display: grid;
   justify-items: center;
-  gap: 10px;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .workspace-empty-state .onboarding-callout {
@@ -93,13 +97,8 @@
   text-align: left;
 }
 
-.workspace-empty-state.compact {
-  padding: 24px;
-}
-
-.workspace-empty-icon {
-  font-size: 42px;
-}
+.workspace-empty-state.compact { padding: 24px; }
+.workspace-empty-icon { font-size: 42px; }
 
 .workspace-toolbar {
   display: flex;
@@ -109,14 +108,12 @@
   flex-wrap: wrap;
 }
 
-.workspace-toolbar h2 {
-  margin: 0;
-}
+.workspace-toolbar h2 { margin: 0; }
 
 .workspace-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .workspace-search,
@@ -124,8 +121,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-sm);
 }
 
 .workspace-search input,
@@ -134,54 +134,55 @@
   background: transparent;
   box-shadow: none;
   color: var(--text);
+  font-size: var(--text-sm);
 }
 
 .task-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 
 .task-card,
 .task-card-skeleton {
-  min-height: 220px;
+  min-height: 200px;
   padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 .task-card {
   display: grid;
   align-content: space-between;
   gap: 18px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  background: var(--surface);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .task-card:hover,
 .task-card:focus-visible {
-  transform: translateY(-2px);
-  border-color: var(--border);
-  box-shadow: var(--shadow-elevated);
+  border-color: rgba(var(--primary-rgb), 0.2);
+  box-shadow: var(--shadow);
   outline: none;
 }
 
-.task-card-icon {
-  font-size: 28px;
-}
+.task-card-icon { font-size: 28px; }
 
-.task-card-body {
-  display: grid;
-  gap: 8px;
-}
+.task-card-body { display: grid; gap: 6px; }
 
 .task-card-body h3 {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.2;
+  font-size: var(--text-xl);
+  line-height: 1.27;
+  letter-spacing: -0.25px;
 }
 
 .task-card-body p,
 .task-card-body span {
   margin: 0;
   color: var(--muted);
+  font-size: var(--text-sm);
 }
 
 .task-card-menu {
@@ -191,10 +192,12 @@
 
 .task-card-menu-trigger {
   border: 0;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .task-card-menu-trigger:hover {
@@ -205,30 +208,35 @@
 .task-card-menu-panel {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 8px);
   min-width: 170px;
-  padding: 10px;
+  padding: 8px;
   display: grid;
-  gap: 4px;
+  gap: 2px;
   z-index: 20;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-elevated);
 }
 
 .task-card-menu-panel button {
   border: 0;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-sm);
   background: transparent;
   padding: 10px 12px;
   text-align: left;
   color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background 0.1s ease;
 }
 
 .task-card-menu-panel button:hover {
   background: var(--surface-strong);
 }
 
-.task-card-menu-panel button.danger {
-  color: var(--danger);
-}
+.task-card-menu-panel button.danger { color: var(--danger); }
 
 .task-card-menu-divider {
   height: 1px;
@@ -243,33 +251,181 @@
   animation: workspace-shimmer 1.6s linear infinite;
 }
 
+/* ── Task Create Page ── */
+
+.create-page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.create-frame {
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.create-head {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.create-body { display: grid; gap: 22px; }
+
+.create-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.create-field { display: grid; gap: 8px; }
+.create-field.grow { flex: 1; }
+.create-field.shrink { width: 120px; }
+
+.create-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.required { color: var(--danger); }
+
+.create-input {
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-micro);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-family: inherit;
+}
+
+.create-input:focus {
+  outline: none;
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.create-textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-micro);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.create-textarea:focus {
+  outline: none;
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.create-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.create-choice-grid.compact {
+  gap: 6px;
+}
+
+.create-choice-grid.inline {
+  gap: 8px;
+}
+
+.wizard-choice-card {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-micro);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.wizard-choice-card:hover {
+  border-color: rgba(var(--primary-rgb), 0.2);
+  color: var(--text);
+}
+
+.wizard-choice-card.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.create-toggle-group {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-micro);
+  background: var(--surface-strong);
+}
+
+.create-toggle-btn {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.create-toggle-btn.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.create-foot {
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Animations ── */
+
+@keyframes workspace-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Responsive ── */
+
 @media (max-width: 1080px) {
-  .task-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  .task-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 860px) {
   .workspace-hero-skeleton,
-  .workspace-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .task-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .workspace-hero { grid-template-columns: 1fr; }
+  .task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .create-row { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .workspace-filters,
   .workspace-search,
   .workspace-select,
   .workspace-search input,
-  .workspace-select select {
-    width: 100%;
-  }
-
-  .task-grid {
-    grid-template-columns: 1fr;
-  }
+  .workspace-select select { width: 100%; }
+  .task-grid { grid-template-columns: 1fr; }
+  .create-frame { padding: 20px; }
 }

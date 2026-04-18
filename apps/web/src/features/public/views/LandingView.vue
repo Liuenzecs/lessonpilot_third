@@ -24,7 +24,7 @@ function resolveLandingIcon(icon: string) {
 
 <template>
   <div class="landing-page">
-    <section class="landing-hero section-card">
+    <section class="landing-hero">
       <div class="landing-hero-copy">
         <p class="page-eyebrow">结构可见，操作极简</p>
         <h1>10 分钟，搞定一份好教案</h1>
@@ -36,7 +36,7 @@ function resolveLandingIcon(icon: string) {
             免费开始备课
           </RouterLink>
           <RouterLink class="landing-link" :to="{ name: 'login' }" @click="(() => {})">
-            已有账号？登录
+            已有账号？登录 →
           </RouterLink>
         </div>
       </div>
@@ -44,7 +44,7 @@ function resolveLandingIcon(icon: string) {
       <HeroProductPreview />
     </section>
 
-    <section class="landing-section section-card">
+    <section class="landing-section section-card alt-bg">
       <div class="landing-section-head">
         <p class="page-eyebrow">痛点共鸣</p>
         <h2>备课，不该这么累</h2>
@@ -60,7 +60,7 @@ function resolveLandingIcon(icon: string) {
       </div>
     </section>
 
-    <section id="features" class="landing-section section-card">
+    <section id="features" class="landing-section">
       <div class="landing-section-head">
         <p class="page-eyebrow">核心功能</p>
         <h2>老师打开就知道下一步该点哪里</h2>
@@ -95,7 +95,7 @@ function resolveLandingIcon(icon: string) {
       </div>
     </section>
 
-    <section class="landing-section section-card">
+    <section class="landing-section section-card alt-bg">
       <div class="landing-section-head">
         <p class="page-eyebrow">使用场景</p>
         <h2>谁在用 LessonPilot？</h2>
@@ -112,7 +112,7 @@ function resolveLandingIcon(icon: string) {
       </div>
     </section>
 
-    <section class="landing-cta section-card">
+    <section class="landing-cta">
       <p class="page-eyebrow">立即开始</p>
       <h2>今晚的课，现在就能备好</h2>
       <RouterLink

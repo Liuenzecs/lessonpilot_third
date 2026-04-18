@@ -52,8 +52,8 @@ const pricingCards = computed(() => [
 
 <template>
   <div class="pricing-page">
-    <section class="pricing-hero section-card">
-      <p class="page-eyebrow">定价页</p>
+    <section class="pricing-hero">
+      <p class="page-eyebrow">定价</p>
       <h1 class="page-title">选择适合你的方案</h1>
       <p class="subtitle">免费版先上手，专业版通过试用或手动续费完成升级，不做自动代扣。</p>
 
@@ -71,7 +71,7 @@ const pricingCards = computed(() => [
       <article
         v-for="card in pricingCards"
         :key="card.title"
-        class="pricing-card app-card"
+        class="pricing-card"
         :class="{ featured: card.title === '专业版', disabled: card.disabled }"
       >
         <div class="pricing-card-head">
@@ -99,7 +99,7 @@ const pricingCards = computed(() => [
       </article>
     </section>
 
-    <section class="section-card">
+    <section class="section-card alt-bg">
       <div class="landing-section-head">
         <p class="page-eyebrow">常见定价问题</p>
         <h2>把最关心的付费细节说清楚</h2>

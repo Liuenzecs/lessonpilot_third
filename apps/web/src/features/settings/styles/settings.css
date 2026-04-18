@@ -1,84 +1,108 @@
+/* settings.css — Notion-style Settings */
+
 .settings-page {
   display: grid;
   gap: 24px;
 }
 
-.settings-hero,
-.settings-tabs,
-.settings-panel {
-  padding: 24px;
+.settings-hero {
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.settings-hero h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  line-height: 1.23;
+  letter-spacing: -0.625px;
 }
 
 .settings-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: 20px;
 }
 
 .settings-tabs {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   height: fit-content;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  position: sticky;
+  top: 80px;
 }
 
 .settings-tabs button {
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  padding: 12px 14px;
+  padding: 10px 12px;
   text-align: left;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.settings-tabs button:hover {
+  background: var(--surface-strong);
   color: var(--text);
 }
 
 .settings-tabs button.active {
-  background: rgba(var(--primary-rgb),0.1);
+  background: var(--primary-soft);
   color: var(--primary);
   font-weight: 700;
 }
 
-.settings-content {
-  display: grid;
-  gap: 18px;
-}
+.settings-content { display: grid; gap: 18px; }
 
 .settings-panel {
   display: grid;
   gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.settings-panel h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  letter-spacing: -0.25px;
 }
 
 .settings-skeleton-panel,
-.settings-skeleton-stack {
-  display: grid;
-  gap: 14px;
-}
+.settings-skeleton-stack { display: grid; gap: 14px; }
 
 .settings-skeleton-line {
   height: 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background:
-    linear-gradient(90deg, rgba(208, 216, 228, 0.5) 0%, rgba(241, 244, 248, 0.96) 50%, rgba(208, 216, 228, 0.5) 100%);
+    linear-gradient(90deg, var(--surface) 0%, var(--surface-strong) 50%, var(--surface) 100%);
   background-size: 200% 100%;
   animation: workspace-shimmer 1.6s linear infinite;
 }
 
-.settings-skeleton-line.short {
-  width: 34%;
-}
+.settings-skeleton-line.short { width: 34%; }
 
 .settings-skeleton-card {
   min-height: 110px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background:
-    linear-gradient(90deg, rgba(208, 216, 228, 0.5) 0%, rgba(241, 244, 248, 0.96) 50%, rgba(208, 216, 228, 0.5) 100%);
+    linear-gradient(90deg, var(--surface) 0%, var(--surface-strong) 50%, var(--surface) 100%);
   background-size: 200% 100%;
   animation: workspace-shimmer 1.6s linear infinite;
 }
 
-.settings-panel h2,
 .data-card h3,
-.subscription-upgrade h3 {
-  margin: 0;
-}
+.subscription-upgrade h3 { margin: 0; }
 
 .subscription-summary {
   display: flex;
@@ -89,85 +113,60 @@
 }
 
 .subscription-plan {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
+  letter-spacing: -0.625px;
 }
 
 .subscription-upgrade {
   display: grid;
   gap: 12px;
-  background: rgba(var(--primary-rgb),0.06);
-}
-
-.billing-toggle-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.billing-toggle-row button {
-  border: 1px solid rgba(var(--primary-rgb),0.18);
-  border-radius: 10px;
-  background: rgba(var(--white-rgb),0.88);
-  color: var(--text);
-  padding: 12px 14px;
-  cursor: pointer;
-}
-
-.billing-toggle-row button.active {
-  border-color: rgba(var(--primary-rgb),0.36);
-  background: rgba(var(--primary-rgb),0.1);
-  color: var(--primary);
-  font-weight: 700;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(var(--primary-rgb), 0.04);
 }
 
 .subscription-upgrade p,
-.data-card p {
-  margin: 0;
-  color: var(--muted);
-}
+.data-card p { margin: 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 
-.subscription-usage {
-  display: grid;
-  gap: 10px;
-}
+.subscription-usage { display: grid; gap: 10px; }
 
 .usage-bar {
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(var(--text-rgb),0.12);
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
 .usage-bar-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--primary));
+  background: var(--primary);
 }
 
 .data-card {
   display: grid;
   gap: 12px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 
 .billing-records,
-.invoice-request-list {
-  display: grid;
-  gap: 12px;
-}
+.invoice-request-list { display: grid; gap: 10px; }
 
 .billing-record-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 0;
-  border-top: 1px solid rgba(var(--text-rgb),0.14);
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
 }
 
-.billing-record-row:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
+.billing-record-row:first-child { border-top: 0; padding-top: 0; }
 
 .billing-record-meta {
   display: grid;
@@ -176,14 +175,44 @@
 }
 
 .data-card.danger {
-  border-color: rgba(var(--danger-rgb),0.24);
-  background: rgba(var(--danger-rgb),0.04);
+  border-color: rgba(var(--danger-rgb), 0.2);
+  background: rgba(var(--danger-rgb), 0.03);
+}
+
+.billing-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.billing-toggle-row button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 10px 14px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.billing-toggle-row button:hover {
+  border-color: rgba(var(--primary-rgb), 0.2);
+  color: var(--text);
+}
+
+.billing-toggle-row button.active {
+  border-color: rgba(var(--primary-rgb), 0.3);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 700;
 }
 
 .settings-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(var(--text-rgb),0.26);
+  background: rgba(0, 0, 0, 0.24);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -192,48 +221,55 @@
 
 .settings-modal {
   width: min(460px, 100%);
-  padding: 24px;
+  padding: 28px;
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-elevated);
 }
 
-.settings-modal p {
-  margin: 0;
-  color: var(--muted);
-}
+.settings-modal p { margin: 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 
 .settings-modal input {
   width: 100%;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 14px 16px;
-  background: rgba(var(--white-rgb),0.92);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-family: inherit;
+}
+
+.settings-modal input:focus {
+  outline: none;
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.settings-inline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+@keyframes workspace-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @media (max-width: 920px) {
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .settings-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); position: static; }
 }
 
-@media (max-width: 640px) {
-  .settings-tabs {
-    grid-template-columns: 1fr;
-  }
-
-  .billing-toggle-row {
-    grid-template-columns: 1fr;
-  }
-
-  .billing-record-row {
-    flex-direction: column;
-  }
-
-  .billing-record-meta {
-    text-align: left;
-  }
+@media (max-width: 600px) {
+  .settings-tabs { grid-template-columns: 1fr; }
+  .billing-toggle-row { grid-template-columns: 1fr; }
+  .billing-record-row { flex-direction: column; }
+  .billing-record-meta { text-align: left; }
+  .settings-hero, .settings-panel { padding: 20px; }
 }
