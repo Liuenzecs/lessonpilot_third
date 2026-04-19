@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { useAuthStore } from '@/app/stores/auth';
 import { exportDocx } from '@/features/export/composables/useExport';
 import TaskCard from '@/features/task/components/TaskCard.vue';
 import { useDeleteTaskMutation, useDuplicateTaskMutation, useTasks } from '@/features/task/composables/useTasks';
@@ -15,7 +14,6 @@ import { useToast } from '@/shared/composables/useToast';
 import '@/features/task/styles/workspace.css';
 
 const router = useRouter();
-const authStore = useAuthStore();
 const toast = useToast();
 const tasksQuery = useTasks();
 const deleteTaskMutation = useDeleteTaskMutation();

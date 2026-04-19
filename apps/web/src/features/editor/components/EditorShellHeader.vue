@@ -47,13 +47,14 @@ function getSaveLabel(
   <header class="editor-shell-header app-card">
     <div class="editor-shell-header-main">
       <div class="editor-shell-header-nav">
-        <button class="button ghost" type="button" @click="$emit('back')">返回</button>
+        <button class="button ghost" type="button" @click="$emit('back')">返回备课台</button>
         <button class="button ghost" type="button" @click="$emit('toggle-outline')">
           {{ outlineCollapsed ? '展开大纲' : '收起大纲' }}
         </button>
       </div>
 
       <div class="editor-shell-title-group">
+        <div class="editor-shell-kicker">备课文档</div>
         <h1 class="editor-shell-title">{{ task?.title || '文档编辑器' }}</h1>
         <div class="editor-shell-meta">
           <span>{{ task?.subject || '未设置学科' }}</span>
@@ -61,6 +62,10 @@ function getSaveLabel(
           <span>{{ task?.grade || '未设置年级' }}</span>
           <span>·</span>
           <span>{{ task?.topic || '未设置主题' }}</span>
+          <template v-if="hasMultipleDocs">
+            <span>·</span>
+            <span>教案 + 学案双文档</span>
+          </template>
         </div>
       </div>
     </div>

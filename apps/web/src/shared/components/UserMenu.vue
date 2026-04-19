@@ -4,12 +4,10 @@ import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
 import { useLogoutMutation } from '@/features/auth/composables/useAuth';
-import { useTheme } from '@/shared/composables/useTheme';
 import { useToast } from '@/shared/composables/useToast';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { isDark, toggleTheme } = useTheme();
 const logoutMutation = useLogoutMutation();
 const toast = useToast();
 
@@ -51,11 +49,6 @@ async function goToSettings() {
   await router.push({ name: 'settings' });
 }
 
-function handleToggleTheme() {
-  toggleTheme();
-  open.value = false;
-}
-
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick);
   window.addEventListener('keydown', handleKeydown);
@@ -78,9 +71,6 @@ onBeforeUnmount(() => {
     <div v-if="open" class="user-menu-panel app-card">
       <div class="user-menu-label">当前账户</div>
       <div class="user-menu-panel-name">{{ userName }}</div>
-      <button class="user-menu-item" type="button" @click="handleToggleTheme">
-        切换到{{ isDark ? '亮色' : '暗色' }}模式
-      </button>
       <button class="user-menu-item" type="button" @click="goToSettings">账户设置</button>
       <button class="user-menu-item danger" type="button" @click="logout">退出登录</button>
     </div>

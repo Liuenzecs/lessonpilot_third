@@ -2,7 +2,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { useAuthStore } from '@/app/stores/auth';
 import { useCreateTaskMutation } from '@/features/task/composables/useTasks';
 import type { LessonCategory, LessonType, Scene } from '@lessonpilot/shared-types';
 import type { TemplateRecord } from '@/features/task/types';
@@ -18,8 +17,9 @@ import {
 } from '@/shared/constants/options';
 import { request } from '@/shared/api/client';
 
+import '@/features/task/styles/workspace.css';
+
 const router = useRouter();
-const authStore = useAuthStore();
 const createTaskMutation = useCreateTaskMutation();
 const toast = useToast();
 
@@ -99,7 +99,11 @@ async function submit() {
         <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
           ← 返回备课台
         </button>
-        <h1 class="page-title">创建新备课</h1>
+        <div class="create-head-copy">
+          <p class="page-eyebrow">创建备课</p>
+          <h1 class="page-title">开始一份新备课</h1>
+          <p class="subtitle">先确定学科、年级和课题，文档会再按 section 逐节生成并实时落到编辑器里。</p>
+        </div>
       </div>
 
       <form class="create-body" @submit.prevent="submit">
@@ -216,6 +220,8 @@ async function submit() {
         <!-- 模板选择 -->
         <div v-if="templates.length > 0" class="create-field">
           <label class="create-label">选择模板（可选）</label>
+          <p v-if="templatesLoading" class="create-helper">正在匹配可用模板…</p>
+          <p v-else class="create-helper">不选择也可以，系统会根据学科与生成内容自动匹配。</p>
           <div class="template-choice-grid">
             <button
               type="button"
@@ -267,46 +273,3 @@ async function submit() {
     </div>
   </div>
 </template>
-
-<style scoped>
-.template-choice-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.template-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.template-card:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-strong);
-}
-
-.template-card.active {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.template-card-name {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text);
-}
-
-.template-card-desc {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  line-height: 1.4;
-}
-</style>

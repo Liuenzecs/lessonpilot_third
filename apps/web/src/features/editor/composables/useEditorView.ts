@@ -25,6 +25,8 @@ import {
   cloneSerializable,
   confirmAllSections,
   confirmSection as confirmSectionUtil,
+  getSectionContent,
+  getSectionReferences as getSectionReferencesUtil,
   getSections,
   updateSection,
 } from '@/shared/utils/content';
@@ -109,7 +111,6 @@ export function useEditorView() {
   // Generation
   const { generationProgress, startGeneration, stopGeneration } = useEditorGeneration({
     taskId: taskId.value,
-    draftDocument,
     ensureLatestDocumentSaved,
     onApplyServerDocument: applyServerDocument,
     onRefetch: () => {
@@ -198,8 +199,12 @@ export function useEditorView() {
 
   function getSectionData(sectionName: string): unknown {
     if (!draftDocument.value) return null;
-    const content = draftDocument.value.content as Record<string, unknown>;
-    return content[sectionName] ?? null;
+    return getSectionContent(draftDocument.value.content, sectionName) ?? null;
+  }
+
+  function getSectionReferences(sectionName: string) {
+    if (!draftDocument.value) return [];
+    return getSectionReferencesUtil(draftDocument.value.content, sectionName);
   }
 
   function updateSectionData(sectionName: string, value: unknown) {
@@ -388,6 +393,7 @@ export function useEditorView() {
     confirmSectionByName,
     confirmAll,
     getSectionData,
+    getSectionReferences,
     updateSectionData,
     toggleSectionCollapse,
     toggleAllSections,

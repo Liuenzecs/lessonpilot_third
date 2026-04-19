@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { Menu, MoonStar, SunMedium } from 'lucide-vue-next';
+import { Menu } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 import { useAuthStore } from '@/app/stores/auth';
-import { useTheme } from '@/shared/composables/useTheme';
 import UserMenu from '@/shared/components/UserMenu.vue';
 
 const authStore = useAuthStore();
 const route = useRoute();
 const menuOpen = ref(false);
 const isScrolled = ref(false);
-const { isDark, toggleTheme } = useTheme();
 
 const isLoginRoute = computed(() => route.name === 'login');
 const isRegisterRoute = computed(() => route.name === 'register');
@@ -58,17 +56,6 @@ onBeforeUnmount(() => {
       </button>
 
       <nav class="public-nav-links" :class="{ open: menuOpen }">
-        <button
-          class="public-theme-toggle"
-          type="button"
-          :aria-label="isDark ? '切换到亮色模式' : '切换到暗色模式'"
-          @click="toggleTheme"
-        >
-          <SunMedium v-if="isDark" :size="16" />
-          <MoonStar v-else :size="16" />
-          <span>{{ isDark ? '亮色' : '暗色' }}</span>
-        </button>
-
         <template v-if="!authStore.isAuthenticated">
           <RouterLink :to="{ name: 'landing', hash: '#features' }">功能介绍</RouterLink>
           <RouterLink :to="{ name: 'pricing' }">定价</RouterLink>

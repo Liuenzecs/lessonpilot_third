@@ -54,6 +54,7 @@ const {
   confirmSectionByName,
   confirmAll,
   getSectionData,
+  getSectionReferences,
   updateSectionData,
   toggleSectionCollapse,
   toggleAllSections,
@@ -137,7 +138,8 @@ function isRewritingSection(sectionName: string): boolean {
     <div v-else-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
       <aside v-if="!outlineCollapsed" class="outline-panel app-card">
         <div class="outline-panel-head">
-          <h3 style="margin: 0">大纲导航</h3>
+          <h3>文档结构</h3>
+          <p class="outline-panel-copy">生成、确认和编辑都按 section 逐节进行。</p>
         </div>
 
         <div class="outline-list">
@@ -157,47 +159,51 @@ function isRewritingSection(sectionName: string): boolean {
       </aside>
 
       <main class="editor-panel app-card">
-        <EditorStatusBanner
-          :is-generating="generationProgress.isGenerating"
-          :completed="generationProgress.completed"
-          :total="generationProgress.total"
-          :current-section="generationProgress.currentSection"
-          :is-rewriting="rewriteState.isRewriting"
-          :rewrite-action="rewriteState.action"
-          :is-appending="false"
-          :append-section-title="''"
-          :stream-error="streamError"
-          :notice-text="notice.text"
-          :notice-tone="notice.tone"
-          @stop="stopGeneration"
-        />
+        <div class="editor-panel-head">
+          <EditorStatusBanner
+            :is-generating="generationProgress.isGenerating"
+            :completed="generationProgress.completed"
+            :total="generationProgress.total"
+            :current-section="generationProgress.currentSection"
+            :is-rewriting="rewriteState.isRewriting"
+            :rewrite-action="rewriteState.action"
+            :is-appending="false"
+            :append-section-title="''"
+            :stream-error="streamError"
+            :notice-text="notice.text"
+            :notice-tone="notice.tone"
+            @stop="stopGeneration"
+          />
 
-        <!-- Tab switcher for tasks with both lesson_plan and study_guide -->
-        <div v-if="hasMultipleDocs" class="doc-tabs">
-          <button
-            class="doc-tab"
-            :class="{ active: activeDocTabIndex === 0 }"
-            type="button"
-            @click="activeDocTabIndex = 0"
-          >
-            教案
-          </button>
-          <button
-            class="doc-tab"
-            :class="{ active: activeDocTabIndex === 1 }"
-            type="button"
-            @click="activeDocTabIndex = 1"
-          >
-            学案
-          </button>
+          <div v-if="hasMultipleDocs" class="doc-tabs">
+            <button
+              class="doc-tab"
+              :class="{ active: activeDocTabIndex === 0 }"
+              type="button"
+              @click="activeDocTabIndex = 0"
+            >
+              教案
+            </button>
+            <button
+              class="doc-tab"
+              :class="{ active: activeDocTabIndex === 1 }"
+              type="button"
+              @click="activeDocTabIndex = 1"
+            >
+              学案
+            </button>
+          </div>
+
+          <div class="editor-toolbar-row">
+            <EditorToolbar
+              :all-collapsed="allCollapsed"
+              :has-pending="hasPending"
+              @toggle-all="toggleAllSections"
+              @confirm-all="confirmAll"
+            />
+            <p class="editor-toolbar-note">内容会按章节即时落库，老师看到的是当前草稿而不是最后一次性替换。</p>
+          </div>
         </div>
-
-        <EditorToolbar
-          :all-collapsed="allCollapsed"
-          :has-pending="hasPending"
-          @toggle-all="toggleAllSections"
-          @confirm-all="confirmAll"
-        />
 
         <div v-if="showInitialSkeleton" class="generation-banner">
           正在为你生成{{ currentDocType === 'study_guide' ? '学案' : '教案' }}...
@@ -220,6 +226,7 @@ function isRewritingSection(sectionName: string): boolean {
               :section="section"
               :doc-type="currentDocType"
               :section-data="getSectionData(section.name)"
+              :section-references="getSectionReferences(section.name)"
               :collapsed="Boolean(collapsedSections[section.name])"
               :streaming-text="getStreamingTextForSection(section.name)"
               :is-rewriting="isRewritingSection(section.name)"

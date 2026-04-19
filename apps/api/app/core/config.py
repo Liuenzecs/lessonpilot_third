@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     minimax_api_key: str = ""
     minimax_model: str = "MiniMax-Text-01"
     minimax_base_url: str = "https://api.minimax.chat/v1"
+    minimax_embedding_model: str = "embo-01"
+    embedding_provider: Literal["local_bge", "minimax"] = "local_bge"
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_device: str = "cpu"
+    rag_enabled: bool = True
+    rag_trigger_mode: Literal["topic_route", "always", "disabled"] = "topic_route"
+    rag_max_knowledge_tokens: int = 3000
+    rag_top_k: int = 8
 
     model_config = SettingsConfigDict(
         env_file=_resolve_env_files(),

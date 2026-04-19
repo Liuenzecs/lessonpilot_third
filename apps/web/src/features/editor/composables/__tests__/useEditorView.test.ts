@@ -1,40 +1,48 @@
 /**
  * useEditorView composable 测试。
  *
- * 测试核心的状态管理和 section 操作逻辑，
- * mock 掉 Vue Router、TanStack Query、useToast 等外部依赖。
+ * 通过真实组件挂载来避免 lifecycle warning。
  */
+import { mount } from '@vue/test-utils';
+import { defineComponent } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mocks — 必须在 import 被测模块之前声明
-// ---------------------------------------------------------------------------
-
-// Vue Router
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { taskId: 'task-123' } }),
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-// TanStack Query — 返回空响应
-vi.mock('@/features/editor/composables/useEditor', () => ({
-  useTaskDocuments: () => ({
-    data: { value: { items: [] } },
-    isLoading: { value: false },
-    refetch: vi.fn(),
-  }),
-  useDocumentHistory: () => ({ data: { value: null }, refetch: vi.fn() }),
-  useDocumentSnapshot: () => ({ data: { value: null } }),
-  useRestoreSnapshotMutation: () => ({ mutateAsync: vi.fn() }),
-}));
+vi.mock('@/features/editor/composables/useEditor', async () => {
+  const { ref } = await vi.importActual<typeof import('vue')>('vue');
+  return {
+    useTaskDocuments: () => ({
+      data: ref({ items: [] }),
+      isLoading: ref(false),
+      refetch: vi.fn(),
+    }),
+    useDocumentHistory: () => ({
+      data: ref({ items: [] }),
+      isLoading: ref(false),
+      refetch: vi.fn(),
+    }),
+    useDocumentSnapshot: () => ({
+      data: ref(null),
+      isLoading: ref(false),
+    }),
+    useRestoreSnapshotMutation: () => ({ mutateAsync: vi.fn() }),
+  };
+});
 
-vi.mock('@/features/task/composables/useTasks', () => ({
-  useTask: () => ({
-    data: { value: null },
-    isLoading: { value: false },
-    refetch: vi.fn(),
-  }),
-}));
+vi.mock('@/features/task/composables/useTasks', async () => {
+  const { ref } = await vi.importActual<typeof import('vue')>('vue');
+  return {
+    useTask: () => ({
+      data: ref(null),
+      isLoading: ref(false),
+      refetch: vi.fn(),
+    }),
+  };
+});
 
 vi.mock('@/features/editor/composables/useAutoSave', () => ({
   useAutoSave: () => ({
@@ -47,7 +55,15 @@ vi.mock('@/features/editor/composables/useAutoSave', () => ({
 
 vi.mock('@/features/editor/composables/useEditorGeneration', () => ({
   useEditorGeneration: () => ({
-    generationProgress: { value: null },
+    generationProgress: {
+      isGenerating: false,
+      completed: 0,
+      total: 0,
+      currentSection: '',
+      currentSectionName: null,
+      streamingText: '',
+      docType: '',
+    },
     startGeneration: vi.fn(),
     stopGeneration: vi.fn(),
   }),
@@ -55,7 +71,12 @@ vi.mock('@/features/editor/composables/useEditorGeneration', () => ({
 
 vi.mock('@/features/editor/composables/useEditorRewrite', () => ({
   useEditorRewrite: () => ({
-    rewriteState: { value: 'idle' },
+    rewriteState: {
+      isRewriting: false,
+      sectionName: null,
+      action: 'rewrite',
+      streamingText: '',
+    },
     startSectionRewrite: vi.fn(),
   }),
 }));
@@ -69,6 +90,7 @@ vi.mock('@/shared/composables/useToast', () => ({
   useToast: () => ({
     success: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
   }),
 }));
 
@@ -76,31 +98,39 @@ vi.mock('@/shared/api/errors', () => ({
   getErrorDescription: (_err: unknown, fallback: string) => fallback,
 }));
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+async function createView() {
+  const { useEditorView } = await import('../useEditorView');
+  let view: ReturnType<typeof useEditorView> | null = null;
+
+  const Harness = defineComponent({
+    setup() {
+      view = useEditorView();
+      return () => null;
+    },
+  });
+
+  const wrapper = mount(Harness);
+  return {
+    view: view!,
+    unmount: () => wrapper.unmount(),
+  };
+}
 
 describe('useEditorView', () => {
-  async function createView() {
-    const { useEditorView } = await import('../useEditorView');
-    return useEditorView();
-  }
-
   it('returns all expected properties', async () => {
-    const view = await createView();
+    const { view, unmount } = await createView();
 
-    // 检查核心 ref 存在
     expect(view).toHaveProperty('draftDocument');
     expect(view).toHaveProperty('saveState');
     expect(view).toHaveProperty('streamError');
     expect(view).toHaveProperty('sections');
     expect(view).toHaveProperty('currentDocType');
 
-    // 检查核心方法存在
     expect(typeof view.confirmSectionByName).toBe('function');
     expect(typeof view.confirmAll).toBe('function');
     expect(typeof view.updateSectionData).toBe('function');
     expect(typeof view.getSectionData).toBe('function');
+    expect(typeof view.getSectionReferences).toBe('function');
     expect(typeof view.toggleSectionCollapse).toBe('function');
     expect(typeof view.toggleAllSections).toBe('function');
     expect(typeof view.scrollToSection).toBe('function');
@@ -110,38 +140,22 @@ describe('useEditorView', () => {
     expect(typeof view.startGeneration).toBe('function');
     expect(typeof view.stopGeneration).toBe('function');
     expect(typeof view.startSectionRewrite).toBe('function');
+
+    unmount();
   });
 
-  it('getSectionData returns null when no document loaded', async () => {
-    const view = await createView();
+  it('returns empty/null-safe section helpers when no document loaded', async () => {
+    const { view, unmount } = await createView();
+
     expect(view.getSectionData('objectives')).toBeNull();
-  });
-
-  it('updateSectionData does nothing when no document loaded', async () => {
-    const view = await createView();
+    expect(view.getSectionReferences('objectives')).toEqual([]);
     expect(() => view.updateSectionData('objectives', [])).not.toThrow();
-    expect(view.draftDocument.value).toBeNull();
-  });
-
-  it('confirmSectionByName does nothing when no document loaded', async () => {
-    const view = await createView();
     expect(() => view.confirmSectionByName('objectives')).not.toThrow();
-    expect(view.draftDocument.value).toBeNull();
-  });
-
-  it('confirmAll does nothing when no document loaded', async () => {
-    const view = await createView();
     expect(() => view.confirmAll()).not.toThrow();
     expect(view.draftDocument.value).toBeNull();
-  });
-
-  it('has pending=false when no document loaded', async () => {
-    const view = await createView();
     expect(view.hasPending.value).toBe(false);
-  });
-
-  it('sections is empty when no document loaded', async () => {
-    const view = await createView();
     expect(view.sections.value).toEqual([]);
+
+    unmount();
   });
 });

@@ -30,5 +30,6 @@ apps/web/src/**/*.d.ts
 *.db
 .coverage
 .tmp/
+.codex-tmp/
 claude.md
 .claude

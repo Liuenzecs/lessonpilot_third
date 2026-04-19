@@ -1,19 +1,13 @@
-/**
- * AI 生成流式消费 composable。
- * 从 useEditorView 中提取的 AI 生成逻辑。
- */
-import type { Ref } from 'vue';
 import { reactive } from 'vue';
 
 import type { LessonDocument } from '@/features/editor/types';
-import { consumeGenerationStream } from '@/features/generation/composables/useGeneration';
-import { useStartGenerationMutation, useTask } from '@/features/task/composables/useTasks';
+import { consumeSectionStream } from '@/features/generation/composables/useGeneration';
+import { useStartGenerationMutation } from '@/features/task/composables/useTasks';
 import { useAuthStore } from '@/app/stores/auth';
 import { useToast } from '@/shared/composables/useToast';
 
 interface UseEditorGenerationOptions {
   taskId: string;
-  draftDocument: Ref<LessonDocument | null>;
   ensureLatestDocumentSaved: () => Promise<boolean>;
   onApplyServerDocument: (doc: LessonDocument) => void;
   onRefetch: () => void;
@@ -23,7 +17,6 @@ interface UseEditorGenerationOptions {
 export function useEditorGeneration(options: UseEditorGenerationOptions) {
   const {
     taskId,
-    draftDocument,
     ensureLatestDocumentSaved,
     onApplyServerDocument,
     onRefetch,
@@ -61,7 +54,7 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
 
     try {
       const response = await startGenerationMutation.mutateAsync(sectionName);
-      await consumeGenerationStream(
+      await consumeSectionStream(
         response.stream_url,
         authStore.token,
         {
@@ -71,7 +64,11 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
             }
           },
           onProgress(payload) {
-            generationProgress.total = Math.max(generationProgress.total, 1);
+            if (typeof payload.total === 'number') {
+              generationProgress.total = payload.total;
+            } else {
+              generationProgress.total = Math.max(generationProgress.total, 1);
+            }
             if (payload.doc_type) {
               generationProgress.docType = payload.doc_type;
             }
@@ -79,19 +76,22 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
           onSectionStart(payload) {
             generationProgress.currentSection = payload.title;
             generationProgress.currentSectionName = payload.section_name;
-            generationProgress.docType = payload.doc_type;
+            generationProgress.docType = payload.doc_type ?? generationProgress.docType;
           },
           onSectionDelta(payload) {
-            generationProgress.streamingText += payload.text;
+            generationProgress.streamingText += payload.delta ?? payload.text ?? '';
           },
-          onSectionComplete() {
-            generationProgress.completed++;
-          },
-          onDocument(payload) {
-            onApplyServerDocument(payload as unknown as LessonDocument);
+          onSectionDocument(payload) {
+            onApplyServerDocument(payload);
             generationProgress.streamingText = '';
           },
-          onDone() {
+          onSectionDone() {
+            generationProgress.completed++;
+          },
+          onWarning(payload) {
+            toast.info('生成提醒', payload.message);
+          },
+          onDocumentDone() {
             generationProgress.isGenerating = false;
             generationProgress.currentSectionName = null;
             generationProgress.streamingText = '';

@@ -50,6 +50,7 @@ function makeLessonPlan(overrides: Partial<LessonPlanContent> = {}): LessonPlanC
     board_design_status: 'pending',
     reflection: '',
     reflection_status: 'pending',
+    section_references: {},
     ...overrides,
   };
 }
@@ -81,6 +82,7 @@ function makeStudyGuide(overrides: Partial<StudyGuideContent> = {}): StudyGuideC
     extension_status: 'pending',
     self_reflection: '',
     self_reflection_status: 'pending',
+    section_references: {},
     ...overrides,
   };
 }
@@ -161,6 +163,14 @@ describe('updateStudyGuideSection', () => {
     expect(updated.learning_objectives).toEqual(['目标1']);
     expect(original.learning_objectives).toEqual([]);
   });
+
+  it('updates self_study through learning_process', () => {
+    const original = makeStudyGuide();
+    const items = [{ level: 'A' as const, itemType: 'short_answer' as const, prompt: '题目', options: [], answer: '', analysis: '' }];
+    const updated = updateStudyGuideSection(original, 'self_study', items);
+    expect(updated.learning_process.selfStudy).toEqual(items);
+    expect(original.learning_process.selfStudy).toEqual([]);
+  });
 });
 
 describe('acceptStudyGuideSection', () => {
@@ -177,6 +187,14 @@ describe('updateSection', () => {
     const updated = updateSection(original, 'reflection', '新的反思内容');
     expect(updated.reflection).toBe('新的反思内容');
     expect(original.reflection).toBe('');
+  });
+
+  it('routes study guide self_study to learning_process', () => {
+    const items = [{ level: 'A' as const, itemType: 'choice' as const, prompt: 'q', options: [], answer: 'a', analysis: '' }];
+    const original = makeStudyGuide();
+    const updated = updateSection(original, 'self_study', items);
+    expect(updated.learning_process.selfStudy).toEqual(items);
+    expect((updated as StudyGuideContent & { self_study?: unknown }).self_study).toBeUndefined();
   });
 });
 

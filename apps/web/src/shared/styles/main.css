@@ -194,7 +194,7 @@ button {
 }
 
 :focus-visible {
-  outline: var(--ring);
+  outline: 2px solid var(--focus-color);
   outline-offset: 1px;
 }
 
@@ -225,11 +225,11 @@ button {
 }
 
 .button:hover:not(:disabled) {
-  transform: scale(1.05);
+  text-decoration: none !important;
 }
 
 .button:active:not(:disabled) {
-  transform: scale(0.9);
+  transform: none;
 }
 
 .button:disabled {
@@ -247,12 +247,13 @@ button {
 }
 
 .button.secondary {
-  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--border);
+  background: var(--surface-strong);
   color: var(--text);
 }
 
 .button.secondary:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--surface-secondary);
 }
 
 .button.ghost {
@@ -317,7 +318,8 @@ button {
 
 .field input:focus, .field select:focus, .field textarea:focus {
   border-color: var(--focus-color);
-  outline: var(--ring);
+  box-shadow: var(--ring);
+  outline: none;
 }
 
 .field input::placeholder, .field textarea::placeholder {

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+from app.services import rewrite_service
+
 
 def _parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
     events: list[tuple[str, dict]] = []
@@ -51,7 +53,8 @@ def test_generation_produces_lesson_plan_content(client, auth_headers):
     with client.stream("GET", stream_url, headers=auth_headers) as stream_response:
         payload = "".join(stream_response.iter_text())
     events = _parse_sse_events(payload)
-    assert events[-1][0] == "done"
+    assert events[-1][0] == "document_done"
+    assert len([item for item in events if item[0] == "section_document"]) == 6
 
     refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
     content = refreshed["content"]
@@ -89,7 +92,83 @@ def test_section_rewrite_flow(client, auth_headers):
 
     with client.stream("GET", rewrite_start.json()["stream_url"], headers=auth_headers) as resp:
         events = _parse_sse_events("".join(resp.iter_text()))
-    assert events[-1][0] == "done"
+    assert events[-1][0] == "document_done"
+    assert "section_document" in [event_name for event_name, _ in events]
+
+
+def test_empty_objectives_rewrite_uses_section_generation(client, auth_headers, monkeypatch):
+    _, document = _create_task_and_document(client, auth_headers)
+    calls: dict[str, str] = {}
+
+    class EmptySectionProvider:
+        async def generate_document_section(self, ctx):
+            calls["generated"] = ctx.section_name
+            yield (
+                '[{"dimension":"知识与技能","content":"理解课文内容"},'
+                '{"dimension":"能力","content":"概括文章结构"},'
+                '{"dimension":"情感态度与价值观","content":"感受作品情感"}]'
+            )
+
+        async def rewrite_section(self, _ctx):
+            calls["rewritten"] = "true"
+            yield "[]"
+
+    monkeypatch.setattr(rewrite_service, "get_provider", lambda: EmptySectionProvider())
+
+    rewrite_start = client.post(
+        f"/api/v1/documents/{document['id']}/rewrite",
+        headers=auth_headers,
+        json={
+            "document_version": document["version"],
+            "section_name": "objectives",
+            "action": "rewrite",
+        },
+    )
+    assert rewrite_start.status_code == 200
+
+    with client.stream("GET", rewrite_start.json()["stream_url"], headers=auth_headers) as resp:
+        events = _parse_sse_events("".join(resp.iter_text()))
+
+    refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
+    assert events[-1][0] == "document_done"
+    assert calls["generated"] == "objectives"
+    assert "rewritten" not in calls
+    assert len(refreshed["content"]["objectives"]) == 3
+    assert refreshed["content"]["objectives"][0]["dimension"] == "knowledge"
+
+
+def test_empty_reflection_rewrite_generates_draft(client, auth_headers, monkeypatch):
+    _, document = _create_task_and_document(client, auth_headers)
+    captured: dict[str, str] = {}
+
+    class ReflectionProvider:
+        async def generate_document_section(self, ctx):
+            captured["rules"] = ctx.section_rules
+            yield '"本节目标整体达成较好，但对重点问题的追问还可以更深入。后续可增加学生复盘与迁移练习。"'  # noqa: E501
+
+        async def rewrite_section(self, _ctx):
+            yield '""'
+
+    monkeypatch.setattr(rewrite_service, "get_provider", lambda: ReflectionProvider())
+
+    rewrite_start = client.post(
+        f"/api/v1/documents/{document['id']}/rewrite",
+        headers=auth_headers,
+        json={
+            "document_version": document["version"],
+            "section_name": "reflection",
+            "action": "rewrite",
+        },
+    )
+    assert rewrite_start.status_code == 200
+
+    with client.stream("GET", rewrite_start.json()["stream_url"], headers=auth_headers) as resp:
+        events = _parse_sse_events("".join(resp.iter_text()))
+
+    refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
+    assert events[-1][0] == "document_done"
+    assert "反思草稿" in captured["rules"]
+    assert refreshed["content"]["reflection"] != ""
 
 
 def test_history_and_restore(client, auth_headers):

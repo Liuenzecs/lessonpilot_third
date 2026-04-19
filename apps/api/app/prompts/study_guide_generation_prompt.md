@@ -15,6 +15,8 @@
 
 {prompt_hints}
 
+{knowledge_context}
+
 ## 使用场景说明
 
 - public_school（公立校）：学案需要规范完整，符合学校导学案格式

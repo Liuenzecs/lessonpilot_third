@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-import json
-
 from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, create_engine
+
+from app.models.template import Template, TemplateSection
+from app.schemas.content import LessonPlanContent, StudyGuideContent
+from app.services.generation_service import (
+    _load_prompt_hints,
+    _validate_generated_content,
+)
 
 
 class TestTemplateEndpoints:
@@ -191,58 +197,92 @@ class TestAIQualityValidation:
     """Test the _validate_generated_content function."""
 
     def test_validate_good_lesson_plan(self) -> None:
-        from app.services.generation_service import _validate_generated_content
-        from app.schemas.content import LessonPlanContent
-
-        content = LessonPlanContent.model_validate({
-            "doc_type": "lesson_plan",
-            "header": {"title": "测试", "subject": "语文", "grade": "七年级"},
-            "objectives": [{"dimension": "knowledge", "content": "掌握基础"}],
-            "key_points": {"key_points": ["重点1"], "difficulties": ["难点1"]},
-            "teaching_process": [
-                {"phase": "导入", "duration": 5, "teacher_activity": "提问", "student_activity": "思考", "design_intent": "激发兴趣"},
-                {"phase": "新授", "duration": 20, "teacher_activity": "讲解", "student_activity": "听讲", "design_intent": "传授知识"},
-                {"phase": "练习", "duration": 10, "teacher_activity": "引导", "student_activity": "练习", "design_intent": "巩固"},
-            ],
-            "board_design": "板书",
-            "reflection": "",
-        })
+        content = LessonPlanContent.model_validate(
+            {
+                "doc_type": "lesson_plan",
+                "header": {"title": "测试", "subject": "语文", "grade": "七年级"},
+                "objectives": [{"dimension": "knowledge", "content": "掌握基础"}],
+                "key_points": {"key_points": ["重点1"], "difficulties": ["难点1"]},
+                "teaching_process": [
+                    {
+                        "phase": "导入",
+                        "duration": 5,
+                        "teacher_activity": "提问",
+                        "student_activity": "思考",
+                        "design_intent": "激发兴趣",
+                    },
+                    {
+                        "phase": "新授",
+                        "duration": 20,
+                        "teacher_activity": "讲解",
+                        "student_activity": "听讲",
+                        "design_intent": "传授知识",
+                    },
+                    {
+                        "phase": "练习",
+                        "duration": 10,
+                        "teacher_activity": "引导",
+                        "student_activity": "练习",
+                        "design_intent": "巩固",
+                    },
+                ],
+                "board_design": "板书",
+                "reflection": "",
+            }
+        )
         warnings = _validate_generated_content(content)
         assert len(warnings) == 0
 
     def test_validate_lesson_plan_few_phases(self) -> None:
-        from app.services.generation_service import _validate_generated_content
-        from app.schemas.content import LessonPlanContent
-
-        content = LessonPlanContent.model_validate({
-            "doc_type": "lesson_plan",
-            "header": {"title": "测试", "subject": "语文", "grade": "七年级"},
-            "objectives": [{"dimension": "knowledge", "content": "掌握基础"}],
-            "key_points": {"keyPoints": ["重点1"], "difficulties": []},
-            "teaching_process": [
-                {"phase": "导入", "duration": 5, "teacher_activity": "提问", "student_activity": "思考", "design_intent": "激发兴趣"},
-            ],
-            "board_design": "板书",
-            "reflection": "",
-        })
+        content = LessonPlanContent.model_validate(
+            {
+                "doc_type": "lesson_plan",
+                "header": {"title": "测试", "subject": "语文", "grade": "七年级"},
+                "objectives": [{"dimension": "knowledge", "content": "掌握基础"}],
+                "key_points": {"keyPoints": ["重点1"], "difficulties": []},
+                "teaching_process": [
+                    {
+                        "phase": "导入",
+                        "duration": 5,
+                        "teacher_activity": "提问",
+                        "student_activity": "思考",
+                        "design_intent": "激发兴趣",
+                    },
+                ],
+                "board_design": "板书",
+                "reflection": "",
+            }
+        )
         warnings = _validate_generated_content(content)
         assert any("1 个环节" in w for w in warnings)
 
     def test_validate_study_guide_empty_self_study(self) -> None:
-        from app.services.generation_service import _validate_generated_content
-        from app.schemas.content import StudyGuideContent
-
-        content = StudyGuideContent.model_validate({
-            "doc_type": "study_guide",
-            "header": {"title": "测试", "subject": "语文", "grade": "七年级"},
-            "learning_objectives": ["我能理解课文"],
-            "key_difficulties": ["难点1"],
-            "prior_knowledge": ["知识1"],
-            "learning_process": {"selfStudy": [], "collaboration": [], "presentation": []},
-            "assessment": [{"level": "A", "itemType": "choice", "prompt": "题目", "options": ["A", "B"], "answer": "A", "analysis": "解析"}],
-            "extension": [],
-            "self_reflection": "",
-        })
+        content = StudyGuideContent.model_validate(
+            {
+                "doc_type": "study_guide",
+                "header": {"title": "测试", "subject": "语文", "grade": "七年级"},
+                "learning_objectives": ["我能理解课文"],
+                "key_difficulties": ["难点1"],
+                "prior_knowledge": ["知识1"],
+                "learning_process": {
+                    "selfStudy": [],
+                    "collaboration": [],
+                    "presentation": [],
+                },
+                "assessment": [
+                    {
+                        "level": "A",
+                        "itemType": "choice",
+                        "prompt": "题目",
+                        "options": ["A", "B"],
+                        "answer": "A",
+                        "analysis": "解析",
+                    }
+                ],
+                "extension": [],
+                "self_reflection": "",
+            }
+        )
         warnings = _validate_generated_content(content)
         assert any("自主学习" in w for w in warnings)
 
@@ -251,9 +291,6 @@ class TestPromptHintsInjection:
     """Test that prompt_hints are correctly loaded and formatted."""
 
     def test_load_prompt_hints_no_template(self) -> None:
-        from sqlmodel import Session, create_engine, SQLModel
-        from app.services.generation_service import _load_prompt_hints
-
         engine = create_engine("sqlite:///:memory:")
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
@@ -261,10 +298,6 @@ class TestPromptHintsInjection:
             assert result == ""
 
     def test_load_prompt_hints_with_template(self) -> None:
-        from sqlmodel import Session, create_engine, SQLModel
-        from app.services.generation_service import _load_prompt_hints
-        from app.models.template import Template, TemplateSection
-
         engine = create_engine("sqlite:///:memory:")
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:

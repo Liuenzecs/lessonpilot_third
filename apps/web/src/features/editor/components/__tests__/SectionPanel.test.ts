@@ -39,12 +39,18 @@ const SectionAiActionsStub = defineComponent({
   template: '<div data-testid="section-ai-actions-stub" />',
 });
 
+const CitationTooltipStub = defineComponent({
+  name: 'CitationTooltip',
+  template: '<div data-testid="citation-tooltip-stub" />',
+});
+
 function mountSectionPanel(overrides: Record<string, unknown>) {
   return mount(SectionPanel, {
     props: {
       section: { name: 'self_study', title: '自主学习', status: 'pending' },
       docType: 'study_guide',
       sectionData: [],
+      sectionReferences: [],
       collapsed: false,
       streamingText: '',
       isRewriting: false,
@@ -59,6 +65,7 @@ function mountSectionPanel(overrides: Record<string, unknown>) {
         ObjectivesEditor: ObjectivesEditorStub,
         TeachingProcessEditor: TeachingProcessEditorStub,
         SectionAiActions: SectionAiActionsStub,
+        CitationTooltip: CitationTooltipStub,
       },
     },
   });

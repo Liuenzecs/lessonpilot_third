@@ -49,15 +49,17 @@ function getRewriteLabel(action: 'rewrite' | 'expand' | 'simplify') {
 <style scoped>
 .stop-btn {
   margin-left: 12px;
-  padding: 2px 10px;
+  padding: 4px 10px;
   font-size: 0.8125rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text-secondary);
 }
 
 .stop-btn:hover {
-  color: var(--danger, #c75450);
-  border-color: var(--danger, #c75450);
+  color: var(--danger);
+  border-color: rgba(var(--danger-rgb), 0.28);
+  background: rgba(var(--danger-rgb), 0.06);
 }
 </style>

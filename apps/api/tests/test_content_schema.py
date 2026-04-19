@@ -51,8 +51,10 @@ def test_lesson_plan_content_validates():
     content = LessonPlanContent.model_validate(payload)
     assert content.doc_type == "lesson_plan"
     assert len(content.objectives) == 2
+    assert content.key_points.key_points == ["重点1"]
     assert content.teaching_process[0].phase == "导入新课"
     assert content.objectives_status == "pending"
+    assert content.model_dump(by_alias=True)["key_points"]["keyPoints"] == ["重点1"]
 
 
 def test_study_guide_content_validates():

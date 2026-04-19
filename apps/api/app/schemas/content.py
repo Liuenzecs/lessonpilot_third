@@ -32,8 +32,10 @@ class TeachingObjective(BaseModel):
 class KeyPoints(BaseModel):
     """教学重难点。"""
 
-    key_points: list[str] = Field(default_factory=list)
+    key_points: list[str] = Field(default_factory=list, alias="keyPoints")
     difficulties: list[str] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True}
 
 
 class TeachingProcessStep(BaseModel):
@@ -60,6 +62,17 @@ class AssessmentItem(BaseModel):
     analysis: str = ""
 
     model_config = {"populate_by_name": True}
+
+
+class CitationReference(BaseModel):
+    """某个 section 使用到的知识引用元数据。"""
+
+    chunk_id: str
+    source: str
+    title: str
+    knowledge_type: str
+    chapter: str | None = None
+    content_snippet: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +110,7 @@ class LessonPlanContent(BaseModel):
     board_design_status: SectionStatus = "pending"
     reflection: str = ""
     reflection_status: SectionStatus = "pending"
+    section_references: dict[str, list[CitationReference]] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +162,7 @@ class StudyGuideContent(BaseModel):
     extension_status: SectionStatus = "pending"
     self_reflection: str = ""
     self_reflection_status: SectionStatus = "pending"
+    section_references: dict[str, list[CitationReference]] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +209,7 @@ def create_empty_lesson_plan(
         board_design_status="pending",
         reflection="",
         reflection_status="pending",
+        section_references={},
     )
 
 
@@ -226,4 +242,5 @@ def create_empty_study_guide(
         extension_status="pending",
         self_reflection="",
         self_reflection_status="pending",
+        section_references={},
     )
