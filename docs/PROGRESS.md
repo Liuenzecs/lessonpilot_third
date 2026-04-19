@@ -979,6 +979,61 @@
   - `pnpm test`：25 passed（18 content + 7 useEditorView）
 - Status: DONE
 
+## [Cycle 4] — 稳定性优先收口（section 流式 + 本地 BGE + Notion 化）
+- 完成日期：2026-04-19
+- 完成内容：
+
+  **1. 编辑器稳定性修复**
+  - 后端生成与重写统一为 section 级 SSE 协议：`section_start / section_delta / section_document / section_done / document_done`
+  - `section_document` 改为回传完整文档载荷，前端不再拿“半个文档”强行合并，类型和运行时一致
+  - 学案 `self_study / collaboration / presentation` 全部统一通过 `learning_process` 读写，修复之前会误写到顶层字段的缺陷
+  - 编辑器 section 完成后立即合并服务器文档，修复“生成时可见，结束后短暂不可见”的稳定性问题
+
+  **2. RAG 改本地 BGE**
+  - 默认 embedding provider 切到 `local_bge + BAAI/bge-m3 + cpu`
+  - `.env.example` 与 `apps/api/.env.example` 补齐 `EMBEDDING_PROVIDER / EMBEDDING_MODEL / EMBEDDING_DEVICE / RAG_* / MINIMAX_*`
+  - 知识新增接口与种子脚本开始写入 `embedding_runtime` 元数据，便于后续知识版本追踪
+  - `seed_knowledge.py` 修复字符串语法错误，新增批量重试与更可读的 embedding 错误日志
+  - `knowledge` 端点的 embedding 失败提示改为 provider 感知，不再裸抛内部异常文案
+
+  **3. Notion 风格收口**
+  - 工作台、创建页、编辑器主流程按 `DESIGN.md` 做一轮收口：容器宽度、留白、section 卡片密度、工具条降噪、引用徽标区和文档阅读宽度统一
+  - 创建页改为显式引入 `workspace.css`，修复直接进入创建页时样式不完整的问题
+  - 用户菜单移除主题切换入口，主流程固定亮色；暗色主题降级为内部实验能力
+
+  **4. 文档与说明同步**
+  - 新增 `docs/rag-current.md`：说明当前 RAG 能力、边界、配置与后续完善方向
+  - 新增 `docs/rag-sales.md`：沉淀客户介绍话术
+  - 更新 `CLAUDE.md`、`GOAL.md`、`NEXT.md`，统一为“稳定性优先 + 完全 Notion + RAG 改本地 BGE”的当前口径
+
+- 关键文件：
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/rewrite_service.py`
+  - `apps/api/app/services/knowledge_service.py`
+  - `apps/api/app/api/v1/endpoints/knowledge.py`
+  - `apps/api/scripts/seed_knowledge.py`
+  - `.env.example`
+  - `apps/api/.env.example`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/features/task/styles/workspace.css`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/shared/components/UserMenu.vue`
+  - `docs/rag-current.md`
+  - `docs/rag-sales.md`
+  - `CLAUDE.md`
+  - `docs/GOAL.md`
+  - `docs/NEXT.md`
+
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m py_compile apps/api/scripts/seed_knowledge.py`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：119 passed（2 条既有 Pydantic deprecation warnings）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：25 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE
+
 ## [Cycle 3] — UI/UX 润色
 - 完成日期：2026-04-16
 - 完成内容：
@@ -1062,4 +1117,45 @@
   - `pnpm lint`：passed（仅有已有 warnings，无新增 error）
   - `pnpm build`：passed
   - `pnpm test`：25 passed（18 content + 7 useEditorView）
+- Status: DONE
+
+## [Cycle 4] — Section 生成兼容性热修复
+- 完成日期：2026-04-19
+- 完成内容：
+  - 为 `objectives / collaboration / presentation / assessment` 等结构化 section 增加模型返回归一化兼容层，支持常见字段别名、中文枚举和值形态后再做 schema 校验，避免解析失败后直接回退为空
+  - 空 section 上点击“生成”时，不再机械沿用空内容重写逻辑；后端会改走 section 重新生成链路
+  - `reflection / self_reflection` 在老师显式点击生成时，改为生成可编辑的反思草稿，不再固定回退为空字符串
+  - 修正后端 `KeyPoints` 的 `keyPoints` / `key_points` 兼容与序列化，收口一处前后端结构不一致
+  - 补充回归测试，覆盖目标归一化、题目归一化、空目标生成、空反思草稿生成
+- 关键文件：
+  - `apps/api/app/schemas/content.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/rewrite_service.py`
+  - `apps/api/tests/test_content_schema.py`
+  - `apps/api/tests/test_generation_service.py`
+  - `apps/api/tests/api/test_documents.py`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：123 passed（保留 2 条既有 Pydantic deprecation warnings）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+- Status: DONE
+
+## [Cycle 4] — RAG 文档补充与知识入库验真
+- 完成日期：2026-04-20
+- 完成内容：
+  - 新增面向小白的 RAG 说明文档，系统讲清楚 LessonPilot 中知识入库、embedding、检索、prompt 注入、citation 与 `section_references` 的整条链路
+  - 补齐“为什么这次没有触发 RAG”的排查说明，明确区分“路由命中但知识库为空”和“真正检索命中并写入引用”这两种状态
+  - 在本地 API 虚拟环境安装缺失依赖 `sentence-transformers` 与 `torch`，恢复本地 `BGE-M3` embedding 能力
+  - 重新执行知识入库脚本，成功写入 16 条《红楼梦》知识卡，恢复语文文学类课题的知识增强生成基础
+  - 通过真实后端生成链路重新生成“薛宝钗人物分析（RAG验证）”，确认生成过程中出现 citation 事件，且最终文档 `section_references` 非空
+  - 核验到 lesson plan 的 `preparation / board_design` 与 study guide 的 `learning_objectives / key_difficulties / prior_knowledge` 已落入真实引用来源，证明这次不是普通生成而是 RAG 生效
+- 关键文件：
+  - `docs/rag-implementation.md`
+  - `apps/api/scripts/seed_knowledge.py`
+  - `apps/api/app/services/knowledge_service.py`
+  - `apps/api/app/core/config.py`
+- 验证结果：
+  - `cd apps/api && .\.venv\Scripts\python.exe -m scripts.seed_knowledge`：成功入库，`knowledge_chunks = 16`
+  - 真实生成验证任务：`ef57f1ef-86ed-47bf-b570-9375c3ccc885`
+  - lesson plan 文档：`34590d92-a638-49ca-987c-21177d3a456f`，`section_references` 非空
+  - study guide 文档：`3ff51269-fcd8-4f21-ac99-780b1315b84d`，`section_references` 非空
 - Status: DONE

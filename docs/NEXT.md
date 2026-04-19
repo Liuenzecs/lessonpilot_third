@@ -1,36 +1,42 @@
-# 当前任务：Cycle 4 — 数据库模板库 + AI 输出质量验证
+# 当前任务：稳定性优先收口（待验收）
 
-## 目标
-建立数据库级教案/学案模板库，提升 AI 输出的教学专业度，确保生成内容真正可用。
+## 本轮目标
 
-## 任务清单
+把主链路从“能跑”收口到“稳定可演示、可继续扩展”：
 
-### 4.1 数据库模板库
-- [ ] 设计模板数据模型（Template、TemplateSection）
-- [ ] 创建 Alembic 迁移，建立模板表结构
-- [ ] 编写种子数据脚本，导入语文教案/学案标准模板
-- [ ] 在创建备课时支持选择模板或使用默认模板
-- [ ] 后端 API：模板 CRUD + 模板列表端点
+- 编辑器生成与重写统一为 section 级 SSE 协议
+- RAG embedding 默认改为本地 `BGE-M3`
+- 主流程 UI 统一到 `DESIGN.md` 的 Notion 风格
+- 项目文档、配置模板与安全口径同步
 
-### 4.2 AI 输出质量验证
-- [ ] 设计 AI 输出质量评分维度（结构完整性、教学专业度、内容准确性）
-- [ ] 编写 prompt 模板 V2，加入更多教学策略指导
-- [ ] 增加 section 级内容校验（必填项、字数下限、教学环节完整性）
-- [ ] 后端测试：验证生成输出符合最小质量标准
+## 已实现
 
-### 4.3 前端模板选择与重构
-- [ ] 创建向导中添加"选择模板"步骤（可选，默认自动匹配）
-- [ ] 模板预览卡片 UI
-- [ ] 全局引入 DESIGN.md，推翻当前样式
+- [x] 后端生成链路改为按 section 顺序生成，事件统一为 `section_start / section_delta / section_document / section_done / document_done`
+- [x] 重写链路切到同一套 SSE 协议，不再保留旧 consumer 分叉
+- [x] `StudyGuideContent` 的 `self_study / collaboration / presentation` 全部统一通过 `learning_process` 读写
+- [x] section 完成后立即回传完整 `section_document`，前端即时合并到草稿文档
+- [x] 编辑器支持引用徽标 / tooltip，老师能看到当前 section 的参考资料
+- [x] embedding 默认配置切为 `local_bge + BAAI/bge-m3 + cpu`
+- [x] 知识新增与种子脚本会写入 embedding runtime 元数据
+- [x] `.env.example` 与 `apps/api/.env.example` 已补齐 RAG / embedding 配置
+- [x] 工作台、创建页、编辑器主流程已按 `DESIGN.md` 做一轮 Notion 化收口
+- [x] 公域和主流程不再暴露主题切换入口
+- [x] 已补 `docs/rag-current.md` 与 `docs/rag-sales.md`
+
+## 本轮待验收
+
+- [ ] 手动走一遍“创建任务 → section 级生成 → 局部重写 → 查看引用 → 导出”
+- [ ] 确认工作台 / 创建页 / 编辑器的视觉方向已经符合“完全 Notion”
+- [ ] 确认本地 BGE 方案满足当前语文知识增强需求
 
 ## 验收标准
-- 数据库中有至少 3 套语文教案模板 + 2 套学案模板
-- AI 生成输出经过结构校验，缺失字段有友好提示
-- 所有 CI 检查通过（type-check / lint / build / pytest / ruff / vitest）
-- 前端全功能链路以 Notion 设计风格走通
-- 模板选择流程端到端可用
 
-## 后续方向
-- **前端重设计**：基于 DESIGN.md 进行 Notion 风格前端重设计
-- **用户测试**：找真实老师进行可用性测试
-- **部署上线**：域名、SSL、CI/CD、监控
+- 生成过程中，每一节完成后内容持续可见，不再出现“生成后短暂消失”
+- 学案三段式 section 保存与渲染全部落在 `learning_process`
+- RAG 在 `RAG_ENABLED=false` 时能优雅降级，在开启时能返回引用元数据
+- 前后端测试、类型检查、构建与静态检查通过
+- 文档状态一致，不再出现 `GOAL / NEXT / PROGRESS` 各自描述不同步
+
+## 暂不进入下一阶段
+
+未经过你确认前，不自动进入模板库运营化、知识包扩学科或部署阶段。
