@@ -89,7 +89,7 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
             generationProgress.completed++;
           },
           onWarning(payload) {
-            toast.info('生成提醒', payload.message);
+            toast.info('整理提醒', payload.message);
           },
           onDocumentDone() {
             generationProgress.isGenerating = false;
@@ -97,14 +97,14 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
             generationProgress.streamingText = '';
             abortController = null;
             onRefetch();
-            toast.success(sectionName ? '本节内容已生成' : '教案已生成，你可以开始编辑。');
+            toast.success(sectionName ? '本节内容已写入草稿' : '初稿已整理完成，你可以开始编辑。');
           },
-          onError(payload) {
+          onError() {
             generationProgress.streamingText = '';
             generationProgress.isGenerating = false;
             generationProgress.currentSectionName = null;
             abortController = null;
-            toast.error('生成失败', '内容生成出现问题，请稍后重试。');
+            toast.error('整理失败', '内容整理出现问题，请稍后重试。');
           },
         },
         abortController.signal,
@@ -114,14 +114,14 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
         generationProgress.isGenerating = false;
         generationProgress.streamingText = '';
         abortController = null;
-        toast.info('已停止生成。');
+        toast.info('已停止整理。');
         return;
       }
       generationProgress.isGenerating = false;
       generationProgress.currentSectionName = null;
       generationProgress.streamingText = '';
       abortController = null;
-      toast.error('生成失败', '生成流打开失败，请稍后重试。');
+      toast.error('整理失败', '整理通道打开失败，请稍后重试。');
     }
   }
 

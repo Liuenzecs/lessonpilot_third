@@ -3,7 +3,7 @@
  * 组合 useAutoSave、useEditorGeneration、useEditorRewrite，
  * 管理文档加载、Tab 切换、section 状态。
  */
-import type { DocumentContent, SectionInfo } from '@lessonpilot/shared-types';
+import type { SectionInfo } from '@lessonpilot/shared-types';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -54,8 +54,6 @@ export function useEditorView() {
   const activeDocTabIndex = ref(0);
 
   const primaryDocument = computed(() => documentsQuery.data.value?.items[0] ?? null);
-  const secondaryDocument = computed(() => documentsQuery.data.value?.items[1] ?? null);
-
   // Current active document based on tab
   const activeDocument = computed(() => {
     const docs = documentsQuery.data.value?.items ?? [];
@@ -80,16 +78,7 @@ export function useEditorView() {
   );
   const previewSnapshot = computed<DocumentSnapshotRecord | null>(() => snapshotQuery.data.value ?? null);
 
-  // Flash notice
   const notice = reactive<{ text: string; tone: 'success' | 'info' }>({ text: '', tone: 'success' });
-  let noticeTimer: number | undefined;
-
-  function flashNotice(text: string, tone: 'success' | 'info' = 'success') {
-    notice.text = text;
-    notice.tone = tone;
-    if (noticeTimer) window.clearTimeout(noticeTimer);
-    noticeTimer = window.setTimeout(() => { notice.text = ''; }, 3200);
-  }
 
   // Auto-save
   function applyServerDocument(doc: LessonDocument) {
@@ -340,7 +329,6 @@ export function useEditorView() {
     window.removeEventListener('resize', syncOutlineForViewport);
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
-    if (noticeTimer) window.clearTimeout(noticeTimer);
   });
 
   // Computed for template

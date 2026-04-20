@@ -15,7 +15,7 @@
             <div class="hero-preview-strong">一元二次方程</div>
           </div>
           <div class="hero-preview-sidebar-card">
-            <div class="hero-preview-label">生成中...</div>
+            <div class="hero-preview-label">正在补齐正文</div>
             <div class="hero-preview-muted">导入环节 / 练习巩固</div>
           </div>
         </aside>
@@ -41,16 +41,16 @@
             <div class="hero-preview-line long" />
             <div class="hero-preview-line medium" />
             <div class="hero-preview-actions">
-              <span>接受</span>
-              <span>拒绝</span>
-              <span>重新生成</span>
+              <span>保留这版</span>
+              <span>暂不采用</span>
+              <span>再整理</span>
             </div>
           </div>
 
           <div class="hero-preview-bottom">
             <span>开始备课</span>
-            <span>补充内容</span>
-            <span>添加练习</span>
+            <span>补充练习</span>
+            <span>导出 Word</span>
           </div>
         </section>
       </div>

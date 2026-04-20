@@ -35,7 +35,7 @@ const pricingCards = computed(() => [
       }
       void router.push({ name: 'register' });
     },
-    features: ['不限量教案生成', '局部重写与补充', 'Word + PDF 导出', '版本历史', '官方预设全覆盖'],
+    features: ['不限量教案起草', '局部改写与补充展开', 'Word + PDF 导出', '版本历史', '官方预设全覆盖'],
   },
   {
     title: '团队版',

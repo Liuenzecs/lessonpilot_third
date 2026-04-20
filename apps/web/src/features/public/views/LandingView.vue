@@ -29,7 +29,7 @@ function resolveLandingIcon(icon: string) {
         <p class="page-eyebrow">结构可见，操作极简</p>
         <h1>10 分钟，搞定一份好教案</h1>
         <p class="landing-hero-text">
-          输入课题，自动生成结构化教案，你来调整和把关。选学科、定主题，剩下的交给 LessonPilot。
+          输入课题，先整理出完整初稿，你来调整和把关。选学科、定主题，LessonPilot 会把骨架和主要内容先铺开。
         </p>
         <div class="button-row landing-hero-actions">
           <RouterLink class="button primary" :to="{ name: 'register' }" @click="(() => {})">

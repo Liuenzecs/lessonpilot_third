@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import type {
   LessonPlanContent,
-  SectionStatus,
   StudyGuideContent,
 } from '@lessonpilot/shared-types';
 
@@ -17,7 +16,6 @@ import {
   getSections,
   getStudyGuideSectionContent,
   setLessonPlanSectionStatus,
-  setStudyGuideSectionStatus,
   updateLessonPlanSection,
   updateSection,
   updateStudyGuideSection,

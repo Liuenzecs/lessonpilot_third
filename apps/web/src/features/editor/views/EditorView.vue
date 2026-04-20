@@ -43,7 +43,6 @@ const {
   collapsedSections,
   persistDocument,
   scrollToSection,
-  startGeneration,
   stopGeneration,
   startSectionRewrite,
   refreshFromServer,
@@ -139,7 +138,7 @@ function isRewritingSection(sectionName: string): boolean {
       <aside v-if="!outlineCollapsed" class="outline-panel app-card">
         <div class="outline-panel-head">
           <h3>文档结构</h3>
-          <p class="outline-panel-copy">生成、确认和编辑都按 section 逐节进行。</p>
+          <p class="outline-panel-copy">起草、确认和编辑都按 section 逐节进行。</p>
         </div>
 
         <div class="outline-list">
@@ -206,7 +205,7 @@ function isRewritingSection(sectionName: string): boolean {
         </div>
 
         <div v-if="showInitialSkeleton" class="generation-banner">
-          正在为你生成{{ currentDocType === 'study_guide' ? '学案' : '教案' }}...
+          正在整理{{ currentDocType === 'study_guide' ? '学案' : '教案' }}初稿...
         </div>
 
         <StreamingText

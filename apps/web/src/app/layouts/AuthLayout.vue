@@ -30,8 +30,8 @@ import '@/features/public/styles/public.css';
           <article class="auth-brand-point">
             <BookOpenText :size="20" />
             <div>
-              <strong>自动生成骨架</strong>
-              <p>结构化教案自动生成，老师只需要编辑和把关。</p>
+              <strong>先铺好备课骨架</strong>
+              <p>结构化文档会先整理出初稿，老师只需要编辑和把关。</p>
             </div>
           </article>
           <article class="auth-brand-point">

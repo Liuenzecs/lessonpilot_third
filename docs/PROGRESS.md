@@ -1159,3 +1159,24 @@
   - lesson plan 文档：`34590d92-a638-49ca-987c-21177d3a456f`，`section_references` 非空
   - study guide 文档：`3ff51269-fcd8-4f21-ac99-780b1315b84d`，`section_references` 非空
 - Status: DONE
+
+## [Cycle 4] — 前端卡片层级与去 AI 感文案收口
+- 完成日期：2026-04-20
+- 完成内容：
+  - 重做前端共享表面体系，`app-card` 默认改为 whisper border + 无阴影，状态卡补齐统一样式，避免页面壳层、内容卡和浮层全部使用同等级阴影
+  - 收口公域页、Auth、备课台、创建页、设置页的卡片密度与留白节奏，减少“大卡套小卡”叠加感，让主页面更接近 `DESIGN.md` 的 Notion 式文档层级
+  - 收口编辑器壳层：顶部 header 改为轻量顶栏，outline panel 更窄更轻，主文档面板成为唯一视觉中心；section 引用区与流式区改成内嵌提示条
+  - 统一主流程文案，弱化 `AI / 生成 / 重写 / 扩写` 的工具感表达，改为“起草 / 整理 / 改写 / 补充展开 / 压缩表达”等老师视角语言；帮助、隐私、条款仍保留必要真实披露
+  - 新增前端断言，覆盖 Landing 主文案、创建页主文案与 CTA、编辑器 section 操作标签，并保留原有 action enum 契约不变
+  - 顺手清理一批前端 lint error（未使用导入、未使用变量、正则转义），让前端 lint quiet、测试和构建恢复通过
+- 关键文件：
+  - `apps/web/src/shared/styles/main.css`
+  - `apps/web/src/features/public/styles/public.css`
+  - `apps/web/src/features/task/styles/workspace.css`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/features/public/content.ts`
+- 验证结果：
+  - `pnpm --dir apps/web test`：29 passed
+  - `pnpm --dir apps/web lint -- --quiet`：passed
+  - `pnpm --dir apps/web build`：passed（含 `vue-tsc`）
+- Status: DONE

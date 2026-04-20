@@ -21,8 +21,8 @@ defineEmits<{
 
 function formatSource(source: string): string {
   if (source === 'save') return '普通保存';
-  if (source === 'generation') return '自动生成';
-  if (source === 'rewrite') return '重写';
+  if (source === 'generation') return '系统起草';
+  if (source === 'rewrite') return '改写';
   if (source === 'restore') return '历史恢复';
   return source;
 }
@@ -57,7 +57,7 @@ function getSectionText(content: DocumentContent, sectionName: string): string {
       <div class="history-drawer-header">
         <div>
           <h3 class="history-drawer-title">历史版本</h3>
-          <div class="muted">最近 10 个可恢复快照。恢复后会生成一个新的当前版本。</div>
+          <div class="muted">最近 10 个可恢复快照。恢复后会写入一个新的当前版本。</div>
         </div>
         <button class="button ghost" type="button" @click="$emit('close')">关闭</button>
       </div>

@@ -104,7 +104,7 @@ onBeforeUnmount(() => {
       </button>
 
       <div v-if="menuOpen" class="task-card-menu-panel app-card">
-        <button type="button" @click.stop="emit('open')">打开编辑</button>
+        <button type="button" @click.stop="emit('open')">继续编辑</button>
         <button type="button" @click.stop="handleExport">导出 Word</button>
         <button type="button" @click.stop="handleDuplicate">复制为新教案</button>
         <div class="task-card-menu-divider" />

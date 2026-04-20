@@ -11,19 +11,21 @@
 }
 .public-main, .private-main, .auth-shell-main {
   flex: 1 0 auto;
-  width: min(1160px, calc(100% - 56px));
+  width: min(1120px, calc(100% - 64px));
   margin: 0 auto;
 }
 
 /* ── Section Card ── */
 .section-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  padding: clamp(24px, 4vw, 40px);
+  display: grid;
+  gap: 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 10px 0;
 }
-.section-card.alt-bg { background: var(--surface-strong); }
+.section-card.alt-bg { background: transparent; }
 
 /* ── Eyebrow & Page Title ── */
 .page-eyebrow {
@@ -45,7 +47,7 @@
 .public-nav {
   position: relative;
   z-index: 40;
-  padding: 18px 0 8px;
+  padding: 20px 0 6px;
   background: transparent;
   transition: opacity 0.2s ease;
 }
@@ -53,13 +55,13 @@
   opacity: 0.96;
 }
 .public-nav-inner, .auth-shell-topbar, .private-nav {
-  width: min(1160px, calc(100% - 56px));
+  width: min(1120px, calc(100% - 64px));
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding-bottom: 14px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
 .public-brand, .public-footer-brand {
@@ -103,17 +105,17 @@
 /* ── Landing / Pricing / Help Page Shells ── */
 .landing-page, .pricing-page, .help-page {
   display: grid;
-  gap: 64px;
-  padding: 28px 0 96px;
+  gap: 88px;
+  padding: 36px 0 112px;
 }
 
 /* ── Hero ── */
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 520px);
-  gap: 52px;
+  grid-template-columns: minmax(0, 1.02fr) minmax(360px, 500px);
+  gap: 64px;
   align-items: center;
-  padding: 42px 0 12px;
+  padding: 56px 0 20px;
 }
 .landing-hero h1 {
   margin: 0;
@@ -122,7 +124,7 @@
   line-height: 1.00;
   letter-spacing: -2.125px;
 }
-.landing-hero-copy { display: grid; gap: 16px; }
+.landing-hero-copy { display: grid; gap: 20px; }
 .landing-hero-text, .about-lead {
   margin: 0;
   color: var(--muted);
@@ -138,7 +140,7 @@
 /* ── Hero Product Preview ── */
 .hero-preview-window {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 20px;
   background: linear-gradient(180deg, rgba(246, 245, 244, 0.92) 0%, #ffffff 100%);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-elevated);
@@ -158,14 +160,14 @@
 }
 .hero-preview-content {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  min-height: 420px;
+  grid-template-columns: 156px minmax(0, 1fr);
+  min-height: 452px;
 }
 .hero-preview-sidebar {
-  padding: 18px;
+  padding: 20px 16px;
   display: grid;
-  gap: 12px;
-  background: rgba(0, 0, 0, 0.02);
+  gap: 10px;
+  background: color-mix(in srgb, var(--surface-strong) 84%, white 16%);
   border-right: 1px solid var(--border);
 }
 .hero-preview-sidebar-title {
@@ -176,28 +178,26 @@
   color: var(--text-tertiary);
 }
 .hero-preview-sidebar-card, .feature-preview-panel {
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--surface-strong) 78%, white 22%);
+  border: 1px solid transparent;
 }
 .hero-preview-sidebar-card.active, .feature-preview-panel.strong {
-  background: var(--primary-soft);
-  border-color: rgba(var(--primary-rgb), 0.2);
+  background: var(--surface);
+  border-color: rgba(var(--primary-rgb), 0.18);
 }
 .hero-preview-label { font-size: 12px; color: var(--text-tertiary); }
 .hero-preview-strong { font-size: var(--text-sm); font-weight: 700; margin-top: 4px; color: var(--text); }
 .hero-preview-muted, .feature-preview-panel.muted { color: var(--muted); }
-.hero-preview-editor { padding: 20px; display: grid; gap: 16px; }
-.hero-preview-editor-head, .hero-preview-actions, .pricing-card-head,
-.workspace-toolbar, .settings-inline-row {
+.hero-preview-editor { padding: 22px; display: grid; gap: 14px; }
+.hero-preview-editor-head, .hero-preview-actions, .pricing-card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
-.hero-preview-export, .hero-preview-chip, .pricing-badge,
-.subscription-pill, .verification-badge {
+.hero-preview-export, .hero-preview-chip, .pricing-badge {
   width: fit-content;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
@@ -206,14 +206,14 @@
 }
 .hero-preview-export { background: rgba(0, 0, 0, 0.05); color: var(--muted); }
 .hero-preview-section {
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--surface-strong) 8%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 .hero-preview-section.pending {
-  background: rgba(var(--secondary-rgb), 0.06);
-  border-color: rgba(var(--secondary-rgb), 0.18);
+  background: rgba(var(--primary-rgb), 0.05);
+  border-color: rgba(var(--primary-rgb), 0.16);
 }
 .hero-preview-chip, .pricing-badge { background: var(--badge-bg); color: var(--badge-text); }
 .hero-preview-section-title { margin-bottom: 10px; font-weight: 700; font-size: var(--text-sm); }
@@ -225,17 +225,22 @@
 }
 .hero-preview-line.long { width: 92%; }
 .hero-preview-line.medium { width: 72%; }
+.hero-preview-actions {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
 .hero-preview-bottom {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   color: var(--primary);
   font-weight: 600;
   font-size: var(--text-sm);
 }
 
 /* ── Landing Sections ── */
-.landing-section { display: grid; gap: 24px; padding: 24px 0; }
+.landing-section { display: grid; gap: 28px; padding: 40px 0; }
 .landing-section-head h2, .about-page h1, .pricing-hero h1, .help-page h1 {
   margin: 0;
   font-size: clamp(30px, 4vw, 48px);
@@ -247,15 +252,19 @@
 .landing-pain-grid, .persona-grid, .pricing-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 .landing-pain-card, .persona-card, .changelog-item {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 208px;
   padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
-.landing-pain-card:hover, .persona-card:hover { box-shadow: var(--shadow); }
+.landing-pain-card:hover, .persona-card:hover { border-color: rgba(var(--primary-rgb), 0.16); }
 .landing-card-icon {
   width: 48px;
   height: 48px;
@@ -289,15 +298,14 @@
 .feature-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
-  gap: 32px;
+  gap: 48px;
   align-items: center;
-  padding: 24px 0;
+  padding: 32px 0;
 }
 .feature-row + .feature-row { border-top: 1px solid var(--border); }
 .feature-row.reverse { direction: rtl; }
 .feature-row.reverse > * { direction: ltr; }
-.feature-preview, .about-contact, .workspace-start-card,
-.subscription-upgrade, .data-card {
+.feature-preview, .about-contact {
   padding: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -308,13 +316,15 @@
   display: grid;
   gap: 12px;
 }
+.feature-preview-stack { gap: 10px; }
 .feature-index { color: var(--primary); font-weight: 700; font-size: var(--text-sm); }
 .feature-index.big { font-size: var(--text-xl); }
 .feature-preview-badge { color: var(--text-tertiary); font-size: 12px; }
 .feature-bullets { margin: 0; padding-left: 18px; color: var(--muted); font-size: var(--text-sm); line-height: 1.6; }
+.feature-copy { gap: 14px; }
 
 /* ── CTA Section ── */
-.landing-cta { text-align: center; justify-items: center; padding: 48px 0; }
+.landing-cta { text-align: center; justify-items: center; padding: 56px 0 8px; }
 .landing-cta h2 {
   margin: 0 0 16px;
   font-size: clamp(30px, 4vw, 48px);
@@ -347,29 +357,32 @@
   box-shadow: var(--shadow-sm);
 }
 .pricing-card {
-  padding: 24px;
+  padding: 26px;
   display: grid;
-  gap: 18px;
+  gap: 20px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
-.pricing-card:hover { box-shadow: var(--shadow); }
+.pricing-card:hover { border-color: rgba(var(--primary-rgb), 0.16); }
 .pricing-card.featured {
   border-color: rgba(var(--primary-rgb), 0.24);
-  transform: translateY(-4px);
-  box-shadow:
-    rgba(0, 0, 0, 0.04) 0px 4px 18px,
-    rgba(0, 0, 0, 0.027) 0px 2px 7.8px,
-    rgba(0, 0, 0, 0.02) 0px 0.8px 2.9px;
+  background: color-mix(in srgb, var(--primary-soft) 30%, var(--surface) 70%);
 }
 .pricing-card.disabled { opacity: 0.7; }
 .pricing-plan { margin: 0 0 10px; color: var(--text-tertiary); font-size: var(--text-sm); font-weight: 500; }
 .pricing-feature-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: var(--text-sm); display: grid; gap: 8px; }
 
 /* ── FAQ Accordion ── */
-.faq-item { padding: 18px 20px; border-radius: var(--radius-sm); }
+.faq-item {
+  padding: 22px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.faq-accordion .faq-item:last-child { border-bottom: 0; }
 .faq-question {
   width: 100%;
   border: 0;
@@ -394,6 +407,8 @@
   gap: 10px;
   padding: 12px 16px;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 .help-search input {
   width: 100%;
@@ -406,22 +421,39 @@
 .help-group { display: grid; gap: 16px; }
 
 /* ── Legal / About / Error / Changelog ── */
-.legal-page, .about-page, .not-found-page, .changelog-page { padding: 20px 0 80px; }
+.legal-page, .about-page, .not-found-page, .changelog-page { padding: 24px 0 96px; }
 .legal-hero { margin-bottom: 24px; }
-.legal-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; margin-top: 24px; }
-.legal-nav { position: sticky; top: 96px; height: fit-content; padding: 16px; display: grid; gap: 6px; }
+.legal-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 36px; margin-top: 28px; }
+.legal-nav {
+  position: sticky;
+  top: 96px;
+  height: fit-content;
+  padding: 8px 0;
+  display: grid;
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
 .legal-nav a {
   font-size: var(--text-sm);
   color: var(--muted);
-  padding: 6px 10px;
-  border-radius: var(--radius-micro);
+  padding: 6px 0;
+  border-radius: 0;
   text-decoration: none;
   transition: background 0.15s ease;
 }
-.legal-nav a:hover, .legal-nav a.active { background: var(--surface-strong); color: var(--text); text-decoration: none; }
-.legal-section { padding: 24px; }
+.legal-nav a:hover, .legal-nav a.active { background: transparent; color: var(--text); text-decoration: none; }
+.legal-section {
+  padding: 0 0 28px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.legal-content .legal-section:last-child { border-bottom: 0; }
 .legal-section h2 { margin-top: 0; font-size: var(--text-xl); letter-spacing: -0.25px; }
-.about-contact { margin-top: 24px; }
+.about-contact { margin-top: 32px; }
 .not-found-page { display: grid; justify-items: center; text-align: center; gap: 16px; padding-top: 80px; }
 .not-found-icon { font-size: 48px; }
 .changelog-date { color: var(--primary); font-weight: 700; font-size: var(--text-sm); }
@@ -466,8 +498,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(420px, 460px);
   align-items: stretch;
-  gap: 32px;
-  padding: 32px 0;
+  gap: 48px;
+  padding: 44px 0 56px;
 }
 .auth-brand-panel { align-content: start; gap: 20px; }
 .auth-brand-panel h1 {
@@ -485,23 +517,23 @@
   font-weight: 500;
   line-height: 1.5;
 }
-.auth-brand-points { display: grid; gap: 12px; }
+.auth-brand-points { display: grid; gap: 14px; }
 .auth-brand-point {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 14px;
   align-items: start;
-  padding: 18px;
+  padding: 20px 22px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-strong) 76%, white 24%);
 }
 .auth-brand-point svg { color: var(--primary); }
 .auth-brand-point strong, .auth-brand-point p { display: block; }
 .auth-brand-point strong { font-size: var(--text-sm); }
 .auth-brand-point p { margin: 6px 0 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
 .auth-form-panel { display: grid; place-items: center; }
-.auth-card { width: min(460px, 100%); padding: 32px; display: grid; gap: 16px; }
+.auth-card { width: min(460px, 100%); padding: 30px; display: grid; gap: 16px; border-radius: var(--radius-lg); }
 .auth-title { font-size: var(--text-2xl); font-weight: 700; line-height: 1.23; letter-spacing: -0.625px; }
 .auth-submit { width: 100%; }
 .password-field { position: relative; }
@@ -651,8 +683,6 @@
 }
 .user-menu-item:hover { background: var(--surface-strong); }
 .user-menu-item.danger { color: var(--danger); }
-.verification-badge { background: rgba(var(--danger-rgb), 0.08); color: var(--danger); }
-.verification-badge.verified { background: rgba(var(--success-rgb), 0.08); color: var(--success); }
 
 /* ══ Responsive — 7-tier breakpoints ══ */
 
@@ -663,14 +693,14 @@
   }
   .hero-preview-content { grid-template-columns: 1fr; }
   .hero-preview-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .landing-hero { padding-top: 24px; }
+  .landing-hero { padding-top: 32px; }
 }
 
 @media (max-width: 768px) {
   .public-main, .private-main, .auth-shell-main,
   .public-nav-inner, .auth-shell-topbar, .private-nav,
   .public-footer-grid, .public-footer-bottom {
-    width: min(100% - 32px, 1200px);
+    width: min(100% - 40px, 1200px);
   }
   .public-nav-mobile { display: inline-flex; }
   .public-nav-links {
@@ -693,8 +723,8 @@
   .private-nav { flex-wrap: wrap; }
   .private-nav-links { width: 100%; justify-content: space-between; }
   .auth-card { padding: 24px; }
-  .landing-page, .pricing-page, .help-page { gap: 24px; padding: 12px 0 48px; }
-  .landing-cta { padding: 32px 0; }
+  .landing-page, .pricing-page, .help-page { gap: 40px; padding: 20px 0 72px; }
+  .landing-cta { padding: 32px 0 8px; }
   .public-footer { padding: 40px 0 24px; }
   .public-footer-grid { grid-template-columns: 1fr; gap: 24px; }
 }
@@ -706,8 +736,7 @@
     width: min(100% - 24px, 1200px);
   }
   .landing-hero h1 { font-size: clamp(32px, 8vw, 48px); letter-spacing: -1.5px; }
-  .section-card { padding: 20px; }
-  .feature-row { gap: 20px; padding: 16px 0; }
+  .feature-row { gap: 24px; padding: 20px 0; }
 }
 
 @media (max-width: 400px) {

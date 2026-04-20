@@ -2,15 +2,15 @@
 
 .workspace-page {
   display: grid;
-  gap: 32px;
+  gap: 40px;
 }
 
 .workspace-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
-  gap: 32px;
+  gap: 36px;
   align-items: center;
-  padding: 34px;
+  padding: 42px 40px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background:
@@ -26,21 +26,22 @@
 
 .workspace-start-card {
   display: grid;
-  gap: 10px;
+  align-content: start;
+  gap: 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--surface-strong);
+  background: color-mix(in srgb, var(--surface-strong) 74%, white 26%);
   color: var(--text);
   text-align: left;
-  padding: 22px 24px;
+  min-height: 148px;
+  padding: 20px 22px;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .workspace-start-card:hover {
   background: var(--surface);
   border-color: rgba(var(--primary-rgb), 0.18);
-  box-shadow: var(--shadow-sm);
 }
 
 .workspace-start-title {
@@ -112,7 +113,7 @@
   gap: 20px;
   align-items: flex-end;
   flex-wrap: wrap;
-  padding-bottom: 6px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -153,33 +154,32 @@
 
 .task-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
 }
 
 .task-card,
 .task-card-skeleton {
-  min-height: 188px;
-  padding: 20px;
+  min-height: 204px;
+  padding: 22px 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 
 .task-card {
   display: grid;
-  align-content: space-between;
-  gap: 20px;
+  grid-template-rows: auto 1fr auto;
+  align-content: start;
+  gap: 18px;
   background: var(--surface);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .task-card:hover,
 .task-card:focus-visible {
   border-color: rgba(var(--primary-rgb), 0.16);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--surface-strong) 24%, white 76%);
   outline: none;
 }
 
@@ -271,13 +271,13 @@
 /* ── Task Create Page ── */
 
 .create-page {
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 12px 0 56px;
+  padding: 20px 0 64px;
 }
 
 .create-frame {
-  padding: 34px;
+  padding: 40px 44px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -297,7 +297,7 @@
   max-width: 42rem;
 }
 
-.create-body { display: grid; gap: 24px; }
+.create-body { display: grid; gap: 28px; }
 
 .create-row {
   display: grid;
@@ -365,7 +365,7 @@
 }
 
 .create-choice-grid.compact {
-  gap: 6px;
+  gap: 8px;
 }
 
 .create-choice-grid.inline {
@@ -373,9 +373,9 @@
 }
 
 .wizard-choice-card {
-  padding: 9px 16px;
+  padding: 10px 16px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-micro);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--muted);
   font-size: var(--text-sm);
@@ -399,10 +399,10 @@
 
 .create-toggle-group {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-micro);
+  border-radius: var(--radius-sm);
   background: var(--surface-strong);
   width: fit-content;
 }
@@ -410,7 +410,7 @@
 .create-toggle-btn {
   padding: 8px 18px;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-subtle);
   background: transparent;
   color: var(--muted);
   font-size: var(--text-sm);
@@ -434,36 +434,32 @@
 
 .template-choice-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
 }
 
 .template-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 124px;
-  padding: 16px 18px;
+  min-height: 118px;
+  padding: 18px 18px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg, rgba(246, 245, 244, 0.64) 0%, rgba(255, 255, 255, 0) 100%),
-    var(--surface);
+  background: color-mix(in srgb, var(--surface-strong) 78%, white 22%);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .template-card:hover {
   border-color: rgba(var(--primary-rgb), 0.16);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  background: var(--surface);
 }
 
 .template-card.active {
   border-color: rgba(var(--primary-rgb), 0.22);
-  background: color-mix(in srgb, var(--primary-soft) 70%, var(--surface) 30%);
-  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.06);
+  background: color-mix(in srgb, var(--primary-soft) 34%, var(--surface) 66%);
 }
 
 .template-card-name {
@@ -488,15 +484,16 @@
 /* ── Responsive ── */
 
 @media (max-width: 1080px) {
-  .task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-hero {
+    padding: 34px 32px;
+  }
 }
 
 @media (max-width: 860px) {
   .workspace-hero-skeleton,
   .workspace-hero { grid-template-columns: 1fr; }
-  .task-grid { grid-template-columns: 1fr; }
   .create-row { grid-template-columns: 1fr; }
-  .create-frame { padding: 24px; }
+  .create-frame { padding: 28px; }
 }
 
 @media (max-width: 600px) {

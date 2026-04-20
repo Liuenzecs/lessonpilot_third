@@ -18,9 +18,9 @@ defineEmits<{
 }>();
 
 function getRewriteLabel(action: 'rewrite' | 'expand' | 'simplify') {
-  if (action === 'expand') return '扩写';
-  if (action === 'simplify') return '精简';
-  return '重写';
+  if (action === 'expand') return '补充展开';
+  if (action === 'simplify') return '压缩表达';
+  return '改写';
 }
 </script>
 
@@ -32,10 +32,10 @@ function getRewriteLabel(action: 'rewrite' | 'expand' | 'simplify') {
 
     <div v-if="isGenerating" class="generation-banner generating">
       <span>
-        正在生成 {{ currentSection || '内容' }}
+        正在整理 {{ currentSection || '内容' }}
         <template v-if="total">（{{ completed }}/{{ total }}）</template>
       </span>
-      <button class="button ghost stop-btn" type="button" @click="$emit('stop')">停止生成</button>
+      <button class="button ghost stop-btn" type="button" @click="$emit('stop')">停止整理</button>
     </div>
 
     <div v-if="isRewriting" class="generation-banner secondary">

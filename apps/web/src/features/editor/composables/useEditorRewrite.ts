@@ -72,7 +72,7 @@ export function useEditorRewrite(options: UseEditorRewriteOptions) {
           rewriteState.sectionName = null;
           rewriteState.streamingText = '';
           onRefetch();
-          toast.success('重写完成', '请确认新内容。');
+          toast.success('改写完成', '请确认更新后的内容。');
         },
         onError(eventPayload) {
           streamError.value = eventPayload.message;
@@ -81,8 +81,8 @@ export function useEditorRewrite(options: UseEditorRewriteOptions) {
           rewriteState.streamingText = '';
         },
       });
-    } catch (error) {
-      streamError.value = '重写失败，请稍后再试。';
+    } catch {
+      streamError.value = '改写失败，请稍后再试。';
       rewriteState.isRewriting = false;
       rewriteState.sectionName = null;
       rewriteState.streamingText = '';

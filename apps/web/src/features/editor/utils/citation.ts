@@ -1,6 +1,6 @@
 import type { CitationInfo } from '@/features/generation/composables/useGeneration'
 
-const CITE_RE = /\[cite:([a-f0-9\-]+)\]/g
+const CITE_RE = /\[cite:([a-f0-9-]+)\]/g
 
 /** 从文本中提取所有 chunk_id */
 export function extractCitationIds(text: string): string[] {

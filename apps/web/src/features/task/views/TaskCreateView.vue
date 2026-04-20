@@ -77,7 +77,7 @@ async function submit() {
       ...form,
       requirements: form.requirements.trim() || null,
     });
-    toast.info('已进入编辑器，正在生成…', '内容将逐步生成到编辑器中。');
+    toast.info('已进入编辑器，正在整理初稿…', '内容会逐节写入编辑器。');
     await router.push({ name: 'editor', params: { taskId: task.id } });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
@@ -102,7 +102,7 @@ async function submit() {
         <div class="create-head-copy">
           <p class="page-eyebrow">创建备课</p>
           <h1 class="page-title">开始一份新备课</h1>
-          <p class="subtitle">先确定学科、年级和课题，文档会再按 section 逐节生成并实时落到编辑器里。</p>
+          <p class="subtitle">先确定学科、年级和课题，系统会按 section 逐节整理初稿并实时写入编辑器。</p>
         </div>
       </div>
 
@@ -183,9 +183,9 @@ async function submit() {
           </div>
         </div>
 
-        <!-- 生成类型 -->
+        <!-- 文档类型 -->
         <div class="create-field">
-          <label class="create-label">生成内容</label>
+          <label class="create-label">文档类型</label>
           <div class="create-toggle-group">
             <button
               v-for="opt in LESSON_TYPE_OPTIONS"
@@ -221,7 +221,7 @@ async function submit() {
         <div v-if="templates.length > 0" class="create-field">
           <label class="create-label">选择模板（可选）</label>
           <p v-if="templatesLoading" class="create-helper">正在匹配可用模板…</p>
-          <p v-else class="create-helper">不选择也可以，系统会根据学科与生成内容自动匹配。</p>
+          <p v-else class="create-helper">不选择也可以，系统会根据学科与文档类型自动匹配。</p>
           <div class="template-choice-grid">
             <button
               type="button"
@@ -229,8 +229,8 @@ async function submit() {
               :class="{ active: form.template_id === null }"
               @click="form.template_id = null"
             >
-              <span class="template-card-name">自动匹配</span>
-              <span class="template-card-desc">根据场景自动选择最合适的模板</span>
+              <span class="template-card-name">系统推荐</span>
+              <span class="template-card-desc">根据当前场景匹配更合适的模板</span>
             </button>
             <button
               v-for="tpl in templates"
@@ -266,7 +266,7 @@ async function submit() {
             type="submit"
             :disabled="!canSubmit || createTaskMutation.isPending.value"
           >
-            {{ createTaskMutation.isPending.value ? '正在创建...' : '开始生成' }}
+            {{ createTaskMutation.isPending.value ? '正在创建...' : '开始备课' }}
           </button>
         </div>
       </form>
