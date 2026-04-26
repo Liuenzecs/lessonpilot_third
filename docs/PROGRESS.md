@@ -1231,3 +1231,21 @@
 - 验证结果：
   - 本次仅同步项目文档入口，未改动产品运行代码，未运行前后端测试
 - Status: DONE（待提交推送）
+
+## [Cycle 4] — 阶段级自动执行 Skill
+- 完成日期：2026-04-26
+- 完成内容：
+  - 新增 `lessonpilot-phase-autopilot-runner` 本机 Codex skill，用于在用户明确授权的阶段内自动拆分多个内部 Cycle 并持续推进
+  - 明确该 skill 的边界：不能切换 Plan mode、不能自动替用户验收、不能绕过 `AGENTS.md`、不能无授权进入下一阶段
+  - 为该 skill 补充 phase charter、execution loop、stop gates 三份 reference，要求先有阶段目标、范围、验收标准和提交推送策略
+  - 同步 `AGENTS.md / CLAUDE.md / docs/NEXT.md` 中的 skills 列表，从 7 个扩展为 8 个
+- 关键文件：
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+  - `C:/Users/realfeeling1/.codex/skills/lessonpilot-phase-autopilot-runner`（NEW）
+- 验证结果：
+  - `lessonpilot-phase-autopilot-runner` 已通过 `quick_validate.py` 结构校验（使用 `PYTHONUTF8=1`）
+  - 本次未改动产品运行代码，未运行前后端测试
+- Status: DONE

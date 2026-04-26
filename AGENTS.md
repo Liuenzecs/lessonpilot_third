@@ -34,6 +34,7 @@
 - `lessonpilot-rag-knowledge-pack-builder`：语文 RAG 知识包设计、入库与引用验证
 - `lessonpilot-export-quality-checker`：导出前体检与 Word 提交质量检查
 - `lessonpilot-cycle-maintainer`：`NEXT / PROGRESS / GOAL / CLAUDE` 等文档状态维护
+- `lessonpilot-phase-autopilot-runner`：在用户明确授权的阶段内，自动拆分多个内部 Cycle 并持续执行到阶段验收口
 
 ### 完成任务后
 

@@ -24,7 +24,7 @@
 - [x] 已补 `docs/rag-current.md` 与 `docs/rag-sales.md`
 - [x] 已补产品/竞品/老师工作流/质量标准/验收/路线图文档
 - [x] 已补 `docs/specs/` 技术契约与 `docs/decisions/` 架构决策记录
-- [x] 已创建 7 个 LessonPilot 专用 Codex skills，覆盖产品策略、教学质量、Word 模板、旧资料迁移、RAG 知识包、导出体检和 Cycle 文档维护
+- [x] 已创建 8 个 LessonPilot 专用 Codex skills，覆盖产品策略、教学质量、Word 模板、旧资料迁移、RAG 知识包、导出体检、Cycle 文档维护和阶段级自动执行
 - [x] 已同步 `AGENTS.md` 与 `CLAUDE.md`，明确文档读取顺序、文档地图与专用 skills 使用口径
 
 ## 本轮待验收
