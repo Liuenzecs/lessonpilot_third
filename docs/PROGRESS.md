@@ -1180,3 +1180,54 @@
   - `pnpm --dir apps/web lint -- --quiet`：passed
   - `pnpm --dir apps/web build`：passed（含 `vue-tsc`）
 - Status: DONE
+
+## [Cycle 4] — 产品文档与 Codex skills 基础建设
+- 完成日期：2026-04-26
+- 完成内容：
+  - 创建 7 个 LessonPilot 专用 Codex skills：
+    - `lessonpilot-product-strategist`：产品策略、竞品迁移、路线图优先级
+    - `lessonpilot-teaching-quality-reviewer`：教案/学案内容质量审查
+    - `lessonpilot-word-template-importer`：学校 Word 模板识别与字段映射
+    - `lessonpilot-legacy-material-ingestor`：旧 Word/PPT/讲义/资料迁移到结构化内容
+    - `lessonpilot-rag-knowledge-pack-builder`：语文 RAG 知识包设计、入库与引用验证
+    - `lessonpilot-export-quality-checker`：导出前体检与 Word 提交质量检查
+    - `lessonpilot-cycle-maintainer`：`NEXT / PROGRESS / GOAL / CLAUDE` 等文档状态维护
+  - 新增产品与执行文档，沉淀产品定位、竞品迁移策略、老师真实工作流、质量标准、验收脚本和路线图
+  - 新增 `docs/specs/` 技术契约文档，记录内容模型、section SSE、Word 导出和 RAG 规格
+  - 新增 ADR，明确“结构化 JSON 是内容中枢”的架构决策
+  - 更新 `docs/NEXT.md`，把新增 docs 与 skills 纳入本轮待验收项，但不自动进入下一阶段
+- 关键文件：
+  - `docs/PRODUCT.md`（NEW）
+  - `docs/COMPETITIVE.md`（NEW）
+  - `docs/TEACHER_WORKFLOWS.md`（NEW）
+  - `docs/QUALITY_RUBRIC.md`（NEW）
+  - `docs/ACCEPTANCE.md`（NEW）
+  - `docs/ROADMAP.md`（NEW）
+  - `docs/specs/content-model.md`（NEW）
+  - `docs/specs/section-sse.md`（NEW）
+  - `docs/specs/export-docx.md`（NEW）
+  - `docs/specs/rag.md`（NEW）
+  - `docs/decisions/ADR-0001-structured-json-as-core.md`（NEW）
+  - `docs/NEXT.md`（UPDATE）
+  - `C:/Users/realfeeling1/.codex/skills/lessonpilot-*`（NEW）
+- 验证结果：
+  - 7 个新增 skill 均已通过 `quick_validate.py` 结构校验（使用 `PYTHONUTF8=1` 规避 Windows 默认 GBK 解码问题）
+  - 本次仅新增文档和本地 Codex skills，未改动产品运行代码，未运行前后端测试
+- Status: DONE（待用户确认新增文档与 skills 方向）
+
+## [Cycle 4] — Agent 入口文档同步与提交准备
+- 完成日期：2026-04-26
+- 完成内容：
+  - 完善 `AGENTS.md`：明确正式工作前先读行为约束，再读 `CLAUDE / NEXT / PROGRESS`，并补充文档口径冲突时的优先级
+  - 在 `AGENTS.md` 中加入 7 个 LessonPilot 专用 Codex skills 的使用场景，方便后续 agent 按任务触发
+  - 完善 `CLAUDE.md`：补齐 `docs/` 文档地图、当前新增文档状态和专用 skills 使用口径
+  - 更新 `docs/NEXT.md`，将 `AGENTS / CLAUDE` 同步纳入本轮已完成事项
+  - 准备按用户要求提交并推送当前 `ai` 分支
+- 关键文件：
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+- 验证结果：
+  - 本次仅同步项目文档入口，未改动产品运行代码，未运行前后端测试
+- Status: DONE（待提交推送）
