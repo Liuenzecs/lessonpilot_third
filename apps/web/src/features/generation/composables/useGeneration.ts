@@ -10,6 +10,15 @@ export interface CitationInfo {
   content_snippet: string;
 }
 
+export interface RagStatusInfo {
+  status: 'disabled' | 'unmatched' | 'matched_empty' | 'ready' | 'degraded';
+  domain?: string | null;
+  matched_keywords: string[];
+  chunk_count: number;
+  retrieved_count: number;
+  message: string;
+}
+
 export interface SectionDocumentPayload extends LessonDocument {
   section_name: string;
   section_title: string;
@@ -29,6 +38,7 @@ export interface SectionStreamHandlers {
   onSectionDelta?: (payload: { doc_type?: string; section_name: string; delta?: string; text?: string }) => void;
   onSectionDocument?: (payload: SectionDocumentPayload) => void;
   onSectionDone?: (payload: { doc_type?: string; section_name: string; completed?: number; total?: number }) => void;
+  onRagStatus?: (payload: RagStatusInfo) => void;
   onCitations?: (payload: { doc_type: string; section_name?: string; citations: CitationInfo[] }) => void;
   onWarning?: (payload: { message: string; doc_type?: string; section_name?: string }) => void;
   onDocumentDone?: (payload: { message?: string; task_id?: string; document_id?: string }) => void;
@@ -118,6 +128,9 @@ export async function consumeSectionStream(
           break;
         case 'section_done':
           handlers.onSectionDone?.(payload);
+          break;
+        case 'rag_status':
+          handlers.onRagStatus?.(payload);
           break;
         case 'citations':
           handlers.onCitations?.(payload);

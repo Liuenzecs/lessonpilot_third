@@ -480,6 +480,7 @@ async def _stream_chat_completion(
     model: str,
     system_prompt: str,
     user_prompt: str,
+    thinking: str | None = None,
 ) -> AsyncIterator[str]:
     """通用的 chat completion 流式调用。"""
     url = f"{base_url.rstrip('/')}/chat/completions"
@@ -487,16 +488,12 @@ async def _stream_chat_completion(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "stream": True,
-        "temperature": 0.6,
-        "max_tokens": 8192,
-    }
+    payload = _build_chat_completion_payload(
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        thinking=thinking,
+    )
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
         async with client.stream("POST", url, json=payload, headers=headers) as resp:
@@ -518,6 +515,30 @@ async def _stream_chat_completion(
                     continue
 
 
+def _build_chat_completion_payload(
+    *,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    thinking: str | None = None,
+) -> dict:
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "stream": True,
+        "temperature": 0.6,
+        "max_tokens": 8192,
+    }
+    if thinking:
+        payload["thinking"] = {"type": thinking}
+        if thinking == "enabled":
+            payload.pop("temperature", None)
+    return payload
+
+
 # ---------------------------------------------------------------------------
 # DeepSeekProvider
 # ---------------------------------------------------------------------------
@@ -529,6 +550,7 @@ class DeepSeekProvider(LLMProvider):
         self._base_url = s.deepseek_base_url
         self._api_key = s.deepseek_api_key
         self._model = s.deepseek_model
+        self._thinking = s.deepseek_thinking
 
     async def generate_lesson_plan(
         self, ctx: LessonPlanContext
@@ -552,6 +574,7 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的教案生成引擎。请严格按照要求输出结构化 JSON，不要输出其他内容。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 
@@ -576,6 +599,7 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的学案生成引擎。请严格按照要求输出结构化 JSON，不要输出其他内容。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 
@@ -599,6 +623,7 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的教案/学案内容重写引擎。请输出重写后的 JSON 片段，不要输出其他内容。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 
@@ -630,6 +655,7 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的 section 生成引擎。只输出当前 section 的 JSON 值，不要输出额外说明。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 

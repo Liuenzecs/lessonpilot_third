@@ -9,55 +9,19 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 import httpx
-from sqlalchemy import text
+from pydantic import BaseModel
+from sqlalchemy import func, text
 from sqlmodel import Session, select
 
 from app.core.config import get_settings
 from app.models.knowledge import KnowledgeChunk
+from app.services.knowledge_pack_service import (
+    find_matched_trigger_terms,
+    load_default_knowledge_pack,
+)
 
 logger = logging.getLogger("lessonpilot.knowledge")
 
-
-_RAG_RULES: tuple[dict[str, tuple[str, ...]], ...] = (
-    {
-        "domain": "红楼梦",
-        "keywords": (
-            "红楼梦",
-            "石头记",
-            "贾宝玉",
-            "林黛玉",
-            "薛宝钗",
-            "王熙凤",
-            "贾母",
-            "刘姥姥",
-            "大观园",
-            "金陵十二钗",
-            "曹雪芹",
-            "黛玉葬花",
-            "宝玉挨打",
-            "葫芦僧",
-            "抄检大观园",
-            "元春",
-            "迎春",
-            "探春",
-            "惜春",
-            "史湘云",
-            "妙玉",
-            "秦可卿",
-            "李纨",
-            "巧姐",
-            "晴雯",
-            "袭人",
-            "紫鹃",
-            "薛蟠",
-            "贾政",
-            "贾赦",
-            "王夫人",
-            "贾琏",
-            "平儿",
-        ),
-    },
-)
 
 _CITE_PATTERN = re.compile(r"\[cite:([a-f0-9\-]+)\]")
 
@@ -76,6 +40,14 @@ class CitationInfo:
     knowledge_type: str
     chapter: str | None
     content_snippet: str
+
+
+@dataclass(slots=True)
+class RagRouteMatch:
+    domain: str
+    matched_keywords: list[str]
+    pack_id: str
+    pack_version: str
 
 
 def extract_citations(raw: str) -> list[CitationMatch]:
@@ -99,6 +71,8 @@ def strip_citations_from_content(content: dict) -> tuple[dict, list[str]]:
 
 
 def _strip_recursive(obj: object, chunk_ids: set[str]) -> object:
+    if isinstance(obj, BaseModel):
+        return _strip_recursive(obj.model_dump(by_alias=True), chunk_ids)
     if isinstance(obj, str):
         matches = extract_citations(obj)
         chunk_ids.update(match.chunk_id for match in matches)
@@ -110,21 +84,42 @@ def _strip_recursive(obj: object, chunk_ids: set[str]) -> object:
     return obj
 
 
-def resolve_rag_domain(topic: str) -> str | None:
-    """根据 topic 命中知识域。"""
+def resolve_rag_domain_match(topic: str) -> RagRouteMatch | None:
+    """根据 topic 命中知识域，并保留触发证据。"""
     settings = get_settings()
     if not settings.rag_enabled or settings.rag_trigger_mode == "disabled":
         return None
+    pack = load_default_knowledge_pack()
     if settings.rag_trigger_mode == "always":
-        return _RAG_RULES[0]["domain"] if _RAG_RULES else None
-    for rule in _RAG_RULES:
-        if any(keyword in topic for keyword in rule["keywords"]):
-            return rule["domain"]
+        domain = pack.domains[0] if pack.domains else None
+        if domain is None:
+            return None
+        return RagRouteMatch(
+            domain=domain.domain,
+            matched_keywords=[],
+            pack_id=pack.pack_id,
+            pack_version=pack.version,
+        )
+    for domain in pack.domains:
+        matched_keywords = find_matched_trigger_terms(topic, domain.trigger_terms)
+        if matched_keywords:
+            return RagRouteMatch(
+                domain=domain.domain,
+                matched_keywords=matched_keywords,
+                pack_id=pack.pack_id,
+                pack_version=pack.version,
+            )
     return None
 
 
+def resolve_rag_domain(topic: str) -> str | None:
+    """根据 topic 命中知识域。"""
+    match = resolve_rag_domain_match(topic)
+    return match.domain if match else None
+
+
 def should_trigger_rag(topic: str) -> bool:
-    return resolve_rag_domain(topic) is not None
+    return resolve_rag_domain_match(topic) is not None
 
 
 @lru_cache(maxsize=4)
@@ -237,6 +232,7 @@ async def retrieve_knowledge(
     max_tokens: int = 3000,
     top_k: int = 8,
     domain: str | None = None,
+    raise_on_embedding_error: bool = False,
 ) -> list[KnowledgeChunk]:
     """基于 topic + requirements 进行向量检索，返回最相关的知识片段。"""
     target_domain = domain or resolve_rag_domain(topic)
@@ -248,6 +244,8 @@ async def retrieve_knowledge(
         query_embedding = (await get_embeddings([query_text], type_="query"))[0]
     except Exception:
         logger.warning("Embedding 调用失败，跳过 RAG 检索", exc_info=True)
+        if raise_on_embedding_error:
+            raise
         return []
 
     embedding_str = "[" + ",".join(str(value) for value in query_embedding) + "]"
@@ -275,6 +273,30 @@ async def retrieve_knowledge(
         chunks.append(chunk)
         total_tokens += chunk.token_count
     return chunks
+
+
+def count_knowledge_chunks(session: Session, domain: str) -> int:
+    """统计指定知识域中可用 chunk 数量。"""
+    return session.exec(
+        select(func.count()).select_from(KnowledgeChunk).where(KnowledgeChunk.domain == domain)
+    ).one()
+
+
+def preview_knowledge_chunks(
+    session: Session,
+    *,
+    domain: str,
+    limit: int = 3,
+) -> list[KnowledgeChunk]:
+    """返回诊断用预览 chunk，不触发 embedding。"""
+    return list(
+        session.exec(
+            select(KnowledgeChunk)
+            .where(KnowledgeChunk.domain == domain)
+            .order_by(KnowledgeChunk.created_at.desc())
+            .limit(limit)
+        ).all()
+    )
 
 
 def _row_to_chunk(row: object) -> KnowledgeChunk:

@@ -9,15 +9,16 @@
 常规生成：
 
 1. `status`
-2. `progress`
-3. `section_start`
-4. `section_delta`
-5. `section_document`
-6. `citations` 可选
-7. `section_done`
-8. 重复下一个 section
-9. `status`
-10. `document_done`
+2. `rag_status`
+3. `progress`
+4. `section_start`
+5. `section_delta`
+6. `section_document`
+7. `citations` 可选
+8. `section_done`
+9. 重复下一个 section
+10. `status`
+11. `document_done`
 
 局部重写：
 
@@ -72,6 +73,30 @@
 - `updated_at`
 - `section_name`
 - `section_title`
+
+### rag_status
+
+常规生成时返回一次，表示本次生成的知识增强状态。
+
+`status` 可取：
+
+- `disabled`：RAG 已关闭。
+- `unmatched`：课题未命中任何知识域。
+- `matched_empty`：命中知识域，但数据库中没有对应 chunk。
+- `ready`：命中知识域并检索到可注入的 chunk。
+- `degraded`：命中知识域，但检索或 embedding 临时失败，已降级普通生成。
+
+必须包含：
+
+- `status`
+- `message`
+- `matched_keywords`
+- `chunk_count`
+- `retrieved_count`
+
+可选包含：
+
+- `domain`
 
 ### citations
 

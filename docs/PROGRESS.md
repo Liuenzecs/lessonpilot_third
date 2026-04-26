@@ -1249,3 +1249,37 @@
   - `lessonpilot-phase-autopilot-runner` 已通过 `quick_validate.py` 结构校验（使用 `PYTHONUTF8=1`）
   - 本次未改动产品运行代码，未运行前后端测试
 - Status: DONE
+
+## [Phase 5] — 知识可信闭环自动推进至验收口
+- 完成日期：2026-04-26
+- 完成内容：
+  - 新增语文重点篇目知识包 manifest，首批覆盖 `红楼梦 / 春 / 背影 / 桃花源记 / 岳阳楼记 / 天净沙·秋思`
+  - 将 RAG 课题路由从代码常量迁移到知识包配置，支持 trigger terms 命中证据
+  - 重写知识入库脚本，写入 `pack_id / pack_version / trigger_terms / embedding_runtime`，并以 `domain + title` 避免重复入库
+  - 新增 `POST /api/v1/knowledge/diagnose`，返回 `disabled / unmatched / matched_empty / ready / degraded` 等老师可理解状态
+  - 生成 SSE 新增 `rag_status` 事件，编辑器状态条展示知识增强命中、未命中和降级提示
+  - 修复 Pydantic section 值中的 `[cite:...]` 未被递归清洗的问题，提升 `section_references` 落库可靠性
+  - DeepSeek 配置切到 `deepseek-v4-flash`，并通过 `DEEPSEEK_THINKING=disabled` 显式关闭 thinking
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-5-knowledge-trust.md`、`docs/specs/rag.md`、`docs/specs/section-sse.md`、`docs/rag-current.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/data/knowledge_packs/chinese_literature_v1.json`
+  - `apps/api/app/services/knowledge_pack_service.py`
+  - `apps/api/app/services/knowledge_service.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/api/v1/endpoints/knowledge.py`
+  - `apps/api/scripts/seed_knowledge.py`
+  - `apps/web/src/features/editor/components/EditorStatusBanner.vue`
+  - `apps/web/src/features/editor/composables/useEditorGeneration.ts`
+  - `.env.example`
+  - `apps/api/.env.example`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：131 passed（保留 2 条既有 Pydantic deprecation warning）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：31 passed
+  - `pnpm --dir apps/web build`：passed
+  - `docker compose up -d postgres`：本地 `pgvector/pgvector:pg16` PostgreSQL 已启动并 healthy
+  - `cd apps/api && .\.venv\Scripts\python.exe -m scripts.seed_knowledge`：passed，成功导入 16 条新知识；第二次执行显示“没有新的知识条目需要导入”
+  - 本地知识库当前 `knowledge_chunks = 32`：`红楼梦=17`、`春=3`、`背影=3`、`桃花源记=3`、`岳阳楼记=3`、`天净沙·秋思=3`
+  - 真实向量检索验证：`红楼梦薛宝钗人物分析`、`春 朱自清 第一课时`、`桃花源记文言文教学` 均命中对应 domain 并召回 3 条 chunk
+- Status: DONE（待用户验收，不自动提交推送）

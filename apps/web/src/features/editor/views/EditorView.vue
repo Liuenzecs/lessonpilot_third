@@ -164,6 +164,7 @@ function isRewritingSection(sectionName: string): boolean {
             :completed="generationProgress.completed"
             :total="generationProgress.total"
             :current-section="generationProgress.currentSection"
+            :rag-status="generationProgress.ragStatus"
             :is-rewriting="rewriteState.isRewriting"
             :rewrite-action="rewriteState.action"
             :is-appending="false"

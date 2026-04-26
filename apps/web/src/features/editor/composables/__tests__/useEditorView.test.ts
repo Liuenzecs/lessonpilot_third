@@ -63,6 +63,7 @@ vi.mock('@/features/editor/composables/useEditorGeneration', () => ({
       currentSectionName: null,
       streamingText: '',
       docType: '',
+      ragStatus: null,
     },
     startGeneration: vi.fn(),
     stopGeneration: vi.fn(),

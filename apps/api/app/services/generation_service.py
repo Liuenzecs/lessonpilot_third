@@ -11,6 +11,7 @@ from fastapi import HTTPException, Request, status
 from pydantic import TypeAdapter
 from sqlmodel import Session, select
 
+from app.core.config import get_settings
 from app.models import Document, Task
 from app.models.template import TemplateSection
 from app.schemas.content import (
@@ -28,8 +29,9 @@ from app.schemas.content import (
 from app.services.document_service import load_content, save_document
 from app.services.knowledge_service import (
     build_citation_metadata,
+    count_knowledge_chunks,
     format_knowledge_context,
-    resolve_rag_domain,
+    resolve_rag_domain_match,
     retrieve_knowledge,
     strip_citations_from_content,
 )
@@ -674,6 +676,25 @@ def _set_section_value(
     return LessonPlanContent.model_validate(data)
 
 
+def _build_rag_status_payload(
+    *,
+    status: str,
+    domain: str | None = None,
+    matched_keywords: list[str] | None = None,
+    chunk_count: int = 0,
+    retrieved_count: int = 0,
+    message: str,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "domain": domain,
+        "matched_keywords": matched_keywords or [],
+        "chunk_count": chunk_count,
+        "retrieved_count": retrieved_count,
+        "message": message,
+    }
+
+
 def _apply_citations_to_section(
     section_name: str,
     value: Any,
@@ -722,32 +743,83 @@ async def stream_generation(
         total_sections = sum(len(_get_section_specs(doc_type)) for doc_type in doc_types)
         completed_sections = 0
 
-        domain = resolve_rag_domain(task.topic)
+        settings = get_settings()
+        rag_match = resolve_rag_domain_match(task.topic)
         knowledge_chunks = []
         knowledge_ctx = ""
-        if domain:
-            try:
-                from app.core.config import get_settings
-
-                settings = get_settings()
-                knowledge_chunks = await retrieve_knowledge(
-                    session,
-                    topic=task.topic,
-                    requirements=task.requirements or "",
-                    max_tokens=settings.rag_max_knowledge_tokens,
-                    top_k=settings.rag_top_k,
-                    domain=domain,
+        if not settings.rag_enabled or settings.rag_trigger_mode == "disabled":
+            yield format_sse(
+                "rag_status",
+                _build_rag_status_payload(
+                    status="disabled",
+                    message="知识增强当前已关闭，本次会按普通生成处理。",
+                ),
+            )
+        elif rag_match is None:
+            yield format_sse(
+                "rag_status",
+                _build_rag_status_payload(
+                    status="unmatched",
+                    message="当前课题暂未命中已配置的语文知识包，本次会按普通生成处理。",
+                ),
+            )
+        else:
+            chunk_count = count_knowledge_chunks(session, rag_match.domain)
+            if chunk_count == 0:
+                yield format_sse(
+                    "rag_status",
+                    _build_rag_status_payload(
+                        status="matched_empty",
+                        domain=rag_match.domain,
+                        matched_keywords=rag_match.matched_keywords,
+                        message="已命中知识域，但知识库里还没有对应资料，请先导入知识包。",
+                    ),
                 )
-                knowledge_ctx = format_knowledge_context(knowledge_chunks)
-                if knowledge_chunks:
-                    logger.info(
-                        "RAG 检索到 %d 条知识 (task=%s, domain=%s)",
-                        len(knowledge_chunks),
-                        task.id,
-                        domain,
+            else:
+                rag_status_payload = _build_rag_status_payload(
+                    status="degraded",
+                    domain=rag_match.domain,
+                    matched_keywords=rag_match.matched_keywords,
+                    chunk_count=chunk_count,
+                    message="已命中知识域，但本次检索未返回可用资料，已按普通生成处理。",
+                )
+                try:
+                    knowledge_chunks = await retrieve_knowledge(
+                        session,
+                        topic=task.topic,
+                        requirements=task.requirements or "",
+                        max_tokens=settings.rag_max_knowledge_tokens,
+                        top_k=settings.rag_top_k,
+                        domain=rag_match.domain,
+                        raise_on_embedding_error=True,
                     )
-            except Exception:
-                logger.warning("RAG 检索失败 (task=%s)，跳过", task.id, exc_info=True)
+                    knowledge_ctx = format_knowledge_context(knowledge_chunks)
+                    if knowledge_chunks:
+                        logger.info(
+                            "RAG 检索到 %d 条知识 (task=%s, domain=%s)",
+                            len(knowledge_chunks),
+                            task.id,
+                            rag_match.domain,
+                        )
+                        rag_status_payload = _build_rag_status_payload(
+                            status="ready",
+                            domain=rag_match.domain,
+                            matched_keywords=rag_match.matched_keywords,
+                            chunk_count=chunk_count,
+                            retrieved_count=len(knowledge_chunks),
+                            message=f"已命中“{rag_match.domain}”知识包，本次会参考相关资料生成。",
+                        )
+                except Exception:
+                    logger.warning("RAG 检索失败 (task=%s)，跳过", task.id, exc_info=True)
+                    rag_status_payload = _build_rag_status_payload(
+                        status="degraded",
+                        domain=rag_match.domain,
+                        matched_keywords=rag_match.matched_keywords,
+                        chunk_count=chunk_count,
+                        message="知识增强检索暂时不可用，本次已自动降级为普通生成。",
+                    )
+
+                yield format_sse("rag_status", rag_status_payload)
 
         for doc_type in doc_types:
             await ensure_client_connected(request)

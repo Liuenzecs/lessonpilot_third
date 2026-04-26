@@ -1,6 +1,7 @@
 import { reactive } from 'vue';
 
 import type { LessonDocument } from '@/features/editor/types';
+import type { RagStatusInfo } from '@/features/generation/composables/useGeneration';
 import { consumeSectionStream } from '@/features/generation/composables/useGeneration';
 import { useStartGenerationMutation } from '@/features/task/composables/useTasks';
 import { useAuthStore } from '@/app/stores/auth';
@@ -35,6 +36,7 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
     currentSectionName: null as string | null,
     streamingText: '',
     docType: '',
+    ragStatus: null as RagStatusInfo | null,
   });
 
   let abortController: AbortController | null = null;
@@ -50,6 +52,7 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
     generationProgress.currentSectionName = sectionName ?? null;
     generationProgress.streamingText = '';
     generationProgress.docType = '';
+    generationProgress.ragStatus = null;
     abortController = new AbortController();
 
     try {
@@ -87,6 +90,9 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
           },
           onSectionDone() {
             generationProgress.completed++;
+          },
+          onRagStatus(payload) {
+            generationProgress.ragStatus = payload;
           },
           onWarning(payload) {
             toast.info('整理提醒', payload.message);

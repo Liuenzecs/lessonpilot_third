@@ -8,6 +8,7 @@ from app.services.llm_service import (
     FakeProvider,
     LessonPlanContext,
     StudyGuideContext,
+    _build_chat_completion_payload,
     _load_prompt,
     _render,
     get_provider,
@@ -37,6 +38,31 @@ def test_load_prompt_exists():
     ]:
         content = _load_prompt(name)
         assert len(content) > 50
+
+
+def test_deepseek_v4_payload_disables_thinking():
+    payload = _build_chat_completion_payload(
+        model="deepseek-v4-flash",
+        system_prompt="system",
+        user_prompt="user",
+        thinking="disabled",
+    )
+
+    assert payload["model"] == "deepseek-v4-flash"
+    assert payload["thinking"] == {"type": "disabled"}
+    assert payload["temperature"] == 0.6
+
+
+def test_thinking_enabled_payload_removes_temperature():
+    payload = _build_chat_completion_payload(
+        model="deepseek-v4-pro",
+        system_prompt="system",
+        user_prompt="user",
+        thinking="enabled",
+    )
+
+    assert payload["thinking"] == {"type": "enabled"}
+    assert "temperature" not in payload
 
 
 def test_fake_provider_generates_valid_lesson_plan_json():

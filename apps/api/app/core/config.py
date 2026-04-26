@@ -52,8 +52,9 @@ class Settings(BaseSettings):
     rate_limit_general_per_minute: int = 60
     llm_provider: Literal["fake", "deepseek", "minimax"] = "fake"
     deepseek_api_key: str = ""
-    deepseek_model: str = "deepseek-chat"
-    deepseek_base_url: str = "https://api.deepseek.com/v1"
+    deepseek_model: str = "deepseek-v4-flash"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_thinking: Literal["enabled", "disabled"] = "disabled"
     minimax_api_key: str = ""
     minimax_model: str = "MiniMax-Text-01"
     minimax_base_url: str = "https://api.minimax.chat/v1"

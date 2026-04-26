@@ -4,12 +4,15 @@ import asyncio
 from unittest.mock import AsyncMock
 
 from app.models.knowledge import KnowledgeChunk
+from app.schemas.content import TeachingObjective
+from app.services.knowledge_pack_service import load_default_knowledge_pack
 from app.services.knowledge_service import (
     estimate_tokens,
     extract_citations,
     format_knowledge_context,
     get_embeddings,
     resolve_rag_domain,
+    resolve_rag_domain_match,
     should_trigger_rag,
     strip_citations,
     strip_citations_from_content,
@@ -24,10 +27,11 @@ def test_should_trigger_rag_match():
     assert should_trigger_rag("红楼梦人物分析") is True
     assert should_trigger_rag("贾宝玉的性格特点") is True
     assert should_trigger_rag("黛玉葬花赏析") is True
+    assert should_trigger_rag("春 朱自清 第一课时") is True
+    assert should_trigger_rag("桃花源记文言文教学") is True
 
 
 def test_should_trigger_rag_no_match():
-    assert should_trigger_rag("春——朱自清") is False
     assert should_trigger_rag("论语十二章") is False
     assert should_trigger_rag("") is False
 
@@ -42,7 +46,31 @@ def test_should_trigger_rag_disabled(monkeypatch):
 
 def test_resolve_rag_domain():
     assert resolve_rag_domain("贾宝玉人物分析") == "红楼梦"
-    assert resolve_rag_domain("春——朱自清") is None
+    assert resolve_rag_domain("春——朱自清") == "春"
+    assert resolve_rag_domain("背影 朱自清") == "背影"
+
+
+def test_resolve_rag_domain_match_includes_evidence():
+    match = resolve_rag_domain_match("岳阳楼记第二课时")
+
+    assert match is not None
+    assert match.domain == "岳阳楼记"
+    assert match.matched_keywords == ["岳阳楼记"]
+    assert match.pack_id == "chinese_literature_core"
+
+
+def test_default_knowledge_pack_manifest_is_valid():
+    pack = load_default_knowledge_pack()
+
+    assert {domain.domain for domain in pack.domains} >= {
+        "红楼梦",
+        "春",
+        "背影",
+        "桃花源记",
+        "岳阳楼记",
+        "天净沙·秋思",
+    }
+    assert all(entry.domain in pack.domain_map for entry in pack.entries)
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +126,22 @@ def test_strip_citations_from_content_empty():
     cleaned, ids = strip_citations_from_content(content)
     assert cleaned == {"text": "无引用内容"}
     assert ids == []
+
+
+def test_strip_citations_from_pydantic_content():
+    content = {
+        "objectives": [
+            TeachingObjective(
+                dimension="knowledge",
+                content="理解人物形象[cite:abc-123]",
+            )
+        ]
+    }
+
+    cleaned, ids = strip_citations_from_content(content)
+
+    assert cleaned["objectives"][0]["content"] == "理解人物形象"
+    assert ids == ["abc-123"]
 
 
 # ---------------------------------------------------------------------------

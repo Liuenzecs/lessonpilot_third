@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import json
 
-from app.services import rewrite_service
+from sqlmodel import Session
+
+from app.core.db import get_engine
+from app.models.knowledge import KnowledgeChunk
+from app.services import generation_service, rewrite_service
 
 
 def _parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
@@ -55,12 +59,79 @@ def test_generation_produces_lesson_plan_content(client, auth_headers):
     events = _parse_sse_events(payload)
     assert events[-1][0] == "document_done"
     assert len([item for item in events if item[0] == "section_document"]) == 6
+    rag_events = [item for item in events if item[0] == "rag_status"]
+    assert rag_events[0][1]["status"] == "matched_empty"
 
     refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
     content = refreshed["content"]
     assert content["doc_type"] == "lesson_plan"
     assert len(content["objectives"]) > 0
     assert len(content["teaching_process"]) > 0
+
+
+def test_generation_rag_status_ready_and_section_references(client, auth_headers, monkeypatch):
+    chunk_id = "123e4567-e89b-12d3-a456-426614174111"
+    chunk = KnowledgeChunk(
+        id=chunk_id,
+        domain="红楼梦",
+        knowledge_type="character_profile",
+        title="薛宝钗人物分析",
+        content="薛宝钗端庄稳重，适合与林黛玉进行人物对比教学。",
+        source="测试知识包",
+        chapter="全书",
+        token_count=20,
+    )
+    with Session(get_engine()) as session:
+        session.add(chunk)
+        session.commit()
+
+    async def fake_retrieve_knowledge(*_args, **_kwargs):
+        return [
+            KnowledgeChunk(
+                id=chunk_id,
+                domain="红楼梦",
+                knowledge_type="character_profile",
+                title="薛宝钗人物分析",
+                content="薛宝钗端庄稳重，适合与林黛玉进行人物对比教学。",
+                source="测试知识包",
+                chapter="全书",
+                token_count=20,
+            )
+        ]
+
+    monkeypatch.setattr(generation_service, "retrieve_knowledge", fake_retrieve_knowledge)
+
+    create_response = client.post(
+        "/api/v1/tasks/",
+        headers=auth_headers,
+        json={
+            "subject": "语文",
+            "grade": "七年级",
+            "topic": "红楼梦薛宝钗人物分析",
+            "requirements": "强调人物对比",
+        },
+    )
+    assert create_response.status_code == 201
+    task_id = create_response.json()["id"]
+
+    start_response = client.post(
+        f"/api/v1/tasks/{task_id}/generate",
+        headers=auth_headers,
+        json={},
+    )
+
+    with client.stream("GET", start_response.json()["stream_url"], headers=auth_headers) as resp:
+        events = _parse_sse_events("".join(resp.iter_text()))
+
+    rag_events = [item for item in events if item[0] == "rag_status"]
+    citation_events = [item for item in events if item[0] == "citations"]
+    assert rag_events[0][1]["status"] == "ready"
+    assert rag_events[0][1]["domain"] == "红楼梦"
+    assert citation_events
+
+    documents_response = client.get(f"/api/v1/documents/?task_id={task_id}", headers=auth_headers)
+    content = documents_response.json()["items"][0]["content"]
+    assert content["section_references"]["objectives"][0]["title"] == "薛宝钗人物分析"
 
 
 def test_section_rewrite_flow(client, auth_headers):
