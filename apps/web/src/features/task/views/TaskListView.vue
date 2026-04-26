@@ -130,6 +130,10 @@ async function exportTask(task: TaskRecord) {
           <span class="workspace-start-title">+ 开始备课</span>
           <span class="workspace-start-subtitle">选择学科和主题，快速起草教案</span>
         </button>
+        <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
+          <span class="workspace-start-title">导入旧教案</span>
+          <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
+        </button>
       </div>
 
       <StatePanel
@@ -155,6 +159,9 @@ async function exportTask(task: TaskRecord) {
         <p>创建第一份教案，让备课从一份可修改的初稿开始。</p>
         <div class="button-row">
           <button class="button primary" type="button" @click="startFirstTask">开始第一次备课</button>
+          <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
+            导入旧教案
+          </button>
           <button class="button ghost" type="button" @click="router.push({ name: 'help' })">
             3 分钟快速上手指南
           </button>

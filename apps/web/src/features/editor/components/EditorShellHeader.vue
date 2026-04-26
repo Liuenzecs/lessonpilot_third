@@ -7,6 +7,8 @@ defineProps<{
   outlineCollapsed: boolean;
   exportMenuOpen: boolean;
   hasMultipleDocs: boolean;
+  qualityReadiness: 'ready' | 'needs_fixes' | 'blocked' | null;
+  qualityChecking: boolean;
 }>();
 
 defineEmits<{
@@ -17,6 +19,7 @@ defineEmits<{
   export: [format: 'docx'];
   'export-all': [];
   'open-export-preview': [];
+  'quality-check': [];
   refresh: [];
   'retry-save': [];
 }>();
@@ -40,6 +43,14 @@ function getSaveLabel(
     return '未同步';
   }
   return '版本冲突';
+}
+
+function getQualityLabel(readiness: 'ready' | 'needs_fixes' | 'blocked' | null, checking: boolean) {
+  if (checking) return '体检中...';
+  if (readiness === 'ready') return '体检通过';
+  if (readiness === 'needs_fixes') return '有提交提醒';
+  if (readiness === 'blocked') return '有阻断项';
+  return '导出前体检';
 }
 </script>
 
@@ -92,6 +103,15 @@ function getSaveLabel(
       </div>
 
       <button class="button secondary" type="button" @click="$emit('open-history')">历史版本</button>
+      <button
+        class="button secondary quality-check-button"
+        type="button"
+        :class="qualityReadiness ? `quality-${qualityReadiness}` : ''"
+        :disabled="qualityChecking"
+        @click="$emit('quality-check')"
+      >
+        {{ getQualityLabel(qualityReadiness, qualityChecking) }}
+      </button>
 
       <div class="export-dropdown">
         <button class="button primary" type="button" @click="$emit('toggle-export-menu')">导出 ▾</button>

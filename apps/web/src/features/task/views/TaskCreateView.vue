@@ -96,9 +96,14 @@ async function submit() {
   <div class="page-shell create-page">
     <div class="create-frame app-card">
       <div class="create-head">
-        <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
-          ← 返回备课台
-        </button>
+        <div class="create-head-actions">
+          <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
+            ← 返回备课台
+          </button>
+          <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
+            导入旧教案
+          </button>
+        </div>
         <div class="create-head-copy">
           <p class="page-eyebrow">创建备课</p>
           <h1 class="page-title">开始一份新备课</h1>

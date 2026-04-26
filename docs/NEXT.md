@@ -1,46 +1,59 @@
-# 当前任务：Phase 5 知识可信闭环（待验收）
+# 当前任务：Phase 6 迁移与提交闭环（实施中）
 
 ## 本阶段目标
 
-把现有“工程版 RAG”推进成老师可感知的“知识可信层”：
+让老师把旧 Word 教案带进 LessonPilot，并在导出前知道“这份能不能交”：
 
-- 扩充语文重点篇目知识包
-- 生成前能判断是否命中知识库
-- 生成中能展示命中 / 未命中 / 降级状态
-- 生成后继续通过 `section_references` 留下引用证据
+- `.docx` 旧教案导入
+- 结构化预览确认
+- 导出前体检
+
+## 已授权范围
+
+- 支持 `.docx` 教案导入，不支持 `.doc`、PDF、PPT、讲义或学案导入
+- 保留老师原文，不用大模型自动改写导入内容
+- 导入内容默认 `pending`，由老师逐节确认
+- 做轻量提交风险检查，不做完整学校 Word 模板复刻
+- 阶段结束停在验收口，不自动提交 / 推送，不进入下一阶段
+
+## 实施清单
+
+- [x] 写入 Phase 6 阶段文档与导入规格
+- [x] 新增 `.docx` 教案导入 preview API
+- [x] 新增导入 confirm API，创建普通 `Task + Document`
+- [x] 新增导出前体检 API
+- [x] 前端增加“导入旧教案”入口、上传预览和确认流程
+- [x] 编辑器导出区域展示导出前体检结果
+- [x] 补齐后端与前端测试
+- [x] 更新验收脚本与阶段完成记录
 
 ## 已实现
 
-- [x] 将知识种子迁移为可维护的知识包 manifest
-- [x] 首批覆盖 `红楼梦`、`春`、`背影`、`桃花源记`、`岳阳楼记`、`天净沙·秋思`
-- [x] 路由规则改为从知识包配置读取
-- [x] 种子脚本写入 `pack_id / pack_version / trigger_terms / embedding_runtime`
-- [x] 新增 `POST /api/v1/knowledge/diagnose` 知识命中诊断 API
-- [x] 生成 SSE 新增 `rag_status` 事件
-- [x] 前端编辑器展示知识增强状态
-- [x] 修复 Pydantic section 值中 citation 未被清洗为 `section_references` 的问题
-- [x] 更新 RAG 规格、SSE 规格、当前能力说明与验收脚本
-- [x] DeepSeek 默认配置切到 `deepseek-v4-flash`，并显式关闭 thinking
-
-## 本轮待验收
-
-- [x] 启动本地 PostgreSQL 后执行 `cd apps/api && .\.venv\Scripts\python.exe -m scripts.seed_knowledge`
-- [x] 手动验证重复执行知识入库不会制造重复 chunk
-- [x] 验证 `红楼梦薛宝钗人物分析`、`春 朱自清 第一课时`、`桃花源记文言文教学` 能命中知识包并召回 chunk
-- [ ] 创建对应语文任务并生成，确认编辑器显示知识增强状态
-- [ ] 命中 RAG 时确认 `section_references` 非空，且 section 顶部参考资料 tooltip 正常
-- [ ] 诊断一个未覆盖课题，确认显示普通生成提示
-- [ ] 用 DeepSeek 真实链路生成一次，确认 `deepseek-v4-flash + thinking disabled` 可返回结构化 section JSON
+- 后端新增 `POST /api/v1/import/lesson-plan/preview`，支持 `.docx` 解析、栏目映射、未识别内容保留和 warning。
+- 后端新增 `POST /api/v1/import/lesson-plan/confirm`，把导入预览创建为普通 `Task + Document`。
+- 后端新增 `POST /api/v1/documents/{document_id}/quality-check`，返回 `ready / needs_fixes / blocked`。
+- 前端新增 `/tasks/import` 旧教案导入页，备课台和创建页均可进入。
+- 编辑器新增导出前体检按钮和结果面板，`needs_fixes` 可确认后继续导出，`blocked` 暂不建议导出。
+- 补齐导入、质量检查和前端交互测试。
 
 ## 验收标准
 
-- 首批重点篇目知识包能一键入库，重复执行不会制造重复 chunk
-- 老师创建或生成语文重点篇目时，能看见“知识库命中 / 未命中”的明确状态
-- 至少 3 个代表性课题检索返回相关 chunk
-- 至少 2 个生成文档产生非空 `section_references`
-- 未命中知识库、关闭 RAG、embedding 失败时均优雅退化，不向老师暴露内部异常
+- 老师上传一份典型旧 `.docx` 教案后，能看到结构化预览，并确认生成普通备课任务
+- 教学目标、教学重难点、教学过程、板书设计、教学反思至少能稳定映射 4 类以上核心 section
+- 未识别内容必须在预览中可见，不允许静默丢弃
+- 确认导入后的内容默认是 `pending`，老师可以逐节确认、编辑、改写、导出
+- 导出前体检能准确指出缺失必填项和提交风险，并给出老师可理解的修复建议
+- 现有创建、生成、编辑、RAG 引用、Word 导出链路不退化
 - 前后端测试、类型检查、构建与静态检查通过
 
 ## 暂不进入下一阶段
 
-本阶段不自动提交 / 推送，不自动进入迁移能力、导出质量或上课包阶段；等待用户验收后再按项目 commit 格式执行。
+Phase 6 完成后停在用户验收清单，不自动进入学校模板复刻、PPT/讲义导入、学案导入或上课包阶段。
+
+## 本轮待验收
+
+- [ ] 上传一份典型旧 `.docx` 教案，确认预览能识别核心栏目。
+- [ ] 确认未识别内容会显示在预览区。
+- [ ] 确认导入后进入编辑器，所有导入 section 均为待确认。
+- [ ] 在空文档、待确认文档、已确认完整文档中分别查看导出前体检状态。
+- [ ] 确认原有创建、生成、RAG 引用、编辑保存和 Word 导出流程未退化。

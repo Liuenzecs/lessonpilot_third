@@ -10,13 +10,14 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   useDocumentHistory,
   useDocumentSnapshot,
+  useQualityCheckMutation,
   useRestoreSnapshotMutation,
   useTaskDocuments,
 } from '@/features/editor/composables/useEditor';
 import { useAutoSave } from '@/features/editor/composables/useAutoSave';
 import { useEditorGeneration } from '@/features/editor/composables/useEditorGeneration';
 import { useEditorRewrite } from '@/features/editor/composables/useEditorRewrite';
-import type { DocumentSnapshotRecord, LessonDocument } from '@/features/editor/types';
+import type { DocumentSnapshotRecord, LessonDocument, QualityCheckResponse } from '@/features/editor/types';
 import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
 import { useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
@@ -47,6 +48,8 @@ export function useEditorView() {
   const historyOpen = ref(false);
   const exportMenuOpen = ref(false);
   const exportPreviewOpen = ref(false);
+  const qualityPanelOpen = ref(false);
+  const qualityResult = ref<QualityCheckResponse | null>(null);
   const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
   const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
   const selectedSnapshotId = ref('');
@@ -76,6 +79,7 @@ export function useEditorView() {
     () => currentDocumentId.value,
     () => taskId.value,
   );
+  const qualityCheckMutation = useQualityCheckMutation(() => currentDocumentId.value);
   const previewSnapshot = computed<DocumentSnapshotRecord | null>(() => snapshotQuery.data.value ?? null);
 
   const notice = reactive<{ text: string; tone: 'success' | 'info' }>({ text: '', tone: 'success' });
@@ -252,9 +256,26 @@ export function useEditorView() {
     }
   }
 
-  async function handleExport() {
+  async function runQualityCheck(options: { openPanel?: boolean } = {}) {
     if (!activeDocument.value || !taskQuery.data.value) return;
     if (!(await ensureLatestDocumentSaved())) return;
+    const openPanel = options.openPanel ?? true;
+    try {
+      const result = await qualityCheckMutation.mutateAsync();
+      qualityResult.value = result;
+      if (openPanel) {
+        qualityPanelOpen.value = true;
+        toast.success('导出前体检完成');
+      }
+      return result;
+    } catch (error) {
+      toast.error('导出前体检失败', getErrorDescription(error, '请稍后重试。'));
+      return null;
+    }
+  }
+
+  async function exportCurrentDocument() {
+    if (!activeDocument.value || !taskQuery.data.value) return;
     exportMenuOpen.value = false;
     try {
       await exportDocx(activeDocument.value.id, taskQuery.data.value.title);
@@ -262,6 +283,28 @@ export function useEditorView() {
     } catch (error) {
       toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
     }
+  }
+
+  async function handleExport() {
+    const result = await runQualityCheck({ openPanel: false });
+    if (!result) return;
+    if (result.readiness === 'blocked') {
+      qualityPanelOpen.value = true;
+      toast.error('导出前还有阻断项', '请先处理体检中标出的关键问题。');
+      return;
+    }
+    if (result.readiness === 'needs_fixes') {
+      qualityPanelOpen.value = true;
+      toast.info('导出前有提醒项', '你可以先处理，也可以确认后继续导出。');
+      return;
+    }
+    await exportCurrentDocument();
+  }
+
+  async function exportAfterQualityCheck() {
+    qualityPanelOpen.value = false;
+    if (!(await ensureLatestDocumentSaved())) return;
+    await exportCurrentDocument();
   }
 
   function openExportPreview() {
@@ -351,6 +394,9 @@ export function useEditorView() {
     historyOpen,
     exportMenuOpen,
     exportPreviewOpen,
+    qualityPanelOpen,
+    qualityResult,
+    qualityChecking: qualityCheckMutation.isPending,
     outlineCollapsed,
     isMobileViewport,
     selectedSnapshotId,
@@ -376,6 +422,8 @@ export function useEditorView() {
     refreshFromServer,
     handleExport,
     handleExportAll,
+    runQualityCheck,
+    exportAfterQualityCheck,
     openExportPreview,
     restoreSnapshot,
     confirmSectionByName,

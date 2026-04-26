@@ -175,7 +175,7 @@ pnpm install
 
 Sprint 0-6（MVP 构建）已全部完成。当前进入 **Cycle 硬化与拓展阶段**。
 
-**当前状态**：Cycle 1-4 已完成。当前为待验收收口：`稳定性优先 + 完全 Notion + RAG 改本地 BGE`。
+**当前状态**：Cycle 1-4 与 Phase 5 已完成并提交；当前 Phase 6 `迁移与提交闭环` 已实现，停在用户验收口。
 
 **Cycle 进度**：
 - [x] **Cycle 1**：关键 Bug 修复（AI 菜单 + 多行编辑器）
@@ -184,15 +184,12 @@ Sprint 0-6（MVP 构建）已全部完成。当前进入 **Cycle 硬化与拓展
 - [x] **Cycle 4**：数据库模板库 + AI 输出质量验证
 
 **本轮待验收内容**：
-- section 级流式生成 / 重写协议统一，彻底修复“生成后短暂不可见”
-- StudyGuide 的 `self_study / collaboration / presentation` 全部统一走 `learning_process`
-- RAG embedding 默认切到 `local_bge + bge-m3`
-- 编辑器引用徽标 / tooltip 闭环
-- 工作台、创建页、编辑器按 `DESIGN.md` 做主流程 Notion 化收口
-- 产品/竞品/老师工作流/质量标准/验收/路线图文档已补齐，待确认能否作为后续执行基准
-- `docs/specs/` 与 `docs/decisions/` 已补齐首批技术契约和 ADR
+- `.docx` 旧教案导入：上传、结构化预览、未识别内容保留、确认进入编辑器
+- 导入内容默认 `pending`，老师逐节确认后再导出
+- 导出前体检：`ready / needs_fixes / blocked` 状态、问题和修复建议
+- 原有创建、生成、编辑保存、RAG 引用和 Word 导出链路需回归确认
 
-**验证结果**：119 pytest + 25 vitest，ruff / type-check / build 全通过（保留 2 条既有 Pydantic deprecation warning）
+**验证结果**：138 pytest + 34 vitest，ruff / type-check / build 全通过（保留 2 条既有 Pydantic deprecation warning）
 
 ## 文档地图
 
@@ -208,6 +205,7 @@ Sprint 0-6（MVP 构建）已全部完成。当前进入 **Cycle 硬化与拓展
 - `docs/ROADMAP.md`：阶段路线图和候选方向
 - `docs/specs/content-model.md`：结构化内容模型契约
 - `docs/specs/section-sse.md`：section 级 SSE 协议
+- `docs/specs/import-docx.md`：旧 Word 教案导入规格
 - `docs/specs/export-docx.md`：Word 导出规格
 - `docs/specs/rag.md`：RAG 规格和生效判定
 - `docs/decisions/`：架构决策记录

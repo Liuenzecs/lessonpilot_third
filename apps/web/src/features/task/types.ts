@@ -1,4 +1,5 @@
-import type { LessonCategory, LessonType, Scene } from '@lessonpilot/shared-types';
+import type { LessonCategory, LessonPlanContent, LessonType, Scene } from '@lessonpilot/shared-types';
+import type { LessonDocument } from '@/features/editor/types';
 
 export interface TemplateRecord {
   id: string;
@@ -57,4 +58,44 @@ export interface TaskUpdatePayload {
 
 export interface GenerationStartResponse {
   stream_url: string;
+}
+
+export interface ImportWarning {
+  severity: 'info' | 'warning';
+  section: string | null;
+  message: string;
+}
+
+export interface UnmappedSection {
+  title: string | null;
+  content: string;
+}
+
+export interface LessonPlanImportMetadata {
+  title: string;
+  subject: string;
+  grade: string;
+  topic: string;
+  class_hour: number;
+  lesson_category: LessonCategory;
+  scene: Scene;
+}
+
+export interface LessonPlanImportPreview {
+  source_filename: string;
+  metadata: LessonPlanImportMetadata;
+  content: LessonPlanContent;
+  mapped_sections: string[];
+  unmapped_sections: UnmappedSection[];
+  warnings: ImportWarning[];
+}
+
+export interface LessonPlanImportConfirmPayload {
+  metadata: LessonPlanImportMetadata;
+  content: LessonPlanContent;
+}
+
+export interface LessonPlanImportConfirmResponse {
+  task: TaskRecord;
+  document: LessonDocument;
 }

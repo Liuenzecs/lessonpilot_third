@@ -10,6 +10,7 @@ import type {
   DocumentSnapshotRecord,
   DocumentUpdatePayload,
   LessonDocument,
+  QualityCheckResponse,
 } from '@/features/editor/types';
 import { request } from '@/shared/api/client';
 
@@ -99,5 +100,14 @@ export function useRestoreSnapshotMutation(
       void queryClient.invalidateQueries({ queryKey: ['documents', getTaskId()] });
       void queryClient.invalidateQueries({ queryKey: ['document-history', getDocumentId()] });
     },
+  });
+}
+
+export function useQualityCheckMutation(getDocumentId: () => string) {
+  return useMutation({
+    mutationFn: () =>
+      request<QualityCheckResponse>(`/api/v1/documents/${getDocumentId()}/quality-check`, {
+        method: 'POST',
+      }),
   });
 }

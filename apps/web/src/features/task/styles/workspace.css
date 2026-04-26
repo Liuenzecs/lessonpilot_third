@@ -7,7 +7,7 @@
 
 .workspace-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-columns: minmax(0, 1fr) repeat(2, minmax(240px, 300px));
   gap: 36px;
   align-items: center;
   padding: 42px 40px;
@@ -42,6 +42,10 @@
 .workspace-start-card:hover {
   background: var(--surface);
   border-color: rgba(var(--primary-rgb), 0.18);
+}
+
+.workspace-start-card.secondary {
+  background: var(--surface);
 }
 
 .workspace-start-title {
@@ -291,6 +295,12 @@
   border-bottom: 1px solid var(--border);
 }
 
+.create-head-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .create-head-copy {
   display: grid;
   gap: 10px;
@@ -474,6 +484,124 @@
   line-height: 1.5;
 }
 
+/* ── Lesson Plan Import ── */
+
+.import-page { max-width: 1040px; }
+
+.import-upload-band {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-strong) 74%, white 26%);
+}
+
+.import-upload-band h2,
+.import-panel h2,
+.preview-section h3 {
+  margin: 0;
+}
+
+.import-upload-band p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.import-file-button input {
+  display: none;
+}
+
+.import-preview-layout {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.import-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.import-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.import-section-grid,
+.import-warning-list,
+.import-unmapped-list {
+  display: grid;
+  gap: 10px;
+}
+
+.import-section-grid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.import-section-pill {
+  padding: 9px 12px;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.import-warning {
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--warning-rgb), 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--warning-rgb), 0.07);
+  color: var(--text);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.import-preview-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.import-preview-sections .preview-section {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+}
+
+.import-preview-sections p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.import-unmapped-list pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
 /* ── Animations ── */
 
 @keyframes workspace-shimmer {
@@ -493,6 +621,8 @@
   .workspace-hero-skeleton,
   .workspace-hero { grid-template-columns: 1fr; }
   .create-row { grid-template-columns: 1fr; }
+  .import-meta-grid { grid-template-columns: 1fr; }
+  .import-upload-band { align-items: stretch; flex-direction: column; }
   .create-frame { padding: 28px; }
 }
 

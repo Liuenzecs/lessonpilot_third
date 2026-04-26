@@ -44,3 +44,20 @@ export interface DocumentSnapshotRecord {
 export interface DocumentHistoryResponse {
   items: DocumentSnapshotRecord[];
 }
+
+export type QualityReadiness = 'ready' | 'needs_fixes' | 'blocked';
+
+export interface QualityIssue {
+  severity: 'blocker' | 'warning' | 'suggestion';
+  section: string | null;
+  message: string;
+  suggestion: string;
+}
+
+export interface QualityCheckResponse {
+  readiness: QualityReadiness;
+  summary: string;
+  issues: QualityIssue[];
+  warnings: QualityIssue[];
+  suggestions: QualityIssue[];
+}

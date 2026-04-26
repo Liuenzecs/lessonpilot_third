@@ -18,6 +18,7 @@ from app.schemas.document import (
     DocumentSnapshotRead,
     DocumentUpdatePayload,
 )
+from app.schemas.quality import QualityCheckResponse
 from app.services.document_service import (
     get_document_snapshot,
     get_owned_document,
@@ -30,6 +31,7 @@ from app.services.document_service import (
     update_document,
 )
 from app.services.export_service import build_docx
+from app.services.quality_service import check_export_quality
 from app.services.rewrite_service import get_document_task, stream_rewrite
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -192,3 +194,18 @@ def export_document(
         )
 
     raise HTTPException(status_code=400, detail="Only docx export is supported")
+
+
+@router.post("/{document_id}/quality-check", response_model=QualityCheckResponse)
+def quality_check_document(
+    document_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> QualityCheckResponse:
+    document = get_owned_document(session, document_id, current_user.id)
+    task = session.exec(
+        select(Task).where(Task.id == document.task_id, Task.user_id == current_user.id)
+    ).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return check_export_quality(task, load_content(document))

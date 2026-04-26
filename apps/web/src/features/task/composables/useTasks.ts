@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 
 import type {
   GenerationStartResponse,
+  LessonPlanImportConfirmPayload,
+  LessonPlanImportConfirmResponse,
+  LessonPlanImportPreview,
   PaginatedTasks,
   TaskCreatePayload,
   TaskRecord,
@@ -88,5 +91,33 @@ export function useStartGenerationMutation(taskId: string) {
         method: 'POST',
         body: JSON.stringify(sectionId ? { section_id: sectionId } : {}),
       }),
+  });
+}
+
+export function usePreviewLessonPlanImportMutation() {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<LessonPlanImportPreview>('/api/v1/import/lesson-plan/preview', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+  });
+}
+
+export function useConfirmLessonPlanImportMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: LessonPlanImportConfirmPayload) =>
+      request<LessonPlanImportConfirmResponse>('/api/v1/import/lesson-plan/confirm', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['account', 'subscription'] });
+    },
   });
 }

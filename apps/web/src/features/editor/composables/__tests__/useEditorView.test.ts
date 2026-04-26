@@ -30,6 +30,10 @@ vi.mock('@/features/editor/composables/useEditor', async () => {
       isLoading: ref(false),
     }),
     useRestoreSnapshotMutation: () => ({ mutateAsync: vi.fn() }),
+    useQualityCheckMutation: () => ({
+      mutateAsync: vi.fn(),
+      isPending: ref(false),
+    }),
   };
 });
 
@@ -126,6 +130,8 @@ describe('useEditorView', () => {
     expect(view).toHaveProperty('streamError');
     expect(view).toHaveProperty('sections');
     expect(view).toHaveProperty('currentDocType');
+    expect(view).toHaveProperty('qualityResult');
+    expect(view).toHaveProperty('qualityPanelOpen');
 
     expect(typeof view.confirmSectionByName).toBe('function');
     expect(typeof view.confirmAll).toBe('function');
@@ -138,6 +144,8 @@ describe('useEditorView', () => {
     expect(typeof view.refreshFromServer).toBe('function');
     expect(typeof view.handleExport).toBe('function');
     expect(typeof view.handleExportAll).toBe('function');
+    expect(typeof view.runQualityCheck).toBe('function');
+    expect(typeof view.exportAfterQualityCheck).toBe('function');
     expect(typeof view.startGeneration).toBe('function');
     expect(typeof view.stopGeneration).toBe('function');
     expect(typeof view.startSectionRewrite).toBe('function');

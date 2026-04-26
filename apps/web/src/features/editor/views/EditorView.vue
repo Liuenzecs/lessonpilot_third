@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import EditorShellHeader from '@/features/editor/components/EditorShellHeader.vue';
 import EditorStatusBanner from '@/features/editor/components/EditorStatusBanner.vue';
 import EditorToolbar from '@/features/editor/components/EditorToolbar.vue';
+import ExportQualityPanel from '@/features/editor/components/ExportQualityPanel.vue';
 import ExportPreviewModal from '@/features/editor/components/ExportPreviewModal.vue';
 import HistoryDrawer from '@/features/editor/components/HistoryDrawer.vue';
 import SectionPanel from '@/features/editor/components/SectionPanel.vue';
@@ -24,6 +25,9 @@ const {
   historyOpen,
   exportMenuOpen,
   exportPreviewOpen,
+  qualityPanelOpen,
+  qualityResult,
+  qualityChecking,
   outlineCollapsed,
   isMobileViewport,
   selectedSnapshotId,
@@ -48,6 +52,8 @@ const {
   refreshFromServer,
   handleExport,
   handleExportAll,
+  runQualityCheck,
+  exportAfterQualityCheck,
   openExportPreview,
   restoreSnapshot,
   confirmSectionByName,
@@ -96,6 +102,8 @@ function isRewritingSection(sectionName: string): boolean {
       :outline-collapsed="outlineCollapsed"
       :export-menu-open="exportMenuOpen"
       :has-multiple-docs="hasMultipleDocs"
+      :quality-readiness="qualityResult?.readiness ?? null"
+      :quality-checking="qualityChecking"
       @back="router.push({ name: 'tasks' })"
       @toggle-outline="outlineCollapsed = !outlineCollapsed"
       @open-history="historyOpen = true"
@@ -103,6 +111,7 @@ function isRewritingSection(sectionName: string): boolean {
       @export="handleExport"
       @export-all="handleExportAll"
       @open-export-preview="openExportPreview"
+      @quality-check="runQualityCheck"
       @refresh="refreshFromServer"
       @retry-save="persistDocument"
     />
@@ -270,6 +279,14 @@ function isRewritingSection(sectionName: string): boolean {
       :task="taskQuery.data.value ?? null"
       :content="draftDocument?.content ?? null"
       @close="exportPreviewOpen = false"
+    />
+
+    <ExportQualityPanel
+      :open="qualityPanelOpen"
+      :result="qualityResult"
+      :loading="qualityChecking"
+      @close="qualityPanelOpen = false"
+      @export="exportAfterQualityCheck"
     />
   </div>
 </template>

@@ -26,6 +26,7 @@ const VerifyEmailView = () => import('@/features/auth/views/VerifyEmailView.vue'
 
 const TaskListView = () => import('@/features/task/views/TaskListView.vue');
 const TaskCreateView = () => import('@/features/task/views/TaskCreateView.vue');
+const LessonPlanImportView = () => import('@/features/task/views/LessonPlanImportView.vue');
 const SettingsView = () => import('@/features/settings/views/SettingsView.vue');
 const EditorView = () => import('@/features/editor/views/EditorView.vue');
 
@@ -143,6 +144,12 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
         path: '/tasks/new',
         name: 'task-create',
         component: TaskCreateView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/tasks/import',
+        name: 'task-import',
+        component: LessonPlanImportView,
         meta: { requiresAuth: true },
       },
       {

@@ -1283,3 +1283,30 @@
   - 本地知识库当前 `knowledge_chunks = 32`：`红楼梦=17`、`春=3`、`背影=3`、`桃花源记=3`、`岳阳楼记=3`、`天净沙·秋思=3`
   - 真实向量检索验证：`红楼梦薛宝钗人物分析`、`春 朱自清 第一课时`、`桃花源记文言文教学` 均命中对应 domain 并召回 3 条 chunk
 - Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 6] — 迁移与提交闭环自动推进至验收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 新增 `.docx` 旧教案导入预览接口：识别教学目标、教学重难点、教学准备、教学过程、板书设计、教学反思，并保留未识别内容与 warning
+  - 新增导入确认接口：将预览结果创建为普通 `Task + Document`，导入内容默认保持 `pending`
+  - 新增导出前体检接口：返回 `ready / needs_fixes / blocked`、问题、提醒和修复建议
+  - 前端新增 `/tasks/import` 导入旧教案页面，备课台和创建页均可进入，支持上传、预览、元信息修正与确认导入
+  - 编辑器新增导出前体检按钮与结果面板，阻断项暂不建议导出，提醒项可由老师确认后继续导出
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-6-migration-submission.md`、`docs/specs/import-docx.md`、`docs/specs/export-docx.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/services/import_service.py`
+  - `apps/api/app/services/quality_service.py`
+  - `apps/api/app/api/v1/endpoints/imports.py`
+  - `apps/api/app/api/v1/endpoints/documents.py`
+  - `apps/api/app/schemas/lesson_import.py`
+  - `apps/api/app/schemas/quality.py`
+  - `apps/web/src/features/task/views/LessonPlanImportView.vue`
+  - `apps/web/src/features/editor/components/ExportQualityPanel.vue`
+  - `apps/web/src/features/editor/composables/useEditorView.ts`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：138 passed（保留 2 条既有 Pydantic deprecation warning）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：34 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
