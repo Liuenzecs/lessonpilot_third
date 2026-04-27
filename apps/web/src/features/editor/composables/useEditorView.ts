@@ -11,6 +11,7 @@ import {
   useDocumentHistory,
   useDocumentSnapshot,
   useQualityCheckMutation,
+  useQualityFixMutation,
   useRestoreSnapshotMutation,
   useTaskDocuments,
   useTeachingPackageMutation,
@@ -22,10 +23,11 @@ import type {
   DocumentSnapshotRecord,
   LessonDocument,
   QualityCheckResponse,
+  QualityIssue,
   TeachingPackageRecord,
 } from '@/features/editor/types';
 import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
-import { useSchoolTemplates, useTask } from '@/features/task/composables/useTasks';
+import { usePersonalAssetRecommendations, useSchoolTemplates, useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
 import {
@@ -58,6 +60,8 @@ export function useEditorView() {
   const qualityResult = ref<QualityCheckResponse | null>(null);
   const selectedExportTemplateId = ref('');
   const teachingPackageResult = ref<TeachingPackageRecord | null>(null);
+  const usePersonalAssetsForGeneration = ref(false);
+  const selectedPersonalAssetIds = ref<string[]>([]);
   const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
   const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
   const selectedSnapshotId = ref('');
@@ -88,8 +92,18 @@ export function useEditorView() {
     () => taskId.value,
   );
   const qualityCheckMutation = useQualityCheckMutation(() => currentDocumentId.value);
+  const qualityFixMutation = useQualityFixMutation(
+    () => currentDocumentId.value,
+    () => taskId.value,
+  );
   const teachingPackageMutation = useTeachingPackageMutation(() => currentDocumentId.value);
   const schoolTemplatesQuery = useSchoolTemplates();
+  const assetRecommendationsQuery = usePersonalAssetRecommendations(() => ({
+    subject: taskQuery.data.value?.subject ?? '',
+    grade: taskQuery.data.value?.grade ?? '',
+    topic: taskQuery.data.value?.topic ?? '',
+    keywords: taskQuery.data.value?.requirements ?? '',
+  }));
   const previewSnapshot = computed<DocumentSnapshotRecord | null>(() => snapshotQuery.data.value ?? null);
 
   const notice = reactive<{ text: string; tone: 'success' | 'info' }>({ text: '', tone: 'success' });
@@ -168,7 +182,13 @@ export function useEditorView() {
       const hasContent = secs.some((s) => s.status !== 'pending' || _sectionHasActualContent(getSectionData(s.name)));
       if (task.status === 'draft' && !hasContent) {
         initialGenerationTriggered.value = true;
-        void startGeneration();
+        const routeOptions = _generationOptionsFromRoute();
+        usePersonalAssetsForGeneration.value = routeOptions.usePersonalAssets;
+        selectedPersonalAssetIds.value = routeOptions.personalAssetIds;
+        void startGeneration({
+          usePersonalAssets: routeOptions.usePersonalAssets,
+          personalAssetIds: routeOptions.personalAssetIds,
+        });
       }
     },
     { immediate: true },
@@ -284,6 +304,25 @@ export function useEditorView() {
     }
   }
 
+  async function applyQualityFix(issue: QualityIssue) {
+    if (!activeDocument.value) return;
+    if (!(await ensureLatestDocumentSaved())) return;
+    try {
+      const updatedDocument = await qualityFixMutation.mutateAsync({
+        section: issue.section,
+        message: issue.message,
+        suggestion: issue.suggestion,
+      });
+      applyServerDocument(updatedDocument);
+      const result = await qualityCheckMutation.mutateAsync();
+      qualityResult.value = result;
+      qualityPanelOpen.value = true;
+      toast.success('已生成待确认修订', '请检查对应 section 后再确认。');
+    } catch (error) {
+      toast.error('调整失败', getErrorDescription(error, '这个问题暂不支持自动调整。'));
+    }
+  }
+
   async function exportCurrentDocument() {
     if (!activeDocument.value || !taskQuery.data.value) return;
     exportMenuOpen.value = false;
@@ -362,6 +401,21 @@ export function useEditorView() {
     }
   }
 
+  function togglePersonalAssetSelection(assetId: string) {
+    if (selectedPersonalAssetIds.value.includes(assetId)) {
+      selectedPersonalAssetIds.value = selectedPersonalAssetIds.value.filter((id) => id !== assetId);
+      return;
+    }
+    selectedPersonalAssetIds.value = [...selectedPersonalAssetIds.value, assetId];
+  }
+
+  async function startGenerationWithPersonalAssets() {
+    await startGeneration({
+      usePersonalAssets: usePersonalAssetsForGeneration.value,
+      personalAssetIds: selectedPersonalAssetIds.value,
+    });
+  }
+
   function handleKeydown(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
@@ -379,6 +433,16 @@ export function useEditorView() {
     if (typeof window === 'undefined') return;
     isMobileViewport.value = window.innerWidth < 720;
     if (window.innerWidth < 1100) outlineCollapsed.value = true;
+  }
+
+  function _generationOptionsFromRoute() {
+    const useAssets = route.query.usePersonalAssets === '1' || route.query.usePersonalAssets === 'true';
+    const rawIds = route.query.personalAssetIds;
+    const idsText = Array.isArray(rawIds) ? rawIds.join(',') : rawIds || '';
+    return {
+      usePersonalAssets: useAssets,
+      personalAssetIds: idsText.split(',').map((item) => item.trim()).filter(Boolean),
+    };
   }
 
   onMounted(() => {
@@ -419,8 +483,12 @@ export function useEditorView() {
     qualityPanelOpen,
     qualityResult,
     qualityChecking: qualityCheckMutation.isPending,
+    qualityFixing: qualityFixMutation.isPending,
     selectedExportTemplateId,
     schoolTemplatesQuery,
+    assetRecommendationsQuery,
+    usePersonalAssetsForGeneration,
+    selectedPersonalAssetIds,
     teachingPackageResult,
     teachingPackageGenerating: teachingPackageMutation.isPending,
     outlineCollapsed,
@@ -449,8 +517,11 @@ export function useEditorView() {
     handleExport,
     handleExportAll,
     runQualityCheck,
+    applyQualityFix,
     exportAfterQualityCheck,
     generateTeachingPackage,
+    startGenerationWithPersonalAssets,
+    togglePersonalAssetSelection,
     openExportPreview,
     restoreSnapshot,
     confirmSectionByName,

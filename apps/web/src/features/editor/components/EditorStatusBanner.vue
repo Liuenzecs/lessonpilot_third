@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import type { RagStatusInfo } from '@/features/generation/composables/useGeneration';
+import type { AssetStatusInfo, RagStatusInfo } from '@/features/generation/composables/useGeneration';
 
 const props = defineProps<{
   isGenerating: boolean;
@@ -9,6 +9,7 @@ const props = defineProps<{
   total: number;
   currentSection: string;
   ragStatus: RagStatusInfo | null;
+  assetStatus: AssetStatusInfo | null;
   isRewriting: boolean;
   rewriteAction: 'rewrite' | 'expand' | 'simplify';
   isAppending: boolean;
@@ -29,6 +30,7 @@ function getRewriteLabel(action: 'rewrite' | 'expand' | 'simplify') {
 }
 
 const ragStatusClass = computed(() => (props.ragStatus ? `rag-${props.ragStatus.status}` : ''));
+const assetStatusClass = computed(() => (props.assetStatus ? `asset-${props.assetStatus.status}` : ''));
 </script>
 
 <template>
@@ -50,6 +52,14 @@ const ragStatusClass = computed(() => (props.ragStatus ? `rag-${props.ragStatus.
       <span class="rag-message">{{ ragStatus.message }}</span>
       <span v-if="ragStatus.domain && ragStatus.retrieved_count" class="rag-meta">
         {{ ragStatus.domain }} · {{ ragStatus.retrieved_count }}/{{ ragStatus.chunk_count }} 条
+      </span>
+    </div>
+
+    <div v-if="assetStatus" class="generation-banner asset-banner" :class="assetStatusClass">
+      <span class="asset-dot" />
+      <span class="rag-message">{{ assetStatus.message }}</span>
+      <span v-if="assetStatus.status === 'ready'" class="rag-meta">
+        我的资料 · {{ assetStatus.matched_assets.length }} 份 · {{ assetStatus.snippet_count }} 段
       </span>
     </div>
 
@@ -90,6 +100,28 @@ const ragStatusClass = computed(() => (props.ragStatus ? `rag-${props.ragStatus.
   border-radius: 9999px;
   background: var(--text-secondary);
   flex: 0 0 auto;
+}
+
+.asset-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.asset-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--text-secondary);
+  flex: 0 0 auto;
+}
+
+.asset-ready .asset-dot {
+  background: var(--primary);
+}
+
+.asset-degraded .asset-dot {
+  background: var(--warning);
 }
 
 .rag-ready .rag-dot {

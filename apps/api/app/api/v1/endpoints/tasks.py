@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session
@@ -16,6 +18,7 @@ from app.schemas.task import (
     TaskUpdatePayload,
 )
 from app.services.generation_service import get_task_and_documents, stream_generation
+from app.services.personal_asset_service import validate_personal_asset_ids
 from app.services.task_service import (
     create_task,
     delete_task,
@@ -123,19 +126,37 @@ def start_generation(
     current_user: User = Depends(get_current_user),
 ) -> GenerationStartResponse:
     get_owned_task(session, task_id, current_user.id)
-    return GenerationStartResponse(stream_url=f"/api/v1/tasks/{task_id}/generate/stream")
+    personal_asset_ids = [item for item in payload.personal_asset_ids if item]
+    validate_personal_asset_ids(session, current_user.id, personal_asset_ids)
+    query = urlencode(
+        {
+            "use_personal_assets": str(payload.use_personal_assets or bool(personal_asset_ids)).lower(),
+            "personal_asset_ids": ",".join(personal_asset_ids),
+        }
+    )
+    return GenerationStartResponse(stream_url=f"/api/v1/tasks/{task_id}/generate/stream?{query}")
 
 
 @router.get("/{task_id}/generate/stream")
 async def stream_task_generation(
     request: Request,
     task_id: str,
+    use_personal_assets: bool = Query(False),
+    personal_asset_ids: str = Query(""),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     task, _docs = get_task_and_documents(session, task_id, current_user.id)
+    parsed_asset_ids = [item for item in personal_asset_ids.split(",") if item]
+    validate_personal_asset_ids(session, current_user.id, parsed_asset_ids)
     return StreamingResponse(
-        stream_generation(session=session, task=task, request=request),
+        stream_generation(
+            session=session,
+            task=task,
+            request=request,
+            use_personal_assets=use_personal_assets,
+            personal_asset_ids=parsed_asset_ids,
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )

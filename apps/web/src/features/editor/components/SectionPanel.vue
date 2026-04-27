@@ -82,6 +82,7 @@ const statusClass = computed(() =>
           :key="reference.chunk_id"
           :source="reference.source"
           :title="reference.title"
+          :knowledge-type="reference.knowledge_type"
           :chapter="reference.chapter"
           :snippet="reference.content_snippet"
         />

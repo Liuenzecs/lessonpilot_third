@@ -24,3 +24,13 @@
 - `ready`：主要风险通过
 
 响应继续包含 `issues / warnings / suggestions`，并增加 `alignment_map` 用于展示目标、过程、评价之间的对应关系。
+
+## 可执行修复
+
+Phase 11 起，部分质量问题可转成待确认修订：
+
+- `POST /api/v1/documents/{document_id}/quality-fix`
+- 请求包含问题所在 `section`、`message` 和 `suggestion`
+- 服务端只处理明确可自动辅助的高频问题：目标具体化、过程承接目标、评价补齐、学生活动可执行化、重难点进入过程
+- 修订后的 section 必须保持 `pending`，由老师确认后才进入最终稿
+- 无法识别的问题返回清晰错误，不做静默改写

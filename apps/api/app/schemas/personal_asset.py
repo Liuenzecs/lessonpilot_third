@@ -58,3 +58,19 @@ class PersonalAssetRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PersonalAssetRecommendation(BaseModel):
+    asset_id: str
+    title: str
+    asset_type: str
+    file_type: str
+    source_filename: str
+    subject: str
+    grade: str
+    topic: str
+    section_title: str
+    section_type: str
+    content_snippet: str
+    score: int
+    matched_terms: list[str] = Field(default_factory=list)

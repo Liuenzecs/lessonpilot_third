@@ -10,6 +10,7 @@ import type {
   DocumentSnapshotRecord,
   DocumentUpdatePayload,
   LessonDocument,
+  QualityFixPayload,
   QualityCheckResponse,
   TeachingPackageRecord,
 } from '@/features/editor/types';
@@ -110,6 +111,21 @@ export function useQualityCheckMutation(getDocumentId: () => string) {
       request<QualityCheckResponse>(`/api/v1/documents/${getDocumentId()}/quality-check`, {
         method: 'POST',
       }),
+  });
+}
+
+export function useQualityFixMutation(getDocumentId: () => string, getTaskId: () => string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: QualityFixPayload) =>
+      request<LessonDocument>(`/api/v1/documents/${getDocumentId()}/quality-fix`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: (document) => {
+      queryClient.setQueryData(['document', getDocumentId()], document);
+      void queryClient.invalidateQueries({ queryKey: ['documents', getTaskId()] });
+    },
   });
 }
 

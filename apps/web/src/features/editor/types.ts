@@ -54,6 +54,12 @@ export interface QualityIssue {
   suggestion: string;
 }
 
+export interface QualityFixPayload {
+  section: string | null;
+  message: string;
+  suggestion: string;
+}
+
 export interface QualityCheckResponse {
   readiness: QualityReadiness;
   summary: string;

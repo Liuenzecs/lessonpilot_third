@@ -80,3 +80,12 @@ LessonPilot 的 RAG 是知识增强生成，不是问答机器人。
 - 知识导入后台。
 - 引用覆盖率和采纳率评估。
 - 语文重点篇目知识库继续扩容。
+
+## 与个人资料引用的边界
+
+公共 RAG 与个人资料复用是两条不同来源：
+
+- 公共 RAG 来自 `knowledge_chunks`，由 `rag_status` 表示命中状态。
+- 个人资料来自当前用户的 `personal_assets`，由 `asset_status` 表示命中状态。
+- 两类来源都可以写入 `section_references`，但 `knowledge_type` 必须区分：公共知识保留原类型，个人资料使用 `personal_asset`。
+- 个人资料不得写入公共知识包，也不得被其他用户检索或引用。

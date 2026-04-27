@@ -81,6 +81,7 @@ class SectionGenerationContext:
     lesson_category: str = "new"
     prompt_hints: str = ""
     knowledge_context: str = ""
+    personal_asset_context: str = ""
     section_name: str = ""
     section_title: str = ""
     section_schema: str = ""
@@ -354,14 +355,14 @@ class FakeProvider(LLMProvider):
             await asyncio.sleep(0.02)
 
 
-def _first_citation_id(knowledge_context: str) -> str | None:
-    match = re.search(r"ID:\s*([a-f0-9\-]+)", knowledge_context)
+def _first_citation_id(*contexts: str) -> str | None:
+    match = re.search(r"ID:\s*([a-f0-9\-]+)", "\n".join(contexts))
     return match.group(1) if match else None
 
 
 def _build_fake_section_payload(ctx: SectionGenerationContext):
     cite_suffix = ""
-    citation_id = _first_citation_id(ctx.knowledge_context)
+    citation_id = _first_citation_id(ctx.knowledge_context, ctx.personal_asset_context)
     if citation_id:
         cite_suffix = f"[cite:{citation_id}]"
 
@@ -645,6 +646,7 @@ class DeepSeekProvider(LLMProvider):
             lesson_category=ctx.lesson_category,
             prompt_hints=ctx.prompt_hints or "",
             knowledge_context=ctx.knowledge_context or "",
+            personal_asset_context=ctx.personal_asset_context or "",
             section_schema=ctx.section_schema,
             existing_sections=ctx.existing_sections or "暂无已完成内容",
             section_rules=ctx.section_rules or "保证内容具体、可直接给老师使用。",
@@ -762,6 +764,7 @@ class MiniMaxProvider(LLMProvider):
             lesson_category=ctx.lesson_category,
             prompt_hints=ctx.prompt_hints or "",
             knowledge_context=ctx.knowledge_context or "",
+            personal_asset_context=ctx.personal_asset_context or "",
             section_schema=ctx.section_schema,
             existing_sections=ctx.existing_sections or "暂无已完成内容",
             section_rules=ctx.section_rules or "保证内容具体、可直接给老师使用。",

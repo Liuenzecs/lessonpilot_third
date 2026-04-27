@@ -9,6 +9,7 @@ describe('ExportQualityPanel', () => {
       props: {
         open: true,
         loading: false,
+        fixing: false,
         result: {
           readiness: 'needs_fixes',
           summary: '有 1 个提交前建议处理的问题。',
@@ -38,6 +39,7 @@ describe('ExportQualityPanel', () => {
       props: {
         open: true,
         loading: false,
+        fixing: false,
         result: {
           readiness: 'blocked',
           summary: '有 1 个阻断问题，暂不建议直接导出。',
@@ -65,6 +67,7 @@ describe('ExportQualityPanel', () => {
       props: {
         open: true,
         loading: false,
+        fixing: false,
         result: {
           readiness: 'needs_fixes',
           summary: '目标过程评价需要再对齐。',
@@ -85,5 +88,33 @@ describe('ExportQualityPanel', () => {
 
     expect(wrapper.text()).toContain('目标-过程-评价');
     expect(wrapper.text()).toContain('品味比喻拟人句');
+  });
+
+  it('emits fix for supported quality issues', async () => {
+    const wrapper = mount(ExportQualityPanel, {
+      props: {
+        open: true,
+        loading: false,
+        fixing: false,
+        result: {
+          readiness: 'needs_fixes',
+          summary: '建议处理。',
+          issues: [
+            {
+              severity: 'warning',
+              section: 'objectives',
+              message: '教学目标第 1 条表述偏空泛。',
+              suggestion: '改成可观察目标。',
+            },
+          ],
+          warnings: [],
+          suggestions: [],
+          alignment_map: [],
+        },
+      },
+    });
+
+    await wrapper.find('.quality-fix-btn').trigger('click');
+    expect(wrapper.emitted('fix')).toHaveLength(1);
   });
 });

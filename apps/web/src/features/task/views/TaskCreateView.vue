@@ -2,7 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { useCreateTaskMutation } from '@/features/task/composables/useTasks';
+import { useCreateTaskMutation, usePersonalAssetRecommendations } from '@/features/task/composables/useTasks';
 import type { LessonCategory, LessonType, Scene } from '@lessonpilot/shared-types';
 import type { TemplateRecord } from '@/features/task/types';
 import { ApiError } from '@/shared/api/client';
@@ -38,6 +38,14 @@ const form = reactive({
 
 const templates = ref<TemplateRecord[]>([]);
 const templatesLoading = ref(false);
+const usePersonalAssets = ref(false);
+const selectedPersonalAssetIds = ref<string[]>([]);
+const assetRecommendationsQuery = usePersonalAssetRecommendations(() => ({
+  subject: form.subject,
+  grade: form.grade,
+  topic: form.topic,
+  keywords: form.requirements,
+}));
 
 async function fetchTemplates() {
   if (!form.subject) {
@@ -78,7 +86,16 @@ async function submit() {
       requirements: form.requirements.trim() || null,
     });
     toast.info('已进入编辑器，正在整理初稿…', '内容会逐节写入编辑器。');
-    await router.push({ name: 'editor', params: { taskId: task.id } });
+    await router.push({
+      name: 'editor',
+      params: { taskId: task.id },
+      query: usePersonalAssets.value
+        ? {
+            usePersonalAssets: '1',
+            personalAssetIds: selectedPersonalAssetIds.value.join(','),
+          }
+        : undefined,
+    });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       submitError.value = '登录状态已失效，请重新登录后再试。';
@@ -89,6 +106,14 @@ async function submit() {
     submitError.value = '创建备课任务失败，请稍后重试。';
     toast.error('创建备课任务失败', getErrorDescription(error, '请稍后重试。'));
   }
+}
+
+function togglePersonalAsset(assetId: string) {
+  if (selectedPersonalAssetIds.value.includes(assetId)) {
+    selectedPersonalAssetIds.value = selectedPersonalAssetIds.value.filter((id) => id !== assetId);
+    return;
+  }
+  selectedPersonalAssetIds.value = [...selectedPersonalAssetIds.value, assetId];
 }
 </script>
 
@@ -249,6 +274,31 @@ async function submit() {
               <span class="template-card-desc">{{ tpl.description }}</span>
             </button>
           </div>
+        </div>
+
+        <div class="create-field personal-assets-field">
+          <label class="create-label">个人资料库（可选）</label>
+          <label class="create-checkbox-line">
+            <input v-model="usePersonalAssets" type="checkbox" />
+            <span>整理初稿时参考我的资料库</span>
+          </label>
+          <p class="create-helper">系统会按课题推荐当前账号的旧教案、讲义或 PPT 大纲。</p>
+          <div v-if="usePersonalAssets" class="template-choice-grid">
+            <button
+              v-for="asset in assetRecommendationsQuery.data.value ?? []"
+              :key="asset.asset_id"
+              type="button"
+              class="template-card"
+              :class="{ active: selectedPersonalAssetIds.includes(asset.asset_id) }"
+              @click="togglePersonalAsset(asset.asset_id)"
+            >
+              <span class="template-card-name">{{ asset.title }}</span>
+              <span class="template-card-desc">{{ asset.section_title }} · {{ asset.file_type }}</span>
+            </button>
+          </div>
+          <p v-if="usePersonalAssets && !(assetRecommendationsQuery.data.value ?? []).length" class="create-helper">
+            当前课题暂未匹配到个人资料；仍可开启，生成时会自动提示未命中。
+          </p>
         </div>
 
         <!-- 补充说明 -->

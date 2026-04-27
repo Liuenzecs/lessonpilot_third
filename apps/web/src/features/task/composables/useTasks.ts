@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { computed } from 'vue';
 
 import type {
   GenerationStartResponse,
+  GenerationStartPayload,
   LessonPlanImportConfirmPayload,
   LessonPlanImportConfirmResponse,
   LessonPlanImportPreview,
   PaginatedTasks,
   PersonalAssetConfirmPayload,
   PersonalAssetPreview,
+  PersonalAssetRecommendation,
   PersonalAssetRecord,
   SchoolTemplateConfirmPayload,
   SchoolTemplatePreview,
@@ -92,10 +95,10 @@ export function useDuplicateTaskMutation() {
 
 export function useStartGenerationMutation(taskId: string) {
   return useMutation({
-    mutationFn: (sectionId?: string) =>
+    mutationFn: (payload: GenerationStartPayload = {}) =>
       request<GenerationStartResponse>(`/api/v1/tasks/${taskId}/generate`, {
         method: 'POST',
-        body: JSON.stringify(sectionId ? { section_id: sectionId } : {}),
+        body: JSON.stringify(payload),
       }),
   });
 }
@@ -179,6 +182,28 @@ export function usePersonalAssets() {
   return useQuery({
     queryKey: ['personal-assets'],
     queryFn: () => request<PersonalAssetRecord[]>('/api/v1/personal-assets/'),
+  });
+}
+
+export function usePersonalAssetRecommendations(params: () => {
+  subject?: string;
+  grade?: string;
+  topic?: string;
+  keywords?: string;
+}) {
+  const currentParams = computed(params);
+  return useQuery({
+    queryKey: computed(() => ['personal-assets', 'recommend', currentParams.value]),
+    queryFn: () => {
+      const query = new URLSearchParams();
+      const current = currentParams.value;
+      if (current.subject) query.set('subject', current.subject);
+      if (current.grade) query.set('grade', current.grade);
+      if (current.topic) query.set('topic', current.topic);
+      if (current.keywords) query.set('keywords', current.keywords);
+      return request<PersonalAssetRecommendation[]>(`/api/v1/personal-assets/recommend?${query.toString()}`);
+    },
+    enabled: computed(() => Boolean(currentParams.value.topic)),
   });
 }
 

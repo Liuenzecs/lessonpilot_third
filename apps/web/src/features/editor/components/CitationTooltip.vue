@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   source: string;
   title: string;
+  knowledgeType?: string;
   chapter?: string;
   snippet: string;
 }>();
 
 const show = ref(false);
+const sourceLabel = computed(() => (props.knowledgeType === 'personal_asset' ? '我的资料' : '知识库资料'));
 </script>
 
 <template>
@@ -17,9 +19,12 @@ const show = ref(false);
     @mouseenter="show = true"
     @mouseleave="show = false"
   >
-    <span class="cite-marker">[{{ source }}]</span>
+    <span class="cite-marker" :class="{ personal: knowledgeType === 'personal_asset' }">
+      [{{ sourceLabel }}]
+    </span>
     <Transition name="cite-fade">
       <div v-if="show" class="cite-tooltip">
+        <div class="cite-tooltip-source">{{ source }}</div>
         <div class="cite-tooltip-title">{{ title }}</div>
         <div v-if="chapter" class="cite-tooltip-chapter">{{ chapter }}</div>
         <div class="cite-tooltip-snippet">{{ snippet }}</div>
@@ -48,6 +53,12 @@ const show = ref(false);
   border: 1px solid rgba(var(--primary-rgb), 0.1);
 }
 
+.cite-marker.personal {
+  background: rgba(var(--success-rgb), 0.08);
+  color: var(--success);
+  border-color: rgba(var(--success-rgb), 0.18);
+}
+
 .cite-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -68,6 +79,12 @@ const show = ref(false);
 
 .cite-tooltip-title {
   font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.cite-tooltip-source {
+  color: var(--text-tertiary);
+  font-size: 11px;
   margin-bottom: 2px;
 }
 

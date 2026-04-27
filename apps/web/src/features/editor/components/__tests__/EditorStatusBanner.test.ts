@@ -11,6 +11,7 @@ function mountBanner(overrides: Record<string, unknown> = {}) {
       total: 0,
       currentSection: '',
       ragStatus: null,
+      assetStatus: null,
       isRewriting: false,
       rewriteAction: 'rewrite',
       isAppending: false,
@@ -54,5 +55,20 @@ describe('EditorStatusBanner', () => {
 
     expect(wrapper.text()).toContain('自动降级为普通生成');
     expect(wrapper.text()).not.toContain('Traceback');
+  });
+
+  it('renders personal asset status with source counts', () => {
+    const wrapper = mountBanner({
+      assetStatus: {
+        status: 'ready',
+        matched_assets: [{ asset_id: 'asset-1', title: '春旧教案', file_type: 'docx' }],
+        snippet_count: 2,
+        message: '已命中 1 份我的资料，本次会参考相关片段生成。',
+      },
+    });
+
+    expect(wrapper.text()).toContain('我的资料');
+    expect(wrapper.text()).toContain('1 份');
+    expect(wrapper.text()).toContain('2 段');
   });
 });

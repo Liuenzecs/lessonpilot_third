@@ -29,3 +29,9 @@ class QualityCheckResponse(BaseModel):
     warnings: list[QualityIssue]
     suggestions: list[QualityIssue]
     alignment_map: list[AlignmentMapItem] = []
+
+
+class QualityFixPayload(BaseModel):
+    section: str | None = None
+    message: str
+    suggestion: str = ""

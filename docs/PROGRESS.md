@@ -1351,3 +1351,30 @@
 - 验证结果：
   - 已停止 `5173` 与 `5174` 上的旧前端监听进程
 - Status: DONE（规则已写入，不涉及用户验收）
+
+## [Phase 11] — 真实样本验收与个人资料复用闭环自动推进至验收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 新增个人资料推荐接口，按当前用户、学科、年级、课题和关键词返回私有资料片段
+  - 生成请求新增 `use_personal_assets / personal_asset_ids`，生成 SSE 新增 `asset_status`
+  - 生成 prompt 注入“我的资料库参考”，并将个人资料 citation 写入 `section_references`
+  - 前端创建页和编辑器新增“参考我的资料库”选择，生成状态区展示个人资料命中情况
+  - 引用 tooltip 区分“知识库资料”和“我的资料”
+  - 新增 `POST /api/v1/documents/{document_id}/quality-fix`，支持将常见质量问题转成待确认修订
+  - 导出前体检面板新增“按建议调整”，修订结果保持 pending
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-11-personal-reuse-acceptance.md`、`docs/specs/personal-assets.md`、`docs/specs/quality-check-v2.md`、`docs/specs/section-sse.md`、`docs/specs/rag.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/services/personal_asset_service.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/quality_fix_service.py`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/components/ExportQualityPanel.vue`
+  - `apps/web/src/features/editor/components/CitationTooltip.vue`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：146 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：41 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）

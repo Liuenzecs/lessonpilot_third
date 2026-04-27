@@ -29,8 +29,12 @@ const {
   qualityPanelOpen,
   qualityResult,
   qualityChecking,
+  qualityFixing,
   selectedExportTemplateId,
   schoolTemplatesQuery,
+  assetRecommendationsQuery,
+  usePersonalAssetsForGeneration,
+  selectedPersonalAssetIds,
   teachingPackageResult,
   teachingPackageGenerating,
   outlineCollapsed,
@@ -58,8 +62,10 @@ const {
   handleExport,
   handleExportAll,
   runQualityCheck,
+  applyQualityFix,
   exportAfterQualityCheck,
   generateTeachingPackage,
+  startGenerationWithPersonalAssets,
   openExportPreview,
   restoreSnapshot,
   confirmSectionByName,
@@ -67,6 +73,7 @@ const {
   getSectionData,
   getSectionReferences,
   updateSectionData,
+  togglePersonalAssetSelection,
   toggleSectionCollapse,
   toggleAllSections,
 } = useEditorView();
@@ -180,6 +187,7 @@ function isRewritingSection(sectionName: string): boolean {
             :total="generationProgress.total"
             :current-section="generationProgress.currentSection"
             :rag-status="generationProgress.ragStatus"
+            :asset-status="generationProgress.assetStatus"
             :is-rewriting="rewriteState.isRewriting"
             :rewrite-action="rewriteState.action"
             :is-appending="false"
@@ -236,6 +244,39 @@ function isRewritingSection(sectionName: string): boolean {
             <button class="button ghost" type="button" @click="router.push({ name: 'school-templates' })">
               管理模板
             </button>
+          </div>
+
+          <div class="editor-personal-assets-bar">
+            <label class="personal-assets-toggle">
+              <input v-model="usePersonalAssetsForGeneration" type="checkbox" />
+              <span>参考我的资料库</span>
+            </label>
+            <div v-if="usePersonalAssetsForGeneration" class="personal-assets-picker">
+              <button
+                v-for="asset in assetRecommendationsQuery.data.value ?? []"
+                :key="asset.asset_id"
+                type="button"
+                class="asset-choice-chip"
+                :class="{ active: selectedPersonalAssetIds.includes(asset.asset_id) }"
+                @click="togglePersonalAssetSelection(asset.asset_id)"
+              >
+                {{ asset.title }} · {{ asset.section_title }}
+              </button>
+              <button class="button ghost" type="button" @click="router.push({ name: 'personal-assets' })">
+                管理资料
+              </button>
+              <button
+                class="button secondary"
+                type="button"
+                :disabled="generationProgress.isGenerating"
+                @click="startGenerationWithPersonalAssets"
+              >
+                按当前资料重新整理
+              </button>
+            </div>
+            <p v-if="usePersonalAssetsForGeneration && !(assetRecommendationsQuery.data.value ?? []).length" class="editor-toolbar-note">
+              当前课题暂未匹配到个人资料，也可以先去资料库上传旧教案或 PPT。
+            </p>
           </div>
 
           <TeachingPackagePanel
@@ -317,8 +358,10 @@ function isRewritingSection(sectionName: string): boolean {
       :open="qualityPanelOpen"
       :result="qualityResult"
       :loading="qualityChecking"
+      :fixing="qualityFixing"
       @close="qualityPanelOpen = false"
       @export="exportAfterQualityCheck"
+      @fix="applyQualityFix"
     />
   </div>
 </template>

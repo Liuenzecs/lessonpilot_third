@@ -30,3 +30,14 @@ v1 支持：
 - `warnings`
 
 确认入库后保存为当前用户私有资产。所有私有资料不得进入公共知识包，不得被其他用户检索。
+
+## 私有复用
+
+Phase 11 起，个人资料可作为生成参考：
+
+- `GET /api/v1/personal-assets/recommend` 根据 `subject / grade / topic / keywords` 返回当前用户的推荐资料片段。
+- 推荐结果只来自当前用户的 `PersonalAsset`，不得返回公共知识包或其他用户数据。
+- v1 使用可解释匹配：标题、课题、年级、栏目标题、正文片段命中关键词后排序。
+- 生成请求可传 `use_personal_assets` 和 `personal_asset_ids`；未传时保持普通生成。
+- 生成流返回 `asset_status`，用于展示“我的资料命中 / 未命中 / 未启用 / 降级”。
+- 个人资料引用写入 `section_references`，`knowledge_type` 使用 `personal_asset`，前端展示为“我的资料”。

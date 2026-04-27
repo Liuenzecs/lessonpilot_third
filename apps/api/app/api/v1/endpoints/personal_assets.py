@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from sqlmodel import Session
 
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models import User
-from app.schemas.personal_asset import PersonalAssetConfirmPayload, PersonalAssetPreview, PersonalAssetRead
+from app.schemas.personal_asset import (
+    PersonalAssetConfirmPayload,
+    PersonalAssetPreview,
+    PersonalAssetRead,
+    PersonalAssetRecommendation,
+)
 from app.services import personal_asset_service
 
 router = APIRouter(prefix="/personal-assets", tags=["personal-assets"])
@@ -36,6 +41,27 @@ def read_personal_assets(
     current_user: User = Depends(get_current_user),
 ) -> list[PersonalAssetRead]:
     return personal_asset_service.list_personal_assets(session, current_user.id)
+
+
+@router.get("/recommend", response_model=list[PersonalAssetRecommendation])
+def recommend_personal_assets(
+    subject: str = Query(""),
+    grade: str = Query(""),
+    topic: str = Query(""),
+    keywords: str = Query(""),
+    limit: int = Query(6, ge=1, le=20),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[PersonalAssetRecommendation]:
+    return personal_asset_service.recommend_personal_assets(
+        session,
+        current_user.id,
+        subject=subject,
+        grade=grade,
+        topic=topic,
+        keywords=keywords,
+        limit=limit,
+    )
 
 
 @router.get("/{asset_id}", response_model=PersonalAssetRead)

@@ -13,6 +13,10 @@ vi.mock('@/features/task/composables/useTasks', () => ({
     mutateAsync: vi.fn(),
     isPending: ref(false),
   }),
+  usePersonalAssetRecommendations: () => ({
+    data: ref([]),
+    isLoading: ref(false),
+  }),
 }));
 
 vi.mock('@/shared/composables/useToast', () => ({
@@ -40,6 +44,7 @@ describe('TaskCreateView', () => {
     const wrapper = mount(TaskCreateView);
 
     expect(wrapper.text()).toContain('文档类型');
+    expect(wrapper.text()).toContain('个人资料库');
     expect(wrapper.text()).toContain('开始备课');
     expect(wrapper.text()).toContain('系统会按 section 逐节整理初稿并实时写入编辑器。');
   });

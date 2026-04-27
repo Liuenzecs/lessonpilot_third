@@ -1,7 +1,7 @@
 import { reactive } from 'vue';
 
 import type { LessonDocument } from '@/features/editor/types';
-import type { RagStatusInfo } from '@/features/generation/composables/useGeneration';
+import type { AssetStatusInfo, RagStatusInfo } from '@/features/generation/composables/useGeneration';
 import { consumeSectionStream } from '@/features/generation/composables/useGeneration';
 import { useStartGenerationMutation } from '@/features/task/composables/useTasks';
 import { useAuthStore } from '@/app/stores/auth';
@@ -13,6 +13,12 @@ interface UseEditorGenerationOptions {
   onApplyServerDocument: (doc: LessonDocument) => void;
   onRefetch: () => void;
   getSectionsCount: () => number;
+}
+
+export interface EditorGenerationOptions {
+  sectionName?: string;
+  usePersonalAssets?: boolean;
+  personalAssetIds?: string[];
 }
 
 export function useEditorGeneration(options: UseEditorGenerationOptions) {
@@ -37,14 +43,16 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
     streamingText: '',
     docType: '',
     ragStatus: null as RagStatusInfo | null,
+    assetStatus: null as AssetStatusInfo | null,
   });
 
   let abortController: AbortController | null = null;
 
-  async function startGeneration(sectionName?: string) {
+  async function startGeneration(options: EditorGenerationOptions = {}) {
     if (!authStore.token) return;
     if (!(await ensureLatestDocumentSaved())) return;
 
+    const sectionName = options.sectionName;
     generationProgress.isGenerating = true;
     generationProgress.completed = 0;
     generationProgress.total = getSectionsCount();
@@ -53,10 +61,15 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
     generationProgress.streamingText = '';
     generationProgress.docType = '';
     generationProgress.ragStatus = null;
+    generationProgress.assetStatus = null;
     abortController = new AbortController();
 
     try {
-      const response = await startGenerationMutation.mutateAsync(sectionName);
+      const response = await startGenerationMutation.mutateAsync({
+        section_id: sectionName ?? null,
+        use_personal_assets: Boolean(options.usePersonalAssets),
+        personal_asset_ids: options.personalAssetIds ?? [],
+      });
       await consumeSectionStream(
         response.stream_url,
         authStore.token,
@@ -93,6 +106,9 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
           },
           onRagStatus(payload) {
             generationProgress.ragStatus = payload;
+          },
+          onAssetStatus(payload) {
+            generationProgress.assetStatus = payload;
           },
           onWarning(payload) {
             toast.info('整理提醒', payload.message);

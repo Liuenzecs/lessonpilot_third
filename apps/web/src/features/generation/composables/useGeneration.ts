@@ -19,6 +19,17 @@ export interface RagStatusInfo {
   message: string;
 }
 
+export interface AssetStatusInfo {
+  status: 'disabled' | 'unmatched' | 'ready' | 'degraded';
+  matched_assets: Array<{
+    asset_id: string;
+    title: string;
+    file_type: string;
+  }>;
+  snippet_count: number;
+  message: string;
+}
+
 export interface SectionDocumentPayload extends LessonDocument {
   section_name: string;
   section_title: string;
@@ -39,6 +50,7 @@ export interface SectionStreamHandlers {
   onSectionDocument?: (payload: SectionDocumentPayload) => void;
   onSectionDone?: (payload: { doc_type?: string; section_name: string; completed?: number; total?: number }) => void;
   onRagStatus?: (payload: RagStatusInfo) => void;
+  onAssetStatus?: (payload: AssetStatusInfo) => void;
   onCitations?: (payload: { doc_type: string; section_name?: string; citations: CitationInfo[] }) => void;
   onWarning?: (payload: { message: string; doc_type?: string; section_name?: string }) => void;
   onDocumentDone?: (payload: { message?: string; task_id?: string; document_id?: string }) => void;
@@ -131,6 +143,9 @@ export async function consumeSectionStream(
           break;
         case 'rag_status':
           handlers.onRagStatus?.(payload);
+          break;
+        case 'asset_status':
+          handlers.onAssetStatus?.(payload);
           break;
         case 'citations':
           handlers.onCitations?.(payload);

@@ -26,6 +26,10 @@
 
 {knowledge_context}
 
+## 我的资料库参考
+
+{personal_asset_context}
+
 ## 当前 section 的 JSON 结构
 
 {section_schema}

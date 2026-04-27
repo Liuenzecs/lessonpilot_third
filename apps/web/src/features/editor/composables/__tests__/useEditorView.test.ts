@@ -8,7 +8,7 @@ import { defineComponent } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { taskId: 'task-123' } }),
+  useRoute: () => ({ params: { taskId: 'task-123' }, query: {} }),
   useRouter: () => ({ push: vi.fn() }),
 }));
 
@@ -34,6 +34,10 @@ vi.mock('@/features/editor/composables/useEditor', async () => {
       mutateAsync: vi.fn(),
       isPending: ref(false),
     }),
+    useQualityFixMutation: () => ({
+      mutateAsync: vi.fn(),
+      isPending: ref(false),
+    }),
     useTeachingPackageMutation: () => ({
       mutateAsync: vi.fn(),
       isPending: ref(false),
@@ -50,6 +54,11 @@ vi.mock('@/features/task/composables/useTasks', async () => {
       refetch: vi.fn(),
     }),
     useSchoolTemplates: () => ({
+      data: ref([]),
+      isLoading: ref(false),
+      refetch: vi.fn(),
+    }),
+    usePersonalAssetRecommendations: () => ({
       data: ref([]),
       isLoading: ref(false),
       refetch: vi.fn(),
@@ -77,6 +86,7 @@ vi.mock('@/features/editor/composables/useEditorGeneration', () => ({
       streamingText: '',
       docType: '',
       ragStatus: null,
+      assetStatus: null,
     },
     startGeneration: vi.fn(),
     stopGeneration: vi.fn(),
@@ -142,6 +152,8 @@ describe('useEditorView', () => {
     expect(view).toHaveProperty('qualityResult');
     expect(view).toHaveProperty('qualityPanelOpen');
     expect(view).toHaveProperty('selectedExportTemplateId');
+    expect(view).toHaveProperty('assetRecommendationsQuery');
+    expect(view).toHaveProperty('usePersonalAssetsForGeneration');
     expect(view).toHaveProperty('teachingPackageResult');
 
     expect(typeof view.confirmSectionByName).toBe('function');
@@ -156,8 +168,11 @@ describe('useEditorView', () => {
     expect(typeof view.handleExport).toBe('function');
     expect(typeof view.handleExportAll).toBe('function');
     expect(typeof view.runQualityCheck).toBe('function');
+    expect(typeof view.applyQualityFix).toBe('function');
     expect(typeof view.exportAfterQualityCheck).toBe('function');
     expect(typeof view.generateTeachingPackage).toBe('function');
+    expect(typeof view.startGenerationWithPersonalAssets).toBe('function');
+    expect(typeof view.togglePersonalAssetSelection).toBe('function');
     expect(typeof view.startGeneration).toBe('function');
     expect(typeof view.stopGeneration).toBe('function');
     expect(typeof view.startSectionRewrite).toBe('function');

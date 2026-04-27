@@ -89,6 +89,22 @@ export interface PersonalAssetRecord {
   updated_at: string;
 }
 
+export interface PersonalAssetRecommendation {
+  asset_id: string;
+  title: string;
+  asset_type: string;
+  file_type: string;
+  source_filename: string;
+  subject: string;
+  grade: string;
+  topic: string;
+  section_title: string;
+  section_type: string;
+  content_snippet: string;
+  score: number;
+  matched_terms: string[];
+}
+
 export interface PersonalAssetConfirmPayload {
   preview: PersonalAssetPreview;
   title?: string | null;
@@ -143,6 +159,12 @@ export interface TaskUpdatePayload {
 
 export interface GenerationStartResponse {
   stream_url: string;
+}
+
+export interface GenerationStartPayload {
+  section_id?: string | null;
+  use_personal_assets?: boolean;
+  personal_asset_ids?: string[];
 }
 
 export interface ImportWarning {

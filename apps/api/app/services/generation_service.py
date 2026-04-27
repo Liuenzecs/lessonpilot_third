@@ -26,6 +26,7 @@ from app.schemas.content import (
     create_empty_lesson_plan,
     create_empty_study_guide,
 )
+from app.schemas.personal_asset import PersonalAssetRecommendation
 from app.services.document_service import load_content, save_document
 from app.services.knowledge_service import (
     build_citation_metadata,
@@ -36,6 +37,10 @@ from app.services.knowledge_service import (
     strip_citations_from_content,
 )
 from app.services.llm_service import SectionGenerationContext, get_provider
+from app.services.personal_asset_service import (
+    format_personal_asset_context,
+    recommend_personal_assets,
+)
 from app.services.sse_utils import ClientDisconnected, ensure_client_connected, format_sse
 
 logger = logging.getLogger("lessonpilot.generation")
@@ -695,17 +700,53 @@ def _build_rag_status_payload(
     }
 
 
+def _build_asset_status_payload(
+    *,
+    status: str,
+    matched_assets: list[dict[str, str]] | None = None,
+    snippet_count: int = 0,
+    message: str,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "matched_assets": matched_assets or [],
+        "snippet_count": snippet_count,
+        "message": message,
+    }
+
+
+def _build_personal_reference_map(
+    recommendations: list[PersonalAssetRecommendation],
+) -> dict[str, CitationReference]:
+    reference_map: dict[str, CitationReference] = {}
+    for item in recommendations:
+        reference_map.setdefault(
+            item.asset_id,
+            CitationReference(
+                chunk_id=item.asset_id,
+                source=f"我的资料库 · {item.file_type}",
+                title=item.title,
+                knowledge_type="personal_asset",
+                chapter=item.section_title,
+                content_snippet=item.content_snippet,
+            ),
+        )
+    return reference_map
+
+
 def _apply_citations_to_section(
     section_name: str,
     value: Any,
     session: Session,
+    personal_references: dict[str, CitationReference] | None = None,
 ) -> tuple[Any, list[CitationReference]]:
     cleaned_wrapper, chunk_ids = strip_citations_from_content({"value": value})
     cleaned_value = cleaned_wrapper["value"]
     if not chunk_ids:
         return cleaned_value, []
+    personal_references = personal_references or {}
     metadata = build_citation_metadata(chunk_ids, session)
-    return cleaned_value, [
+    public_references = [
         CitationReference(
             chunk_id=item.chunk_id,
             source=item.source,
@@ -716,6 +757,15 @@ def _apply_citations_to_section(
         )
         for item in metadata
     ]
+    public_ids = {reference.chunk_id for reference in public_references}
+    references = list(public_references)
+    for chunk_id in chunk_ids:
+        if chunk_id in public_ids:
+            continue
+        personal_reference = personal_references.get(chunk_id)
+        if personal_reference is not None:
+            references.append(personal_reference)
+    return cleaned_value, references
 
 
 async def stream_generation(
@@ -723,6 +773,8 @@ async def stream_generation(
     session: Session,
     task: Task,
     request: Request | None = None,
+    use_personal_assets: bool = False,
+    personal_asset_ids: list[str] | None = None,
 ) -> AsyncIterator[str]:
     """按 section 顺序流式生成教案/学案。"""
     provider = get_provider()
@@ -747,6 +799,8 @@ async def stream_generation(
         rag_match = resolve_rag_domain_match(task.topic)
         knowledge_chunks = []
         knowledge_ctx = ""
+        personal_asset_ctx = ""
+        personal_references: dict[str, CitationReference] = {}
         if not settings.rag_enabled or settings.rag_trigger_mode == "disabled":
             yield format_sse(
                 "rag_status",
@@ -821,6 +875,71 @@ async def stream_generation(
 
                 yield format_sse("rag_status", rag_status_payload)
 
+        selected_asset_ids = personal_asset_ids or []
+        should_use_personal_assets = use_personal_assets or bool(selected_asset_ids)
+        if not should_use_personal_assets:
+            yield format_sse(
+                "asset_status",
+                _build_asset_status_payload(
+                    status="disabled",
+                    message="未开启个人资料参考，本次只按当前课题和已启用知识库生成。",
+                ),
+            )
+        else:
+            try:
+                recommendations = recommend_personal_assets(
+                    session,
+                    task.user_id,
+                    subject=task.subject,
+                    grade=task.grade,
+                    topic=task.topic,
+                    keywords=task.requirements or "",
+                    asset_ids=selected_asset_ids or None,
+                    limit=6,
+                )
+                personal_asset_ctx = format_personal_asset_context(recommendations)
+                personal_references = _build_personal_reference_map(recommendations)
+                if recommendations:
+                    matched_assets: list[dict[str, str]] = []
+                    seen_asset_ids: set[str] = set()
+                    for item in recommendations:
+                        if item.asset_id in seen_asset_ids:
+                            continue
+                        seen_asset_ids.add(item.asset_id)
+                        matched_assets.append(
+                            {
+                                "asset_id": item.asset_id,
+                                "title": item.title,
+                                "file_type": item.file_type,
+                            }
+                        )
+                    yield format_sse(
+                        "asset_status",
+                        _build_asset_status_payload(
+                            status="ready",
+                            matched_assets=matched_assets,
+                            snippet_count=len(recommendations),
+                            message=f"已命中 {len(matched_assets)} 份我的资料，本次会参考相关片段生成。",
+                        ),
+                    )
+                else:
+                    yield format_sse(
+                        "asset_status",
+                        _build_asset_status_payload(
+                            status="unmatched",
+                            message="我的资料库暂未匹配到当前课题，本次会按普通生成处理。",
+                        ),
+                    )
+            except Exception:
+                logger.warning("个人资料检索失败 (task=%s)，跳过", task.id, exc_info=True)
+                yield format_sse(
+                    "asset_status",
+                    _build_asset_status_payload(
+                        status="degraded",
+                        message="个人资料暂时无法检索，本次已自动降级为普通生成。",
+                    ),
+                )
+
         for doc_type in doc_types:
             await ensure_client_connected(request)
             doc = _get_or_create_document(session, task, doc_type)
@@ -861,6 +980,7 @@ async def stream_generation(
                     lesson_category=task.lesson_category,
                     prompt_hints=prompt_hints,
                     knowledge_context=knowledge_ctx,
+                    personal_asset_context=personal_asset_ctx,
                     section_name=spec["name"],
                     section_title=spec["title"],
                     section_schema=spec["schema"],
@@ -889,6 +1009,7 @@ async def stream_generation(
                         spec["name"],
                         validated_value,
                         session,
+                        personal_references,
                     )
                 except Exception:
                     logger.warning(

@@ -14,6 +14,7 @@ from app.schemas.personal_asset import (
     ExtractedAssetSection,
     PersonalAssetConfirmPayload,
     PersonalAssetPreview,
+    PersonalAssetRecommendation,
     ReuseSuggestion,
 )
 
@@ -65,6 +66,81 @@ def list_personal_assets(session: Session, user_id: str) -> list[PersonalAsset]:
     return session.exec(statement).all()
 
 
+def recommend_personal_assets(
+    session: Session,
+    user_id: str,
+    *,
+    subject: str = "",
+    grade: str = "",
+    topic: str = "",
+    keywords: str = "",
+    asset_ids: list[str] | None = None,
+    limit: int = 6,
+) -> list[PersonalAssetRecommendation]:
+    """Return teacher-owned snippets that can be reused for the current topic."""
+    assets = _load_candidate_assets(session, user_id, asset_ids)
+    terms = _query_terms(subject=subject, grade=grade, topic=topic, keywords=keywords)
+    recommendations: list[PersonalAssetRecommendation] = []
+
+    for asset in assets:
+        for section in _asset_sections(asset):
+            score, matched_terms = _score_asset_section(asset, section, terms, subject=subject, grade=grade)
+            if asset_ids and score <= 0:
+                score = 1
+            if score <= 0:
+                continue
+            recommendations.append(
+                PersonalAssetRecommendation(
+                    asset_id=asset.id,
+                    title=asset.title,
+                    asset_type=asset.asset_type,
+                    file_type=asset.file_type,
+                    source_filename=asset.source_filename,
+                    subject=asset.subject,
+                    grade=asset.grade,
+                    topic=asset.topic,
+                    section_title=section.title or asset.title,
+                    section_type=section.section_type,
+                    content_snippet=_clip_text(section.content or asset.title, 260),
+                    score=score,
+                    matched_terms=matched_terms,
+                )
+            )
+
+    recommendations.sort(key=lambda item: (item.score, item.title), reverse=True)
+    return recommendations[:limit]
+
+
+def validate_personal_asset_ids(session: Session, user_id: str, asset_ids: list[str]) -> None:
+    if not asset_ids:
+        return
+    assets = _load_candidate_assets(session, user_id, asset_ids)
+    found_ids = {asset.id for asset in assets}
+    missing_ids = [asset_id for asset_id in asset_ids if asset_id not in found_ids]
+    if missing_ids:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal asset not found")
+
+
+def format_personal_asset_context(recommendations: list[PersonalAssetRecommendation]) -> str:
+    if not recommendations:
+        return ""
+    lines = [
+        "## 我的资料库参考",
+        "",
+        "以下资料来自当前老师的个人资料库，只能用于本次老师自己的备课。",
+        "如引用，请在内容对应位置标注 [cite:资料ID]。",
+        "",
+    ]
+    for item in recommendations:
+        lines.append(f"[我的资料] ID: {item.asset_id}")
+        lines.append(f"资料：{item.title}")
+        lines.append(f"文件：{item.source_filename}（{item.file_type}）")
+        lines.append(f"片段：{item.section_title}")
+        lines.append(f"内容：{item.content_snippet}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def get_personal_asset(session: Session, asset_id: str, user_id: str) -> PersonalAsset:
     asset = session.exec(
         select(PersonalAsset).where(PersonalAsset.id == asset_id, PersonalAsset.user_id == user_id)
@@ -78,6 +154,109 @@ def delete_personal_asset(session: Session, asset_id: str, user_id: str) -> None
     asset = get_personal_asset(session, asset_id, user_id)
     session.delete(asset)
     session.commit()
+
+
+def _load_candidate_assets(
+    session: Session,
+    user_id: str,
+    asset_ids: list[str] | None = None,
+) -> list[PersonalAsset]:
+    statement = select(PersonalAsset).where(PersonalAsset.user_id == user_id)
+    if asset_ids:
+        statement = statement.where(PersonalAsset.id.in_(asset_ids))
+    return list(session.exec(statement.order_by(PersonalAsset.updated_at.desc())).all())
+
+
+def _asset_sections(asset: PersonalAsset) -> list[ExtractedAssetSection]:
+    content = asset.extracted_content or {}
+    raw_sections = list(content.get("extracted_sections") or [])
+    raw_sections.extend(content.get("unmapped_sections") or [])
+    sections: list[ExtractedAssetSection] = []
+    for raw in raw_sections:
+        if isinstance(raw, ExtractedAssetSection):
+            sections.append(raw)
+        elif isinstance(raw, dict):
+            sections.append(ExtractedAssetSection.model_validate(raw))
+    if sections:
+        return sections
+    return [
+        ExtractedAssetSection(
+            title=asset.title,
+            content=" ".join(item for item in [asset.topic, asset.title] if item),
+            section_type="unknown",
+        )
+    ]
+
+
+def _score_asset_section(
+    asset: PersonalAsset,
+    section: ExtractedAssetSection,
+    terms: list[str],
+    *,
+    subject: str,
+    grade: str,
+) -> tuple[int, list[str]]:
+    haystack = " ".join(
+        [
+            asset.title,
+            asset.topic,
+            asset.subject,
+            asset.grade,
+            asset.source_filename,
+            section.title,
+            section.content,
+            section.section_type,
+        ]
+    ).lower()
+    matched_terms = [term for term in terms if term.lower() in haystack]
+    has_topic_match = bool(asset.topic and topic_like(asset.topic, terms))
+    if not matched_terms and not has_topic_match:
+        return 0, []
+    score = len(matched_terms) * 10
+    if subject and asset.subject and subject == asset.subject:
+        score += 3
+    if grade and asset.grade and grade == asset.grade:
+        score += 2
+    if has_topic_match:
+        score += 6
+    if section.section_type in {"objectives", "teaching_process", "assessment", "ppt_slide"}:
+        score += 1
+    return score, matched_terms
+
+
+def topic_like(value: str, terms: list[str]) -> bool:
+    normalized = _normalize_term(value)
+    return bool(normalized) and any(normalized == term or normalized in term or term in normalized for term in terms)
+
+
+def _query_terms(*, subject: str, grade: str, topic: str, keywords: str) -> list[str]:
+    _ = subject, grade
+    raw = " ".join([topic, keywords])
+    terms: list[str] = []
+    for value in re.split(r"[\s，。、“”‘’；;：:、,.!！?？\-——（）()]+", raw):
+        normalized = _normalize_term(value)
+        if not normalized or normalized in {"语文", "年级", "课题", "教学", "教案", "学案"}:
+            continue
+        terms.append(normalized)
+    quoted = re.findall(r"《([^》]+)》", raw)
+    terms.extend(_normalize_term(item) for item in quoted if _normalize_term(item))
+    compact_topic = _normalize_term(topic)
+    if compact_topic:
+        terms.append(compact_topic)
+    unique_terms: list[str] = []
+    for term in terms:
+        if term and term not in unique_terms:
+            unique_terms.append(term)
+    return unique_terms
+
+
+def _normalize_term(value: str) -> str:
+    return value.replace("《", "").replace("》", "").strip().lower()
+
+
+def _clip_text(value: str, limit: int) -> str:
+    cleaned = _clean_text(value)
+    return cleaned[:limit] + "..." if len(cleaned) > limit else cleaned
 
 
 def _preview_docx(file_bytes: bytes, filename: str) -> PersonalAssetPreview:

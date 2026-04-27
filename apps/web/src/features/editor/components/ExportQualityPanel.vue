@@ -5,11 +5,13 @@ defineProps<{
   open: boolean;
   result: QualityCheckResponse | null;
   loading: boolean;
+  fixing: boolean;
 }>();
 
 defineEmits<{
   close: [];
   export: [];
+  fix: [issue: QualityIssue];
 }>();
 
 const readinessLabels = {
@@ -20,6 +22,10 @@ const readinessLabels = {
 
 function issueKey(issue: QualityIssue, index: number) {
   return `${issue.section || 'document'}-${issue.message}-${index}`;
+}
+
+function canFixIssue(issue: QualityIssue) {
+  return Boolean(issue.section && ['objectives', 'key_points', 'teaching_process', 'learning_objectives', 'assessment'].includes(issue.section));
 }
 </script>
 
@@ -50,6 +56,15 @@ function issueKey(issue: QualityIssue, index: number) {
           >
             <strong>{{ issue.message }}</strong>
             <span>{{ issue.suggestion }}</span>
+            <button
+              v-if="canFixIssue(issue)"
+              class="quality-fix-btn"
+              type="button"
+              :disabled="fixing"
+              @click="$emit('fix', issue)"
+            >
+              {{ fixing ? '正在调整...' : '按建议调整' }}
+            </button>
           </div>
         </section>
 
@@ -62,6 +77,15 @@ function issueKey(issue: QualityIssue, index: number) {
           >
             <strong>{{ warning.message }}</strong>
             <span>{{ warning.suggestion }}</span>
+            <button
+              v-if="canFixIssue(warning)"
+              class="quality-fix-btn"
+              type="button"
+              :disabled="fixing"
+              @click="$emit('fix', warning)"
+            >
+              {{ fixing ? '正在调整...' : '按建议调整' }}
+            </button>
           </div>
         </section>
 
@@ -74,6 +98,15 @@ function issueKey(issue: QualityIssue, index: number) {
           >
             <strong>{{ suggestion.message }}</strong>
             <span>{{ suggestion.suggestion }}</span>
+            <button
+              v-if="canFixIssue(suggestion)"
+              class="quality-fix-btn"
+              type="button"
+              :disabled="fixing"
+              @click="$emit('fix', suggestion)"
+            >
+              {{ fixing ? '正在调整...' : '按建议调整' }}
+            </button>
           </div>
         </section>
 

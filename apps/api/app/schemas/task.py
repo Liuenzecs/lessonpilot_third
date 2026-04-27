@@ -52,6 +52,8 @@ class PaginatedTasks(BaseModel):
 
 class GenerationStartPayload(BaseModel):
     section_id: str | None = None
+    use_personal_assets: bool = False
+    personal_asset_ids: list[str] = Field(default_factory=list)
 
 
 class GenerationStartResponse(BaseModel):
