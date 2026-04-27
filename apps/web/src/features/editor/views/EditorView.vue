@@ -9,6 +9,7 @@ import ExportPreviewModal from '@/features/editor/components/ExportPreviewModal.
 import HistoryDrawer from '@/features/editor/components/HistoryDrawer.vue';
 import SectionPanel from '@/features/editor/components/SectionPanel.vue';
 import StreamingText from '@/features/editor/components/StreamingText.vue';
+import TeachingPackagePanel from '@/features/editor/components/TeachingPackagePanel.vue';
 import { useEditorView } from '@/features/editor/composables/useEditorView';
 import { getAppErrorState } from '@/shared/api/errors';
 import StatePanel from '@/shared/components/StatePanel.vue';
@@ -28,6 +29,10 @@ const {
   qualityPanelOpen,
   qualityResult,
   qualityChecking,
+  selectedExportTemplateId,
+  schoolTemplatesQuery,
+  teachingPackageResult,
+  teachingPackageGenerating,
   outlineCollapsed,
   isMobileViewport,
   selectedSnapshotId,
@@ -54,6 +59,7 @@ const {
   handleExportAll,
   runQualityCheck,
   exportAfterQualityCheck,
+  generateTeachingPackage,
   openExportPreview,
   restoreSnapshot,
   confirmSectionByName,
@@ -212,6 +218,32 @@ function isRewritingSection(sectionName: string): boolean {
             />
             <p class="editor-toolbar-note">内容会按章节即时落库，老师看到的是当前草稿而不是最后一次性替换。</p>
           </div>
+
+          <div class="editor-export-template-bar">
+            <label>
+              <span>学校导出模板</span>
+              <select v-model="selectedExportTemplateId">
+                <option value="">默认 Word 格式</option>
+                <option
+                  v-for="template in schoolTemplatesQuery.data.value ?? []"
+                  :key="template.id"
+                  :value="template.id"
+                >
+                  {{ template.name }}
+                </option>
+              </select>
+            </label>
+            <button class="button ghost" type="button" @click="router.push({ name: 'school-templates' })">
+              管理模板
+            </button>
+          </div>
+
+          <TeachingPackagePanel
+            :visible="currentDocType === 'lesson_plan'"
+            :loading="teachingPackageGenerating"
+            :package-result="teachingPackageResult"
+            @generate="generateTeachingPackage"
+          />
         </div>
 
         <div v-if="showInitialSkeleton" class="generation-banner">

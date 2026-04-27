@@ -68,6 +68,27 @@
 
 不要把学校模板硬编码成全局唯一格式。
 
+## 学校模板化导出
+
+模板接口：
+
+- `POST /api/v1/templates/school/preview`
+- `POST /api/v1/templates/school/confirm`
+- `GET /api/v1/templates/school/personal`
+- `DELETE /api/v1/templates/school/{template_id}`
+
+导出接口：
+
+- `GET /api/v1/documents/{document_id}/export?format=docx&template_id=...`
+
+规则：
+
+- 模板归属于当前用户，不能被其他用户读取或用于导出。
+- 模板保存为结构化 export spec，不保存真实学校样例进仓库。
+- 模板导出优先使用模板的栏目顺序、元信息字段、教学过程表格列和空白区域。
+- 模板不可访问或不存在时返回 404；不传模板时使用默认导出。
+- v1 不承诺像素级复刻原 Word。
+
 ## 导出前体检
 
 导出前体检接口：
@@ -81,6 +102,7 @@
 - `issues`：需要处理的问题
 - `warnings`：提交前提醒
 - `suggestions`：可选优化
+- `alignment_map`：目标、过程、评价对应关系
 
 ### 教案检查
 
@@ -100,3 +122,13 @@
 - `ready`：主要导出风险已通过。
 
 前端可以在 `needs_fixes` 时提示老师先处理，也允许老师确认后继续导出；`blocked` 时暂不建议继续导出。
+
+### 质量检查 2.0
+
+在原有导出风险之外，继续检查：
+
+- 教学目标是否具体、可观察、可评价。
+- 教学过程是否承接教学目标。
+- 教学重难点是否在过程中展开。
+- 学生活动是否只是“认真听讲”等被动表述。
+- 学案达标测评是否覆盖学习目标。

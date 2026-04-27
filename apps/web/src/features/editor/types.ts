@@ -60,4 +60,41 @@ export interface QualityCheckResponse {
   issues: QualityIssue[];
   warnings: QualityIssue[];
   suggestions: QualityIssue[];
+  alignment_map: Array<{
+    objective: string;
+    process_matches: string[];
+    assessment_matches: string[];
+    status: 'covered' | 'partial' | 'missing';
+  }>;
+}
+
+export interface PptSlideDraft {
+  title: string;
+  bullets: string[];
+  activity: string;
+  speaker_note: string;
+  status: string;
+}
+
+export interface TalkScriptDraft {
+  opening: string;
+  questions: string[];
+  transitions: string[];
+  closing: string;
+  status: string;
+}
+
+export interface TeachingPackageRecord {
+  id: string;
+  task_id: string;
+  document_id: string;
+  title: string;
+  status: string;
+  content: {
+    study_guide: Extract<DocumentContent, { doc_type: 'study_guide' }>;
+    ppt_outline: PptSlideDraft[];
+    talk_script: TalkScriptDraft;
+  };
+  created_at: string;
+  updated_at: string;
 }

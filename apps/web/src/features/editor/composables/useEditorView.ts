@@ -13,13 +13,19 @@ import {
   useQualityCheckMutation,
   useRestoreSnapshotMutation,
   useTaskDocuments,
+  useTeachingPackageMutation,
 } from '@/features/editor/composables/useEditor';
 import { useAutoSave } from '@/features/editor/composables/useAutoSave';
 import { useEditorGeneration } from '@/features/editor/composables/useEditorGeneration';
 import { useEditorRewrite } from '@/features/editor/composables/useEditorRewrite';
-import type { DocumentSnapshotRecord, LessonDocument, QualityCheckResponse } from '@/features/editor/types';
+import type {
+  DocumentSnapshotRecord,
+  LessonDocument,
+  QualityCheckResponse,
+  TeachingPackageRecord,
+} from '@/features/editor/types';
 import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
-import { useTask } from '@/features/task/composables/useTasks';
+import { useSchoolTemplates, useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
 import {
@@ -50,6 +56,8 @@ export function useEditorView() {
   const exportPreviewOpen = ref(false);
   const qualityPanelOpen = ref(false);
   const qualityResult = ref<QualityCheckResponse | null>(null);
+  const selectedExportTemplateId = ref('');
+  const teachingPackageResult = ref<TeachingPackageRecord | null>(null);
   const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
   const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
   const selectedSnapshotId = ref('');
@@ -80,6 +88,8 @@ export function useEditorView() {
     () => taskId.value,
   );
   const qualityCheckMutation = useQualityCheckMutation(() => currentDocumentId.value);
+  const teachingPackageMutation = useTeachingPackageMutation(() => currentDocumentId.value);
+  const schoolTemplatesQuery = useSchoolTemplates();
   const previewSnapshot = computed<DocumentSnapshotRecord | null>(() => snapshotQuery.data.value ?? null);
 
   const notice = reactive<{ text: string; tone: 'success' | 'info' }>({ text: '', tone: 'success' });
@@ -278,7 +288,7 @@ export function useEditorView() {
     if (!activeDocument.value || !taskQuery.data.value) return;
     exportMenuOpen.value = false;
     try {
-      await exportDocx(activeDocument.value.id, taskQuery.data.value.title);
+      await exportDocx(activeDocument.value.id, taskQuery.data.value.title, selectedExportTemplateId.value || null);
       toast.success('Word 文档已开始下载');
     } catch (error) {
       toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
@@ -340,6 +350,18 @@ export function useEditorView() {
     }
   }
 
+  async function generateTeachingPackage() {
+    if (!activeDocument.value || currentDocType.value !== 'lesson_plan') return;
+    if (!(await ensureLatestDocumentSaved())) return;
+    try {
+      const result = await teachingPackageMutation.mutateAsync();
+      teachingPackageResult.value = result;
+      toast.success('上课包已整理', '学案、PPT 大纲和口播稿都已生成待确认草稿。');
+    } catch (error) {
+      toast.error('生成上课包失败', getErrorDescription(error, '请先确认教案核心内容。'));
+    }
+  }
+
   function handleKeydown(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
@@ -397,6 +419,10 @@ export function useEditorView() {
     qualityPanelOpen,
     qualityResult,
     qualityChecking: qualityCheckMutation.isPending,
+    selectedExportTemplateId,
+    schoolTemplatesQuery,
+    teachingPackageResult,
+    teachingPackageGenerating: teachingPackageMutation.isPending,
     outlineCollapsed,
     isMobileViewport,
     selectedSnapshotId,
@@ -424,6 +450,7 @@ export function useEditorView() {
     handleExportAll,
     runQualityCheck,
     exportAfterQualityCheck,
+    generateTeachingPackage,
     openExportPreview,
     restoreSnapshot,
     confirmSectionByName,

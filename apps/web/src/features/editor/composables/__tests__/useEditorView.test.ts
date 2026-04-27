@@ -34,6 +34,10 @@ vi.mock('@/features/editor/composables/useEditor', async () => {
       mutateAsync: vi.fn(),
       isPending: ref(false),
     }),
+    useTeachingPackageMutation: () => ({
+      mutateAsync: vi.fn(),
+      isPending: ref(false),
+    }),
   };
 });
 
@@ -42,6 +46,11 @@ vi.mock('@/features/task/composables/useTasks', async () => {
   return {
     useTask: () => ({
       data: ref(null),
+      isLoading: ref(false),
+      refetch: vi.fn(),
+    }),
+    useSchoolTemplates: () => ({
+      data: ref([]),
       isLoading: ref(false),
       refetch: vi.fn(),
     }),
@@ -132,6 +141,8 @@ describe('useEditorView', () => {
     expect(view).toHaveProperty('currentDocType');
     expect(view).toHaveProperty('qualityResult');
     expect(view).toHaveProperty('qualityPanelOpen');
+    expect(view).toHaveProperty('selectedExportTemplateId');
+    expect(view).toHaveProperty('teachingPackageResult');
 
     expect(typeof view.confirmSectionByName).toBe('function');
     expect(typeof view.confirmAll).toBe('function');
@@ -146,6 +157,7 @@ describe('useEditorView', () => {
     expect(typeof view.handleExportAll).toBe('function');
     expect(typeof view.runQualityCheck).toBe('function');
     expect(typeof view.exportAfterQualityCheck).toBe('function');
+    expect(typeof view.generateTeachingPackage).toBe('function');
     expect(typeof view.startGeneration).toBe('function');
     expect(typeof view.stopGeneration).toBe('function');
     expect(typeof view.startSectionRewrite).toBe('function');

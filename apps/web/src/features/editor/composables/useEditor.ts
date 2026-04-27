@@ -11,6 +11,7 @@ import type {
   DocumentUpdatePayload,
   LessonDocument,
   QualityCheckResponse,
+  TeachingPackageRecord,
 } from '@/features/editor/types';
 import { request } from '@/shared/api/client';
 
@@ -109,5 +110,18 @@ export function useQualityCheckMutation(getDocumentId: () => string) {
       request<QualityCheckResponse>(`/api/v1/documents/${getDocumentId()}/quality-check`, {
         method: 'POST',
       }),
+  });
+}
+
+export function useTeachingPackageMutation(getDocumentId: () => string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      request<TeachingPackageRecord>(`/api/v1/documents/${getDocumentId()}/teaching-package`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['teaching-packages', getDocumentId()] });
+    },
   });
 }

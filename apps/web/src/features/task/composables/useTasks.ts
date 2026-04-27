@@ -6,9 +6,15 @@ import type {
   LessonPlanImportConfirmResponse,
   LessonPlanImportPreview,
   PaginatedTasks,
+  PersonalAssetConfirmPayload,
+  PersonalAssetPreview,
+  PersonalAssetRecord,
+  SchoolTemplateConfirmPayload,
+  SchoolTemplatePreview,
   TaskCreatePayload,
   TaskRecord,
   TaskUpdatePayload,
+  TemplateRecord,
 } from '@/features/task/types';
 import { request } from '@/shared/api/client';
 
@@ -118,6 +124,100 @@ export function useConfirmLessonPlanImportMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['account', 'subscription'] });
+    },
+  });
+}
+
+export function useSchoolTemplates() {
+  return useQuery({
+    queryKey: ['school-templates'],
+    queryFn: () => request<TemplateRecord[]>('/api/v1/templates/school/personal'),
+  });
+}
+
+export function usePreviewSchoolTemplateMutation() {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<SchoolTemplatePreview>('/api/v1/templates/school/preview', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+  });
+}
+
+export function useConfirmSchoolTemplateMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SchoolTemplateConfirmPayload) =>
+      request<TemplateRecord>('/api/v1/templates/school/confirm', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['school-templates'] });
+    },
+  });
+}
+
+export function useDeleteSchoolTemplateMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (templateId: string) =>
+      request<void>(`/api/v1/templates/school/${templateId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['school-templates'] });
+    },
+  });
+}
+
+export function usePersonalAssets() {
+  return useQuery({
+    queryKey: ['personal-assets'],
+    queryFn: () => request<PersonalAssetRecord[]>('/api/v1/personal-assets/'),
+  });
+}
+
+export function usePreviewPersonalAssetMutation() {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<PersonalAssetPreview>('/api/v1/personal-assets/preview', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+  });
+}
+
+export function useConfirmPersonalAssetMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: PersonalAssetConfirmPayload) =>
+      request<PersonalAssetRecord>('/api/v1/personal-assets/confirm', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['personal-assets'] });
+    },
+  });
+}
+
+export function useDeletePersonalAssetMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assetId: string) =>
+      request<void>(`/api/v1/personal-assets/${assetId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['personal-assets'] });
     },
   });
 }

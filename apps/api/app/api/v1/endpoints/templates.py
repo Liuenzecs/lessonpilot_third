@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlmodel import Session
 
 from app.core.db import get_session
 from app.core.security import get_current_user
 from app.models.user import User
-from app.schemas.template import TemplateCreate, TemplateRead, TemplateSectionRead, TemplateUpdate
+from app.schemas.template import (
+    TemplateConfirmPayload,
+    TemplateCreate,
+    TemplatePreview,
+    TemplateRead,
+    TemplateSectionRead,
+    TemplateUpdate,
+)
 from app.services import template_service
 
 router = APIRouter()
@@ -29,7 +36,43 @@ def create_template(
     template_in: TemplateCreate,
     current_user: User = Depends(get_current_user),
 ) -> TemplateRead:
-    return template_service.create_template(session=session, template_in=template_in)
+    return template_service.create_template(session=session, template_in=template_in, user_id=current_user.id)
+
+
+@router.post("/school/preview", response_model=TemplatePreview)
+async def preview_school_template(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+) -> TemplatePreview:
+    _ = current_user
+    return template_service.preview_school_template(await file.read(), file.filename or "template.docx")
+
+
+@router.post("/school/confirm", response_model=TemplateRead, status_code=status.HTTP_201_CREATED)
+def confirm_school_template(
+    payload: TemplateConfirmPayload,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> TemplateRead:
+    return template_service.save_school_template(session, current_user.id, payload)
+
+
+@router.get("/school/personal", response_model=list[TemplateRead])
+def read_school_templates(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[TemplateRead]:
+    return template_service.list_school_templates(session, current_user.id)
+
+
+@router.delete("/school/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_school_template(
+    template_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    template_service.delete_school_template(session, template_id, current_user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.get("/{template_id}", response_model=TemplateRead)
 def read_template(

@@ -3,6 +3,7 @@ import type { LessonDocument } from '@/features/editor/types';
 
 export interface TemplateRecord {
   id: string;
+  user_id?: string | null;
   name: string;
   subject: string;
   grade: string;
@@ -11,6 +12,90 @@ export interface TemplateRecord {
   is_public: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface TemplateFieldMapping {
+  template_label: string;
+  content_field: string;
+  confidence: number;
+  location: string;
+}
+
+export interface TemplateTableLayout {
+  name: string;
+  columns: string[];
+  field_mappings: TemplateFieldMapping[];
+}
+
+export interface SchoolTemplatePreview {
+  source_filename: string;
+  name: string;
+  subject: string;
+  grade: string;
+  template_type: string;
+  field_mappings: TemplateFieldMapping[];
+  section_order: string[];
+  table_layouts: TemplateTableLayout[];
+  blank_areas: string[];
+  unsupported_items: string[];
+  warnings: string[];
+}
+
+export interface SchoolTemplateConfirmPayload {
+  preview: SchoolTemplatePreview;
+  name?: string | null;
+  subject?: string | null;
+  grade?: string | null;
+}
+
+export interface ExtractedAssetSection {
+  title: string;
+  content: string;
+  section_type: string;
+}
+
+export interface ReuseSuggestion {
+  target: string;
+  label: string;
+  reason: string;
+}
+
+export interface PersonalAssetPreview {
+  source_filename: string;
+  file_type: 'docx' | 'pptx';
+  title: string;
+  subject: string;
+  grade: string;
+  topic: string;
+  asset_type: 'lesson_plan' | 'study_guide' | 'ppt_outline' | 'teaching_note' | 'reference_material';
+  extracted_sections: ExtractedAssetSection[];
+  unmapped_sections: ExtractedAssetSection[];
+  reuse_suggestions: ReuseSuggestion[];
+  warnings: string[];
+}
+
+export interface PersonalAssetRecord {
+  id: string;
+  title: string;
+  asset_type: string;
+  source_filename: string;
+  file_type: string;
+  subject: string;
+  grade: string;
+  topic: string;
+  extracted_content: Record<string, unknown>;
+  reuse_suggestions: ReuseSuggestion[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PersonalAssetConfirmPayload {
+  preview: PersonalAssetPreview;
+  title?: string | null;
+  subject?: string | null;
+  grade?: string | null;
+  topic?: string | null;
+  asset_type?: PersonalAssetPreview['asset_type'] | null;
 }
 
 export interface TaskRecord {

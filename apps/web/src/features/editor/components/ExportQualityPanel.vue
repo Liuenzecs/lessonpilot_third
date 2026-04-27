@@ -77,6 +77,22 @@ function issueKey(issue: QualityIssue, index: number) {
           </div>
         </section>
 
+        <section v-if="result.alignment_map.length" class="quality-group">
+          <h4>目标-过程-评价</h4>
+          <div
+            v-for="item in result.alignment_map"
+            :key="item.objective"
+            class="quality-issue"
+            :class="item.status === 'covered' ? 'suggestion' : 'warning'"
+          >
+            <strong>{{ item.objective }}</strong>
+            <span>
+              过程：{{ item.process_matches.join('、') || '未明显对应' }}；
+              评价：{{ item.assessment_matches.join('、') || '未明显对应' }}
+            </span>
+          </div>
+        </section>
+
         <div v-if="!result.issues.length && !result.warnings.length" class="quality-ready-box">
           当前文档已满足主要导出要求。
         </div>

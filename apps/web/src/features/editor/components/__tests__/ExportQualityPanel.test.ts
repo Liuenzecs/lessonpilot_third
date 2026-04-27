@@ -22,6 +22,7 @@ describe('ExportQualityPanel', () => {
           ],
           warnings: [],
           suggestions: [],
+          alignment_map: [],
         },
       },
     });
@@ -50,11 +51,39 @@ describe('ExportQualityPanel', () => {
           ],
           warnings: [],
           suggestions: [],
+          alignment_map: [],
         },
       },
     });
 
     expect(wrapper.text()).toContain('暂不建议导出');
     expect(wrapper.find('.button.primary').attributes('disabled')).toBeDefined();
+  });
+
+  it('renders alignment map when quality v2 returns it', () => {
+    const wrapper = mount(ExportQualityPanel, {
+      props: {
+        open: true,
+        loading: false,
+        result: {
+          readiness: 'needs_fixes',
+          summary: '目标过程评价需要再对齐。',
+          issues: [],
+          warnings: [],
+          suggestions: [],
+          alignment_map: [
+            {
+              objective: '品味比喻拟人句的表达效果',
+              process_matches: ['品味语言'],
+              assessment_matches: [],
+              status: 'partial',
+            },
+          ],
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain('目标-过程-评价');
+    expect(wrapper.text()).toContain('品味比喻拟人句');
   });
 });

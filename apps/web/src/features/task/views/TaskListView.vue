@@ -126,14 +126,24 @@ async function exportTask(task: TaskRecord) {
           <p class="subtitle">打开就是你的备课桌，最近的教案、搜索、复制和导出都在这里完成。</p>
         </div>
 
-        <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
-          <span class="workspace-start-title">+ 开始备课</span>
-          <span class="workspace-start-subtitle">选择学科和主题，快速起草教案</span>
-        </button>
-        <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
-          <span class="workspace-start-title">导入旧教案</span>
-          <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
-        </button>
+        <div class="workspace-hero-actions">
+          <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
+            <span class="workspace-start-title">+ 开始备课</span>
+            <span class="workspace-start-subtitle">选择学科和主题，快速起草教案</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
+            <span class="workspace-start-title">导入旧教案</span>
+            <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'school-templates' })">
+            <span class="workspace-start-title">学校模板</span>
+            <span class="workspace-start-subtitle">保存常用 Word 格式，导出时直接套用</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'personal-assets' })">
+            <span class="workspace-start-title">个人资料库</span>
+            <span class="workspace-start-subtitle">迁移旧讲义和 PPT，沉淀私有资料</span>
+          </button>
+        </div>
       </div>
 
       <StatePanel

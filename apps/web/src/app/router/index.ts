@@ -27,6 +27,8 @@ const VerifyEmailView = () => import('@/features/auth/views/VerifyEmailView.vue'
 const TaskListView = () => import('@/features/task/views/TaskListView.vue');
 const TaskCreateView = () => import('@/features/task/views/TaskCreateView.vue');
 const LessonPlanImportView = () => import('@/features/task/views/LessonPlanImportView.vue');
+const SchoolTemplatesView = () => import('@/features/task/views/SchoolTemplatesView.vue');
+const PersonalAssetsView = () => import('@/features/task/views/PersonalAssetsView.vue');
 const SettingsView = () => import('@/features/settings/views/SettingsView.vue');
 const EditorView = () => import('@/features/editor/views/EditorView.vue');
 
@@ -150,6 +152,18 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
         path: '/tasks/import',
         name: 'task-import',
         component: LessonPlanImportView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/templates/school',
+        name: 'school-templates',
+        component: SchoolTemplatesView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/assets',
+        name: 'personal-assets',
+        component: PersonalAssetsView,
         meta: { requiresAuth: true },
       },
       {

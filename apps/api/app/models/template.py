@@ -14,6 +14,10 @@ class Template(SQLModel, table=True):
     __tablename__ = "templates"
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    user_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(36), ForeignKey("users.id"), index=True, nullable=True),
+    )
     name: str = Field(sa_column=Column(String(255), nullable=False))
     subject: str = Field(sa_column=Column(String(80), nullable=False, index=True))
     grade: str = Field(sa_column=Column(String(80), nullable=False, index=True))

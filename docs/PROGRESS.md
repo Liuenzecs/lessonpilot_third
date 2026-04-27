@@ -1310,3 +1310,44 @@
   - `pnpm --dir apps/web test --run`：34 passed
   - `pnpm --dir apps/web build`：passed
 - Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 7-10] — 学校格式与个人备课资产闭环自动推进至验收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 新增学校 Word 模板上传预览、确认保存、个人模板列表和删除能力，模板保存为结构化 export spec
+  - 将模板归属扩展到用户维度，Word 导出支持 `template_id`，可按个人学校模板渲染元信息、栏目顺序、教学过程表格列和空白区域
+  - 导出前体检升级为质量检查 2.0，新增目标空泛、目标-过程承接、重难点展开、学生活动主动性、学案测评覆盖等检查，并返回 `alignment_map`
+  - 新增上课包生成能力，从已确认教案生成学案草稿、PPT 大纲和课堂口播稿，所有内容默认 pending
+  - 新增个人资料库，支持 `.docx` / `.pptx` 上传预览、确认保存、列表、删除和用户隔离
+  - 前端备课台新增“学校模板”“个人资料库”入口，编辑器新增学校模板选择与上课包面板，体检面板展示一致性结果
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-7-10-teaching-asset-loop.md`、`docs/specs/school-template.md`、`docs/specs/quality-check-v2.md`、`docs/specs/teaching-package.md`、`docs/specs/personal-assets.md`、`docs/specs/export-docx.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/services/template_service.py`
+  - `apps/api/app/services/export_service.py`
+  - `apps/api/app/services/quality_service.py`
+  - `apps/api/app/services/personal_asset_service.py`
+  - `apps/api/app/services/teaching_package_service.py`
+  - `apps/web/src/features/task/views/SchoolTemplatesView.vue`
+  - `apps/web/src/features/task/views/PersonalAssetsView.vue`
+  - `apps/web/src/features/editor/components/TeachingPackagePanel.vue`
+  - `apps/web/src/features/editor/components/ExportQualityPanel.vue`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：142 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：38 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 7-10] — 本地前端端口规则收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 明确本地前端开发服务固定使用 `5173`
+  - 若 `5173` 被占用，后续 agent 需先释放占用进程，再重新使用 `5173`
+  - 禁止未经用户明确指定时临时切换到 `5174` 或其他端口
+- 关键文件：
+  - `AGENTS.md`
+  - `CLAUDE.md`
+- 验证结果：
+  - 已停止 `5173` 与 `5174` 上的旧前端监听进程
+- Status: DONE（规则已写入，不涉及用户验收）

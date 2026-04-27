@@ -7,7 +7,7 @@
 
 .workspace-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(2, minmax(240px, 300px));
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 640px);
   gap: 36px;
   align-items: center;
   padding: 42px 40px;
@@ -16,6 +16,12 @@
   background:
     linear-gradient(180deg, rgba(246, 245, 244, 0.72) 0%, rgba(255, 255, 255, 0) 140px),
     var(--surface);
+}
+
+.workspace-hero-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .workspace-hero-copy {
@@ -33,7 +39,7 @@
   background: color-mix(in srgb, var(--surface-strong) 74%, white 26%);
   color: var(--text);
   text-align: left;
-  min-height: 148px;
+  min-height: 132px;
   padding: 20px 22px;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -49,7 +55,7 @@
 }
 
 .workspace-start-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.25px;
 }
@@ -602,6 +608,44 @@
   line-height: 1.6;
 }
 
+.asset-page {
+  max-width: 1080px;
+}
+
+.asset-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.asset-preview-grid > div,
+.asset-card {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+}
+
+.asset-preview-grid h3,
+.asset-card h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+}
+
+.asset-preview-grid p,
+.asset-card p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.asset-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
 /* ── Animations ── */
 
 @keyframes workspace-shimmer {
@@ -620,6 +664,7 @@
 @media (max-width: 860px) {
   .workspace-hero-skeleton,
   .workspace-hero { grid-template-columns: 1fr; }
+  .workspace-hero-actions { grid-template-columns: 1fr; }
   .create-row { grid-template-columns: 1fr; }
   .import-meta-grid { grid-template-columns: 1fr; }
   .import-upload-band { align-items: stretch; flex-direction: column; }

@@ -21,6 +21,7 @@ from app.schemas.content import (
     DocumentContent,
     LessonPlanContent,
     StudyGuideContent,
+    TeachingProcessStep,
     is_lesson_plan,
     is_study_guide,
 )
@@ -389,6 +390,175 @@ def _build_lesson_plan_docx(
     _render_reflection(document, content)
 
 
+def _build_templated_lesson_plan_docx(
+    document: DocxDocument,
+    task: Task,
+    content: LessonPlanContent,
+    template_spec: dict,
+) -> None:
+    _render_template_header(document, content, task, template_spec)
+    section_order = template_spec.get("section_order") or [
+        "objectives",
+        "key_points",
+        "preparation",
+        "teaching_process",
+        "board_design",
+        "reflection",
+    ]
+    rendered = set()
+    for section_name in section_order:
+        _render_lesson_section_by_name(document, task, content, section_name, template_spec)
+        rendered.add(section_name)
+    for section_name in ["objectives", "key_points", "preparation", "teaching_process", "board_design", "reflection"]:
+        if section_name not in rendered:
+            _render_lesson_section_by_name(document, task, content, section_name, template_spec)
+    for blank_label in template_spec.get("blank_areas") or []:
+        if blank_label not in {"教学反思", "课后反思", "教后反思"}:
+            _add_section_title(document, str(blank_label))
+            _add_empty_area(document, f"（{blank_label}）")
+
+
+def _render_template_header(
+    document: DocxDocument,
+    content: LessonPlanContent,
+    task: Task,
+    template_spec: dict,
+) -> None:
+    _add_paragraph(
+        document,
+        content.header.title or task.title,
+        font_name="微软雅黑",
+        font_size=_PT_EIGHTEEN,
+        bold=True,
+        color=_COLOR_INK,
+        alignment=WD_ALIGN_PARAGRAPH.CENTER,
+        space_after=_PT_SIX,
+    )
+    metadata_labels = _template_metadata_labels(template_spec)
+    if metadata_labels:
+        table = document.add_table(rows=0, cols=4)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        _set_table_borders(table)
+        for left, right in _pairwise(metadata_labels):
+            row = table.add_row()
+            _set_cell_text(row.cells[0], left, bold=True)
+            _set_cell_shading(row.cells[0], "f0ebe0")
+            _set_cell_text(row.cells[1], _metadata_value(left, content, task))
+            _set_cell_text(row.cells[2], right, bold=True)
+            _set_cell_shading(row.cells[2], "f0ebe0")
+            _set_cell_text(row.cells[3], _metadata_value(right, content, task))
+        document.add_paragraph()
+    else:
+        _render_lesson_plan_header(document, content, task)
+
+
+def _render_lesson_section_by_name(
+    document: DocxDocument,
+    task: Task,
+    content: LessonPlanContent,
+    section_name: str,
+    template_spec: dict,
+) -> None:
+    if section_name == "objectives":
+        _render_objectives(document, content)
+    elif section_name == "key_points":
+        _render_key_points(document, content)
+    elif section_name == "preparation":
+        _render_preparation(document, content)
+    elif section_name == "teaching_process":
+        _render_template_teaching_process(document, content, task.scene, template_spec)
+    elif section_name == "board_design":
+        _render_board_design(document, content)
+    elif section_name == "reflection":
+        _render_reflection(document, content)
+
+
+def _render_template_teaching_process(
+    document: DocxDocument,
+    content: LessonPlanContent,
+    scene: str,
+    template_spec: dict,
+) -> None:
+    if content.teaching_process_status != "confirmed" or not content.teaching_process:
+        return
+    _add_section_title(document, "教学过程")
+    headers = _template_process_columns(template_spec)
+    if not headers:
+        headers = (
+            ["教学环节", "时长", "教师活动", "学生活动"]
+            if scene == "tutor"
+            else ["教学环节", "时长", "教师活动", "学生活动", "设计意图"]
+        )
+    table = document.add_table(rows=1 + len(content.teaching_process), cols=len(headers))
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    _set_table_borders(table)
+    for index, header in enumerate(headers):
+        _set_cell_text(table.rows[0].cells[index], header, bold=True)
+        _set_cell_shading(table.rows[0].cells[index], "f0ebe0")
+    for row_index, step in enumerate(content.teaching_process, start=1):
+        row = table.rows[row_index]
+        for col_index, header in enumerate(headers):
+            _set_cell_text(row.cells[col_index], _process_value(header, step))
+    document.add_paragraph()
+
+
+def _template_metadata_labels(template_spec: dict) -> list[str]:
+    for layout in template_spec.get("table_layouts") or []:
+        if layout.get("name") == "metadata":
+            return [str(item) for item in layout.get("columns") or []][:8]
+    labels = []
+    for mapping in template_spec.get("field_mappings") or []:
+        if str(mapping.get("content_field", "")).startswith("header"):
+            labels.append(str(mapping.get("template_label") or ""))
+    return [label for label in labels if label][:8]
+
+
+def _template_process_columns(template_spec: dict) -> list[str]:
+    for layout in template_spec.get("table_layouts") or []:
+        if layout.get("name") == "teaching_process":
+            return [str(item) for item in layout.get("columns") or [] if str(item).strip()]
+    return []
+
+
+def _metadata_value(label: str, content: LessonPlanContent, task: Task) -> str:
+    if "课题" in label or "课名" in label or "教学内容" in label:
+        return content.header.title or task.topic
+    if "学科" in label:
+        return content.header.subject or task.subject
+    if "年级" in label:
+        return content.header.grade or task.grade
+    if "课时" in label:
+        return f"第{task.class_hour}课时"
+    if "课型" in label:
+        return _LESSON_CATEGORY_LABELS.get(task.lesson_category, task.lesson_category)
+    if "教师" in label:
+        return content.header.teacher
+    return ""
+
+
+def _process_value(label: str, step: TeachingProcessStep) -> str:
+    if "环节" in label or "流程" in label or "步骤" in label:
+        return step.phase
+    if "时" in label or "分钟" in label:
+        return f"{step.duration}分钟"
+    if "教师" in label or "教法" in label:
+        return step.teacher_activity
+    if "学生" in label or "学法" in label:
+        return step.student_activity
+    if "意图" in label or "说明" in label:
+        return step.design_intent
+    return ""
+
+
+def _pairwise(labels: list[str]) -> list[tuple[str, str]]:
+    result: list[tuple[str, str]] = []
+    for index in range(0, len(labels), 2):
+        left = labels[index]
+        right = labels[index + 1] if index + 1 < len(labels) else ""
+        result.append((left, right))
+    return result
+
+
 # ---------------------------------------------------------------------------
 # 学案导出
 # ---------------------------------------------------------------------------
@@ -546,13 +716,16 @@ def _build_study_guide_docx(
 # 公共入口
 # ---------------------------------------------------------------------------
 
-def build_docx(task: Task, content: DocumentContent) -> bytes:
+def build_docx(task: Task, content: DocumentContent, template_spec: dict | None = None) -> bytes:
     """根据内容类型生成 Word 文档字节。"""
     document = DocxDocument()
     _configure_page(document)
 
     if is_lesson_plan(content):
-        _build_lesson_plan_docx(document, task, content)
+        if template_spec and template_spec.get("kind") == "school_export_template":
+            _build_templated_lesson_plan_docx(document, task, content, template_spec)
+        else:
+            _build_lesson_plan_docx(document, task, content)
     elif is_study_guide(content):
         _build_study_guide_docx(document, task, content)
     else:
