@@ -11,6 +11,8 @@ import SectionPanel from '@/features/editor/components/SectionPanel.vue';
 import StreamingText from '@/features/editor/components/StreamingText.vue';
 import TeachingPackagePanel from '@/features/editor/components/TeachingPackagePanel.vue';
 import { useEditorView } from '@/features/editor/composables/useEditorView';
+import SharePanel from '@/features/sharing/components/SharePanel.vue';
+import ReimportPanel from '@/features/reimport/components/ReimportPanel.vue';
 import { getAppErrorState } from '@/shared/api/errors';
 import StatePanel from '@/shared/components/StatePanel.vue';
 
@@ -26,6 +28,8 @@ const {
   streamError,
   historyOpen,
   exportMenuOpen,
+  sharePanelOpen,
+  reimportPanelOpen,
   exportPreviewOpen,
   qualityPanelOpen,
   qualityResult,
@@ -46,6 +50,8 @@ const {
   rewriteState,
   sections,
   currentDocType,
+  currentDocumentId,
+  currentDocumentVersion,
   hasMultipleDocs,
   activeDocTabIndex,
   historyQuery,
@@ -130,6 +136,8 @@ function isRewritingSection(sectionName: string): boolean {
       @back="router.push({ name: 'tasks' })"
       @toggle-outline="outlineCollapsed = !outlineCollapsed"
       @open-history="historyOpen = true"
+      @open-share="sharePanelOpen = true"
+      @open-reimport="reimportPanelOpen = true"
       @toggle-export-menu="exportMenuOpen = !exportMenuOpen"
       @export="handleExport"
       @export-all="handleExportAll"
@@ -383,6 +391,20 @@ function isRewritingSection(sectionName: string): boolean {
       @close="historyOpen = false"
       @select="selectedSnapshotId = $event"
       @restore="restoreSnapshot"
+    />
+
+    <SharePanel
+      :document-id="currentDocumentId"
+      :open="sharePanelOpen"
+      @close="sharePanelOpen = false"
+    />
+
+    <ReimportPanel
+      :document-id="currentDocumentId"
+      :document-version="currentDocumentVersion"
+      :open="reimportPanelOpen"
+      @close="reimportPanelOpen = false"
+      @merged="refreshFromServer"
     />
 
     <ExportPreviewModal

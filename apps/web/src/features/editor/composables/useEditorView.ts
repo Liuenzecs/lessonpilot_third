@@ -55,6 +55,8 @@ export function useEditorView() {
   const initialGenerationTriggered = ref(false);
   const historyOpen = ref(false);
   const exportMenuOpen = ref(false);
+  const sharePanelOpen = ref(false);
+  const reimportPanelOpen = ref(false);
   const exportPreviewOpen = ref(false);
   const qualityPanelOpen = ref(false);
   const qualityResult = ref<QualityCheckResponse | null>(null);
@@ -83,6 +85,7 @@ export function useEditorView() {
 
   // History
   const currentDocumentId = computed(() => activeDocument.value?.id ?? '');
+  const currentDocumentVersion = computed(() => activeDocument.value?.version ?? 0);
   const historyEnabled = computed(() => historyOpen.value && Boolean(currentDocumentId.value));
   const snapshotEnabled = computed(() => historyEnabled.value && Boolean(selectedSnapshotId.value));
   const historyQuery = useDocumentHistory(currentDocumentId, historyEnabled);
@@ -489,6 +492,8 @@ export function useEditorView() {
     streamError,
     historyOpen,
     exportMenuOpen,
+    sharePanelOpen,
+    reimportPanelOpen,
     exportPreviewOpen,
     qualityPanelOpen,
     qualityResult,
@@ -509,6 +514,8 @@ export function useEditorView() {
     rewriteState,
     sections,
     currentDocType,
+    currentDocumentId,
+    currentDocumentVersion,
     hasMultipleDocs,
     activeDocTabIndex,
     historyQuery,

@@ -26,10 +26,13 @@ const VerifyEmailView = () => import('@/features/auth/views/VerifyEmailView.vue'
 const TaskListView = () => import('@/features/task/views/TaskListView.vue');
 const TaskCreateView = () => import('@/features/task/views/TaskCreateView.vue');
 const LessonPlanImportView = () => import('@/features/task/views/LessonPlanImportView.vue');
+const BatchImportView = () => import('@/features/task/views/BatchImportView.vue');
 const SchoolTemplatesView = () => import('@/features/task/views/SchoolTemplatesView.vue');
 const PersonalAssetsView = () => import('@/features/task/views/PersonalAssetsView.vue');
 const QuestionBankView = () => import('@/features/task/views/QuestionBankView.vue');
 const SettingsView = () => import('@/features/settings/views/SettingsView.vue');
+const SharedDocumentView = () => import('@/features/sharing/views/SharedDocumentView.vue');
+const CalendarView = () => import('@/features/calendar/views/CalendarView.vue');
 const EditorView = () => import('@/features/editor/views/EditorView.vue');
 
 export function createAppRouter(pinia: Pinia, history: RouterHistory = createWebHistory()) {
@@ -74,6 +77,11 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
             path: 'changelog',
             name: 'changelog',
             component: ChangelogView,
+          },
+          {
+            path: 'share/:token',
+            name: 'shared-document',
+            component: SharedDocumentView,
           },
           {
             path: '500',
@@ -155,6 +163,12 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
         meta: { requiresAuth: true },
       },
       {
+        path: '/tasks/batch-import',
+        name: 'batch-import',
+        component: BatchImportView,
+        meta: { requiresAuth: true },
+      },
+      {
         path: '/templates/school',
         name: 'school-templates',
         component: SchoolTemplatesView,
@@ -170,6 +184,12 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
         path: '/questions',
         name: 'question-bank',
         component: QuestionBankView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/calendar',
+        name: 'calendar',
+        component: CalendarView,
         meta: { requiresAuth: true },
       },
       {

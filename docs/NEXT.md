@@ -1,62 +1,70 @@
-# 当前任务：Phase 16 迁移竞争力提升 — 第一阶段 P0
+# 当前任务：等待用户验收 Phase 17 P1
 
 ## 本阶段目标
 
-从竞品（ClassIn / 科大讯飞 / 希沃）迁移来的老师，使用 LessonPilot 后不再想回去。
+全部 4 个 Phase 17 P1 任务已完成实施，等待用户手动验收。
 
-第一阶段：扫除迁移的最大障碍——课件输出和题目质量。
-
-详见 `docs/milestones/phase-16-migration-competitiveness.md`
+详见 `docs/milestones/phase-16-migration-competitiveness.md` 和 `.claude/plans/humble-churning-sky.md`。
 
 ## 本轮实施切片
 
-### P0-1: 课件大纲生成 + PPTX 导出
+### P1-1：旧教案批量导入
 
-- [x] 后端：从教案结构化 JSON 生成课件大纲（section → slides 映射）
-  - 标题页（课题/学科/年级）
-  - 教学目标页
-  - 每个教学环节 → 对应的关键幻灯片（教师活动、学生活动、设计意图提取为演讲者备注）
-  - 课堂提问页
-  - 总结页 + 作业页
-- [x] 后端：PPTX 导出服务（`python-pptx`），与 Word 导出并行作为导出选项
-- [x] 前端：编辑器导出菜单增加"导出课件（PPTX）"选项
-- [x] 规格文档：`docs/specs/courseware-pptx.md`
-- [x] 测试：8 个后端测试通过
+- [x] 后端：batch-preview / batch-confirm 端点，批量导入服务包装函数
+- [x] 前端：BatchImportView.vue（多文件选择 → 预览 → 逐项编辑 → 批量确认）
+- [x] 备课台入口卡片"批量导入教案"
+- [x] 单文件解析逻辑完全复用，单项失败独立报告
 
-### P0-2: 语文重点篇目分层题库
+### P1-2：教研组分享链接
 
-- [x] 后端：题库模型（Question: id/篇目/题型/难度/题干/答案/解析/来源/标签）
-- [x] 数据：语文 7-9 年级重点篇目各 15-20 道分层题（A基础/B理解/C拓展/D选做）
-- [x] 后端：选题服务（按篇目、难度、题型、数量筛选）
-- [x] 后端：学案生成 prompt 集成题库选题（AI 可从题库选 + 必要时生成补充）
-- [x] 前端：题库管理页（按篇目浏览、筛选、收藏）
-- [x] 规格文档：`docs/specs/question-bank.md`
-- [x] 测试：9 个后端测试通过
+- [x] 后端：ShareLink / ShareComment 模型 + Alembic 迁移
+- [x] 后端：share_service + 7 个 API 端点（创建/列表/更新/删除 + 公开只读视图 + 评论）
+- [x] 前端：SharePanel.vue（权限/过期时间/复制链接/管理已有链接）
+- [x] 前端：SharedDocumentView.vue（公开只读页，无需登录 + 可选评论）
+- [x] 编辑器工具栏"分享"按钮
+
+### P1-3：教学日历 + 学期计划
+
+- [x] 后端：Semester / WeekSchedule / LessonScheduleEntry 三表模型 + 迁移
+- [x] 后端：calendar_service + 9 个 API 端点（学期 CRUD + 排课/移课）
+- [x] 前端：CalendarView.vue（学期面板 + 水平滚动周网格 + 点击排课 + 移除）
+- [x] 备课台入口卡片"教学日历"
+
+### P1-4：Word 修改回导（diff & merge）
+
+- [x] 后端：reimport_service diff 引擎（difflib SequenceMatcher + 结构化比对）
+- [x] 后端：preview + merge 端点（merge 前自动拍快照）
+- [x] 前端：ReimportPanel.vue（三步向导：上传→逐 section 接受/拒绝→确认合并）
+- [x] 编辑器工具栏"回导修改"按钮（仅教案可见）
 
 ## 已授权范围
 
-- 课件生成和题库都是新增模块，不破坏现有主链路
+- 全部 4 个 P1 任务均为新增模块，不破坏现有主链路
 - 可新增数据库表、API 端点、前端页面
-- PPTX 导出与现有 Word 导出作为平级导出选项
-- 题库数据可先以 JSON 种子文件加载（类似 `knowledge_packs`）
+- 回导功能复用现有导入解析器 + 快照系统
 
-## 完成状态
+## 验证结果
 
-Phase 16 P0 实施已完成，后端测试全通过（176 passed），前端测试全通过（49 passed），类型检查通过。
+- 后端测试：176 passed
+- 前端测试：49 passed
+- 类型检查：passed
 
 ## 停止条件
 
-- 等待用户手动验收 P0 功能
+- 等待用户手动验收 P1 功能
 - 或用户明确指示暂停/调整方向
-- **不自动进入 P1 任务，必须等用户确认**
+- **不自动进入 P2 任务，必须等用户确认**
 
 ## 验收标准
 
-### P0-1 课件
-- [ ] 创建语文教案 → 生成 → 确认 → 导出 PPTX → 在 PowerPoint 中打开，幻灯片内容和顺序合理
-- [ ] 课件导出不破坏 Word 导出链路
+### P1-1 批量导入
+- [ ] 选择 3+ 个 .docx → 批量预览 → 逐项调整元数据 → 批量确认 → 备课台看到全部导入的 task
 
-### P0-2 题库
-- [ ] 在题库管理页按篇目浏览题目
-- [ ] 创建学案 → 生成时 AI 优先从题库选题 → 题目质量可接受
-- [ ] 题库未覆盖篇目时 AI 正常生成题目
+### P1-2 分享链接
+- [ ] 生成分享链接 → 无痕窗口打开 → 看到只读文档 → 留评论（如 comment 权限） → 返回编辑器看到评论
+
+### P1-3 教学日历
+- [ ] 创建学期 → 自动生成周 → 将已有 task 分配到不同周/天 → 日历视图正确显示
+
+### P1-4 Word 回导
+- [ ] 导出 docx → 在 Word 中修改 → 上传回导 → 看到逐 section diff → 接受部分修改 → 编辑器内容已合并 → 历史版本中有 pre-merge 快照

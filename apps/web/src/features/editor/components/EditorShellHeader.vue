@@ -16,6 +16,8 @@ defineEmits<{
   back: [];
   'toggle-outline': [];
   'open-history': [];
+  'open-share': [];
+  'open-reimport': [];
   'toggle-export-menu': [];
   export: [format: 'docx' | 'pptx'];
   'export-all': [];
@@ -104,6 +106,8 @@ function getQualityLabel(readiness: 'ready' | 'needs_fixes' | 'blocked' | null, 
       </div>
 
       <button class="button secondary" type="button" @click="$emit('open-history')">历史版本</button>
+      <button class="button secondary" type="button" @click="$emit('open-share')">分享</button>
+      <button v-if="currentDocType === 'lesson_plan'" class="button secondary" type="button" @click="$emit('open-reimport')">回导修改</button>
       <button
         class="button secondary quality-check-button"
         type="button"

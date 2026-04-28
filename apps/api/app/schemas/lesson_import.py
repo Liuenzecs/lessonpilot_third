@@ -47,3 +47,29 @@ class LessonPlanImportConfirmPayload(BaseModel):
 class LessonPlanImportConfirmResponse(BaseModel):
     task: TaskRead
     document: DocumentRead
+
+
+# ---------------------------------------------------------------------------
+# Batch import schemas
+# ---------------------------------------------------------------------------
+
+
+class BatchImportPreview(BaseModel):
+    items: list[LessonPlanImportPreview]
+
+
+class BatchImportConfirmPayload(BaseModel):
+    items: list[LessonPlanImportConfirmPayload]
+
+
+class BatchImportFailure(BaseModel):
+    source_filename: str
+    error: str
+
+
+class BatchImportConfirmResponse(BaseModel):
+    items: list[LessonPlanImportConfirmResponse] = Field(default_factory=list)
+    total: int
+    succeeded: int
+    failed: int
+    failures: list[BatchImportFailure] = Field(default_factory=list)

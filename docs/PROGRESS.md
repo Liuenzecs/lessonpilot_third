@@ -1603,3 +1603,20 @@
   - `pnpm --dir apps/web type-check`：passed
   - `ruff check`：passed
 - Status: DONE（等待用户手动验收 P0，不自动进入 P1）
+
+## [Phase 17 P1] — 批量导入 + 分享链接 + 教学日历 + Word 回导
+- 完成日期：2026-04-29
+- 完成内容：
+  - **P1-1 批量导入**：batch-preview/batch-confirm 端点 + BatchImportView.vue（多文件 → 预览 → 逐项编辑 → 批量确认），单项失败独立报告
+  - **P1-2 教研组分享**：ShareLink/ShareComment 模型 + 迁移 + 7 个 API 端点 + SharePanel.vue（权限/过期/复制链接）+ SharedDocumentView.vue（公开只读+评论）
+  - **P1-3 教学日历**：Semester/WeekSchedule/LessonScheduleEntry 三表模型 + 迁移 + 9 个 API 端点 + CalendarView.vue（学期面板+周网格+点击排课）
+  - **P1-4 Word 回导**：reimport_service diff 引擎（difflib+结构化比对）+ preview/merge 端点 + ReimportPanel.vue（三步向导：上传→逐 section 接受/拒绝→合并），合并前自动拍快照
+- 关键文件（共 37 个新文件）：
+  - 后端：`models/share_link.py`, `models/semester.py`, `schemas/share.py`, `schemas/calendar.py`, `schemas/reimport.py`, `schemas/lesson_import.py`（batch扩展）, `services/share_service.py`, `services/calendar_service.py`, `services/reimport_service.py`, `services/import_service.py`（batch扩展）, `endpoints/sharing.py`, `endpoints/calendar.py`, `endpoints/documents.py`（reimport扩展）, `endpoints/imports.py`（batch扩展）, `core/security.py`（get_optional_user）, 2 个 Alembic 迁移
+  - 前端：`features/sharing/`（4 文件）, `features/calendar/`（4 文件）, `features/reimport/`（3 文件）, `features/task/views/BatchImportView.vue`, 路由/编辑器/备课台改动
+  - 文档：`NEXT.md`, `PROGRESS.md`, `CLAUDE.md`
+- 验证结果：
+  - 后端测试：176 passed
+  - 前端测试：49 passed
+  - `pnpm --dir apps/web type-check`：passed
+- Status: DONE（等待用户手动验收 P1，不自动进入 P2）
