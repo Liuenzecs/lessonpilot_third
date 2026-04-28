@@ -6,6 +6,9 @@
  */
 import { computed, nextTick, ref } from 'vue';
 
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
+
 const props = defineProps<{
   modelValue: string[];
   disabled?: boolean;
@@ -80,16 +83,24 @@ function setTextareaRef(el: unknown, index: number) {
     <div v-for="(item, index) in list" :key="index" class="list-item-row">
       <span v-if="itemPrefix" class="item-prefix">{{ itemPrefix }}</span>
       <span class="item-index">{{ index + 1 }}.</span>
-      <textarea
-        :ref="(el) => setTextareaRef(el, index)"
-        class="item-input"
-        :value="item"
-        :disabled="disabled"
-        :placeholder="placeholder ?? `第 ${index + 1} 项`"
-        rows="1"
-        @input="updateItem(index, ($event.target as HTMLTextAreaElement).value); autoResize($event.target)"
-        @keydown="handleKeydown($event, index)"
-      />
+      <div class="formula-field">
+        <textarea
+          :ref="(el) => setTextareaRef(el, index)"
+          class="item-input"
+          :value="item"
+          :disabled="disabled"
+          :placeholder="placeholder ?? `第 ${index + 1} 项`"
+          rows="1"
+          @input="updateItem(index, ($event.target as HTMLTextAreaElement).value); autoResize($event.target)"
+          @keydown="handleKeydown($event, index)"
+        />
+        <FormulaText
+          v-if="containsFormula(item)"
+          class="formula-preview"
+          :text="item"
+          preview
+        />
+      </div>
       <button
         v-if="!disabled && list.length > 1"
         type="button"

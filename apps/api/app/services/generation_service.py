@@ -28,6 +28,11 @@ from app.schemas.content import (
 )
 from app.schemas.personal_asset import PersonalAssetRecommendation
 from app.services.document_service import load_content, save_document
+from app.services.formula_text import (
+    escape_latex_for_json,
+    repair_latex_in_value,
+    repair_latex_text,
+)
 from app.services.knowledge_service import (
     build_citation_metadata,
     count_knowledge_chunks,
@@ -605,19 +610,20 @@ def _extract_section_payload(parsed: Any, section_name: str) -> Any:
 
 
 def _parse_section_value(raw: str, spec: dict[str, Any]) -> Any:
-    text = _remove_code_fence(raw)
+    raw_text = _remove_code_fence(raw)
+    text = escape_latex_for_json(raw_text)
     if spec["kind"] == "string":
         try:
             parsed = json.loads(text)
             return parsed if isinstance(parsed, str) else text
         except json.JSONDecodeError:
-            return text
+            return repair_latex_text(raw_text)
     parsed = json.loads(text)
     return _extract_section_payload(parsed, spec["name"])
 
 
 def _validate_section_value(value: Any, spec: dict[str, Any]) -> Any:
-    normalized_value = _normalize_section_value(value, spec)
+    normalized_value = repair_latex_in_value(_normalize_section_value(value, spec))
     return spec["adapter"].validate_python(normalized_value)
 
 

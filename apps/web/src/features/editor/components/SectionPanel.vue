@@ -14,6 +14,9 @@ import type {
 } from '@lessonpilot/shared-types';
 import { computed } from 'vue';
 
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
+
 import CitationTooltip from './CitationTooltip.vue';
 import KeyPointsEditor from './SectionEditors/KeyPointsEditor.vue';
 import GenericListEditor from './SectionEditors/GenericListEditor.vue';
@@ -90,7 +93,12 @@ const statusClass = computed(() =>
 
       <!-- 流式输出显示区 -->
       <div v-if="streamingText" class="streaming-content">
-        <span class="streaming-text">{{ stripCitations(streamingText) }}</span>
+        <FormulaText
+          v-if="containsFormula(stripCitations(streamingText))"
+          class="streaming-text"
+          :text="stripCitations(streamingText)"
+        />
+        <span v-else class="streaming-text">{{ stripCitations(streamingText) }}</span>
         <span class="streaming-cursor" />
       </div>
 

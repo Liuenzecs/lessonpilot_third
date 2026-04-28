@@ -7,6 +7,9 @@
 import type { TeachingObjective } from '@lessonpilot/shared-types';
 import { computed, nextTick, ref } from 'vue';
 
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
+
 const props = defineProps<{
   modelValue: TeachingObjective[];
   disabled?: boolean;
@@ -99,16 +102,24 @@ function setTextareaRef(el: unknown, index: number) {
           {{ label }}
         </option>
       </select>
-      <textarea
-        :ref="(el) => setTextareaRef(el, index)"
-        class="objective-content"
-        :value="obj.content"
-        :disabled="disabled"
-        placeholder="请输入教学目标内容"
-        rows="1"
-        @input="updateObjective(index, { content: ($event.target as HTMLTextAreaElement).value }); autoResize($event.target)"
-        @keydown="handleKeydown($event, index)"
-      />
+      <div class="formula-field">
+        <textarea
+          :ref="(el) => setTextareaRef(el, index)"
+          class="objective-content"
+          :value="obj.content"
+          :disabled="disabled"
+          placeholder="请输入教学目标内容"
+          rows="1"
+          @input="updateObjective(index, { content: ($event.target as HTMLTextAreaElement).value }); autoResize($event.target)"
+          @keydown="handleKeydown($event, index)"
+        />
+        <FormulaText
+          v-if="containsFormula(obj.content)"
+          class="formula-preview"
+          :text="obj.content"
+          preview
+        />
+      </div>
       <button
         v-if="!disabled && objectives.length > 1"
         type="button"

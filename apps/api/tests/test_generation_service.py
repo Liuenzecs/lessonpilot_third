@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.services.generation_service import _get_section_specs, _validate_section_value
+from app.services.generation_service import (
+    _get_section_specs,
+    _parse_section_value,
+    _validate_section_value,
+)
 
 
 def _get_spec(doc_type: str, section_name: str):
@@ -43,3 +47,38 @@ def test_validate_section_value_normalizes_assessment_variants():
     assert items[0].item_type == "short_answer"
     assert items[0].prompt == "结合文本，说说人物的性格特点。"
     assert items[0].answer == "可从语言、动作、神态等角度作答。"
+
+
+def test_parse_section_value_preserves_latex_commands_in_json_string():
+    spec = _get_spec("lesson_plan", "board_design")
+
+    value = _parse_section_value(
+        r'"面积公式：\\(S=\frac{1}{2}ah+\sqrt{2}\\)，角度 \\(\theta=30^\circ\\)"',
+        spec,
+    )
+
+    assert r"\frac{1}{2}" in value
+    assert r"\sqrt{2}" in value
+    assert r"\theta" in value
+    assert "\x0c" not in value
+    assert "\t" not in value
+
+
+def test_validate_section_value_repairs_latex_control_escapes():
+    spec = _get_spec("study_guide", "assessment")
+
+    value = [
+        {
+            "level": "A",
+            "itemType": "short_answer",
+            "prompt": "计算 \\(S=\x0crac{1}{2}ah\\)，并说明 \theta 的意义。",
+            "options": [],
+            "answer": r"\(S=\frac{1}{2}ah\)",
+            "analysis": "",
+        }
+    ]
+
+    items = _validate_section_value(value, spec)
+
+    assert r"\frac{1}{2}" in items[0].prompt
+    assert r"\theta" in items[0].prompt

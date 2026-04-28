@@ -2,6 +2,7 @@
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
 @import '@fontsource/inter/700.css';
+@import 'katex/dist/katex.min.css';
 
 :root {
   color-scheme: light;
@@ -392,6 +393,49 @@ button {
 
 .field input::placeholder, .field textarea::placeholder {
   color: var(--text-tertiary);
+}
+
+.formula-text {
+  display: inline;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.formula-text-preview {
+  display: block;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--primary-rgb), 0.055);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+
+.formula-copy {
+  white-space: pre-wrap;
+}
+
+.formula-math {
+  display: inline-block;
+  max-width: 100%;
+  margin: 0 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: -0.14em;
+}
+
+.formula-math-display {
+  display: block;
+  margin: var(--space-xs) 0;
+  padding: var(--space-xs) 0;
+}
+
+.formula-math .katex {
+  font-size: 1.05em;
+}
+
+.formula-math-display .katex-display {
+  margin: 0;
 }
 
 .muted, .subtitle {

@@ -68,6 +68,21 @@
   gap: 10px;
 }
 
+.formula-field {
+  flex: 1;
+  display: grid;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.formula-preview {
+  margin-top: var(--space-2xs);
+}
+
+.rich-text-formula-preview {
+  margin-top: var(--space-sm);
+}
+
 .dimension-select,
 .objective-content,
 .step-input,
@@ -102,6 +117,13 @@
   line-height: 1.6;
   resize: vertical;
   font-family: inherit;
+}
+
+.formula-field > .objective-content,
+.formula-field > .item-input,
+.formula-field > .option-input,
+.formula-field > .answer-input {
+  width: 100%;
 }
 
 .objective-content,

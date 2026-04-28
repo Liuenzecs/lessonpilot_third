@@ -1409,3 +1409,53 @@
   - `5173` 端口：已确认空闲后以 `--strictPort` 启动，监听进程为 `node`
   - 本地 Chrome headless 打开 `http://127.0.0.1:5173/`：公域首屏正常渲染真实文档桌预览
 - Status: DONE（用户已验收）
+
+## [Cycle 12 Hotfix] — 数学公式生成与编辑器展示修复
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增后端 LaTeX 文本保护，避免模型输出的 `\frac / \theta / \sqrt / \(...\)` 在 JSON 解析时被转成控制字符
+  - 对已解析值中的常见公式控制字符做递归修复，降低旧内容或非严格输出造成的乱码
+  - 更新生成、重写、教案、学案 prompt，明确数学公式使用 LaTeX 且 JSON 字符串反斜杠必须双写
+  - 前端引入 KaTeX，新增公式解析工具与 `FormulaText` 组件
+  - 编辑器文字字段、测评题、答案解析、板书 / 反思与流式输出区域增加公式预览
+- 关键文件：
+  - `apps/api/app/services/formula_text.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/prompts/section_generation_prompt.md`
+  - `apps/api/app/prompts/section_rewrite_prompt.md`
+  - `apps/web/src/shared/utils/formula.ts`
+  - `apps/web/src/shared/components/FormulaText.vue`
+  - `apps/web/src/features/editor/components/SectionEditors/*.vue`
+  - `apps/web/src/features/editor/components/SectionPanel.vue`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_generation_service.py -q`：4 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app/services/formula_text.py apps/api/app/services/generation_service.py apps/api/tests/test_generation_service.py`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：148 passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：44 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Cycle 12 Hotfix] — 数学公式 Word 原生导出补齐
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增 Word OMML 公式构建工具，将常见 LaTeX 片段转换为 `m:oMath`
+  - Word 导出段落和表格单元格支持识别 `\\(...\\)`、`\\[...\\]`、`$$...$$` 公式
+  - 支持分式、根号、上下标、希腊字母和常用运算符的原生公式导出
+  - 教案目标、教学过程、板书以及学案测评题、答案、解析等文本字段导出时不再保留裸 LaTeX
+  - 更新 Word 导出规格和手动验收脚本，明确公式需在 Word 中可选中、可编辑
+- 关键文件：
+  - `apps/api/app/services/word_formula.py`
+  - `apps/api/app/services/export_service.py`
+  - `apps/api/tests/test_export.py`
+  - `docs/specs/export-docx.md`
+  - `docs/ACCEPTANCE.md`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_export.py -q`：12 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app/services/word_formula.py apps/api/app/services/export_service.py apps/api/tests/test_export.py`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：150 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：44 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
