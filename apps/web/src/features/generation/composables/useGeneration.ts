@@ -1,31 +1,61 @@
 import { buildApiUrl } from '@/shared/api/client';
+import type { LessonDocument } from '@/features/editor/types';
 
-// ---------------------------------------------------------------------------
-// 流式生成事件 handlers（Sprint 3 新协议）
-// ---------------------------------------------------------------------------
-
-export interface StreamingEventHandlers {
-  onStatus: (payload: { status: string }) => void;
-  onProgress: (payload: { progress: number; message: string; doc_type?: string }) => void;
-  onSectionStart: (payload: { doc_type: string; section_name: string; title: string }) => void;
-  onSectionDelta: (payload: { text: string }) => void;
-  onSectionComplete: (payload: { doc_type: string; section_name: string }) => void;
-  onDocument: (payload: { id: string; doc_type: string; content: unknown; version: number }) => void;
-  onDone: (payload: { message: string }) => void;
-  onError: (payload: { message: string }) => void;
+export interface CitationInfo {
+  chunk_id: string;
+  source: string;
+  title: string;
+  knowledge_type: string;
+  chapter?: string;
+  content_snippet: string;
 }
 
-// ---------------------------------------------------------------------------
-// 旧版通用 handler（rewrite / append 仍在使用）
-// ---------------------------------------------------------------------------
-
-export interface GenerationEventHandlers {
-  onEvent: (event: string, payload: unknown) => void;
+export interface RagStatusInfo {
+  status: 'disabled' | 'unmatched' | 'matched_empty' | 'ready' | 'degraded';
+  domain?: string | null;
+  matched_keywords: string[];
+  chunk_count: number;
+  retrieved_count: number;
+  message: string;
 }
 
-// ---------------------------------------------------------------------------
-// 内部 SSE 消费
-// ---------------------------------------------------------------------------
+export interface AssetStatusInfo {
+  status: 'disabled' | 'unmatched' | 'ready' | 'degraded';
+  matched_assets: Array<{
+    asset_id: string;
+    title: string;
+    file_type: string;
+  }>;
+  snippet_count: number;
+  message: string;
+}
+
+export interface SectionDocumentPayload extends LessonDocument {
+  section_name: string;
+  section_title: string;
+}
+
+export interface SectionStreamHandlers {
+  onStatus?: (payload: { status: string }) => void;
+  onProgress?: (payload: {
+    progress?: number;
+    completed?: number;
+    total?: number;
+    doc_type?: string;
+    section_name?: string;
+    message?: string;
+  }) => void;
+  onSectionStart?: (payload: { doc_type?: string; section_name: string; title: string }) => void;
+  onSectionDelta?: (payload: { doc_type?: string; section_name: string; delta?: string; text?: string }) => void;
+  onSectionDocument?: (payload: SectionDocumentPayload) => void;
+  onSectionDone?: (payload: { doc_type?: string; section_name: string; completed?: number; total?: number }) => void;
+  onRagStatus?: (payload: RagStatusInfo) => void;
+  onAssetStatus?: (payload: AssetStatusInfo) => void;
+  onCitations?: (payload: { doc_type: string; section_name?: string; citations: CitationInfo[] }) => void;
+  onWarning?: (payload: { message: string; doc_type?: string; section_name?: string }) => void;
+  onDocumentDone?: (payload: { message?: string; task_id?: string; document_id?: string }) => void;
+  onError?: (payload: { message: string }) => void;
+}
 
 async function _consumeSse(
   streamUrl: string,
@@ -80,14 +110,10 @@ async function _consumeSse(
   }
 }
 
-// ---------------------------------------------------------------------------
-// 流式生成消费（Sprint 3 新协议）
-// ---------------------------------------------------------------------------
-
-export async function consumeGenerationStream(
+export async function consumeSectionStream(
   streamUrl: string,
   token: string,
-  handlers: StreamingEventHandlers,
+  handlers: SectionStreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
   await _consumeSse(
@@ -98,56 +124,43 @@ export async function consumeGenerationStream(
 
       switch (event) {
         case 'status':
-          handlers.onStatus(payload);
+          handlers.onStatus?.(payload);
           break;
         case 'progress':
-          handlers.onProgress(payload);
+          handlers.onProgress?.(payload);
           break;
         case 'section_start':
-          handlers.onSectionStart(payload);
+          handlers.onSectionStart?.(payload);
           break;
         case 'section_delta':
-          handlers.onSectionDelta(payload);
+          handlers.onSectionDelta?.(payload);
           break;
-        case 'section_complete':
-          handlers.onSectionComplete(payload);
+        case 'section_document':
+          handlers.onSectionDocument?.(payload);
           break;
-        case 'document':
-          handlers.onDocument(payload);
+        case 'section_done':
+          handlers.onSectionDone?.(payload);
           break;
-        case 'done':
-          handlers.onDone(payload);
+        case 'rag_status':
+          handlers.onRagStatus?.(payload);
+          break;
+        case 'asset_status':
+          handlers.onAssetStatus?.(payload);
+          break;
+        case 'citations':
+          handlers.onCitations?.(payload);
+          break;
+        case 'warning':
+          handlers.onWarning?.(payload);
+          break;
+        case 'document_done':
+          handlers.onDocumentDone?.(payload);
           break;
         case 'error':
-          handlers.onError(payload);
+          handlers.onError?.(payload);
           break;
       }
     },
     signal,
   );
-}
-
-// ---------------------------------------------------------------------------
-// 旧版 Rewrite / Append 消费（保留不动）
-// ---------------------------------------------------------------------------
-
-export async function consumeRewriteStream(
-  streamUrl: string,
-  token: string,
-  handlers: GenerationEventHandlers,
-  signal?: AbortSignal,
-): Promise<void> {
-  await _consumeSse(streamUrl, token, (event, dataValue) => {
-    handlers.onEvent(event, JSON.parse(dataValue));
-  }, signal);
-}
-
-export async function consumeAppendStream(
-  streamUrl: string,
-  token: string,
-  handlers: GenerationEventHandlers,
-): Promise<void> {
-  await _consumeSse(streamUrl, token, (event, dataValue) => {
-    handlers.onEvent(event, JSON.parse(dataValue));
-  });
 }

@@ -29,7 +29,6 @@ def client(monkeypatch: pytest.MonkeyPatch):
     with TestClient(app) as test_client:
         yield test_client
 
-    SQLModel.metadata.drop_all(engine)
     engine.dispose()
     if database_path.exists():
         database_path.unlink()

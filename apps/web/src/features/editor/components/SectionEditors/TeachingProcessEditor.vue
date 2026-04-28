@@ -6,6 +6,9 @@
 import type { TeachingProcessStep } from '@lessonpilot/shared-types';
 import { computed } from 'vue';
 
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
+
 const props = defineProps<{
   modelValue: TeachingProcessStep[];
   disabled?: boolean;
@@ -94,6 +97,12 @@ function removeStep(index: number) {
             rows="2"
             @input="updateStep(index, { teacher_activity: ($event.target as HTMLTextAreaElement).value })"
           />
+          <FormulaText
+            v-if="containsFormula(step.teacher_activity)"
+            class="formula-preview"
+            :text="step.teacher_activity"
+            preview
+          />
         </div>
         <div class="step-field">
           <label class="step-label">学生活动</label>
@@ -105,6 +114,12 @@ function removeStep(index: number) {
             rows="2"
             @input="updateStep(index, { student_activity: ($event.target as HTMLTextAreaElement).value })"
           />
+          <FormulaText
+            v-if="containsFormula(step.student_activity)"
+            class="formula-preview"
+            :text="step.student_activity"
+            preview
+          />
         </div>
         <div class="step-field">
           <label class="step-label">设计意图</label>
@@ -115,6 +130,12 @@ function removeStep(index: number) {
             placeholder="为什么这样设计..."
             rows="2"
             @input="updateStep(index, { design_intent: ($event.target as HTMLTextAreaElement).value })"
+          />
+          <FormulaText
+            v-if="containsFormula(step.design_intent)"
+            class="formula-preview"
+            :text="step.design_intent"
+            preview
           />
         </div>
       </div>

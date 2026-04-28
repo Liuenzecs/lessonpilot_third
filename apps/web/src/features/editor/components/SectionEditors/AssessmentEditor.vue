@@ -6,6 +6,9 @@
 import type { AssessmentItem } from '@lessonpilot/shared-types';
 import { computed } from 'vue';
 
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
+
 const props = defineProps<{
   modelValue: AssessmentItem[];
   disabled?: boolean;
@@ -107,16 +110,30 @@ function removeOption(itemIndex: number, optionIndex: number) {
           rows="2"
           @input="updateItem(index, { prompt: ($event.target as HTMLTextAreaElement).value })"
         />
+        <FormulaText
+          v-if="containsFormula(item.prompt)"
+          class="formula-preview"
+          :text="item.prompt"
+          preview
+        />
         <div v-if="item.itemType === 'choice'" class="item-options">
           <div v-for="(opt, oi) in item.options" :key="oi" class="option-row">
             <span class="option-label">{{ String.fromCharCode(65 + oi) }}.</span>
-            <input
-              type="text"
-              class="option-input"
-              :value="opt"
-              :disabled="disabled"
-              @input="updateOption(index, oi, ($event.target as HTMLInputElement).value)"
-            />
+            <div class="formula-field">
+              <input
+                type="text"
+                class="option-input"
+                :value="opt"
+                :disabled="disabled"
+                @input="updateOption(index, oi, ($event.target as HTMLInputElement).value)"
+              />
+              <FormulaText
+                v-if="containsFormula(opt)"
+                class="formula-preview"
+                :text="opt"
+                preview
+              />
+            </div>
             <button
               v-if="!disabled"
               type="button"
@@ -137,14 +154,22 @@ function removeOption(itemIndex: number, optionIndex: number) {
         </div>
         <div class="item-answer">
           <label class="step-label">答案</label>
-          <input
-            type="text"
-            class="answer-input"
-            :value="item.answer"
-            :disabled="disabled"
-            placeholder="参考答案"
-            @input="updateItem(index, { answer: ($event.target as HTMLInputElement).value })"
-          />
+          <div class="formula-field">
+            <input
+              type="text"
+              class="answer-input"
+              :value="item.answer"
+              :disabled="disabled"
+              placeholder="参考答案"
+              @input="updateItem(index, { answer: ($event.target as HTMLInputElement).value })"
+            />
+            <FormulaText
+              v-if="containsFormula(item.answer)"
+              class="formula-preview"
+              :text="item.answer"
+              preview
+            />
+          </div>
         </div>
         <div class="item-analysis">
           <label class="step-label">解析</label>
@@ -155,6 +180,12 @@ function removeOption(itemIndex: number, optionIndex: number) {
             placeholder="解题思路..."
             rows="2"
             @input="updateItem(index, { analysis: ($event.target as HTMLTextAreaElement).value })"
+          />
+          <FormulaText
+            v-if="containsFormula(item.analysis)"
+            class="formula-preview"
+            :text="item.analysis"
+            preview
           />
         </div>
       </div>

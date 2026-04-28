@@ -13,6 +13,7 @@ from app.models import (
     DocumentSnapshot,
     Feedback,
     Task,
+    TeacherStyleProfile,
     User,
 )
 from app.schemas.account import (
@@ -117,6 +118,7 @@ def export_account_data(session: Session, user: User) -> bytes:
     feedback_entries = session.exec(
         select(Feedback).where(Feedback.user_id == user.id).order_by(Feedback.created_at.desc())
     ).all()
+    style_profile = session.exec(select(TeacherStyleProfile).where(TeacherStyleProfile.user_id == user.id)).first()
 
     payload = {
         "exported_at": datetime.now(UTC).isoformat(),
@@ -159,6 +161,16 @@ def export_account_data(session: Session, user: User) -> bytes:
             }
             for snapshot in snapshots
         ],
+        "style_profile": {
+            "enabled": style_profile.enabled,
+            "objective_style": style_profile.objective_style,
+            "process_style": style_profile.process_style,
+            "school_wording": style_profile.school_wording,
+            "activity_preferences": style_profile.activity_preferences,
+            "avoid_phrases": style_profile.avoid_phrases,
+            "sample_count": style_profile.sample_count,
+            "updated_at": style_profile.updated_at.isoformat(),
+        } if style_profile else None,
         "feedback": [serialize_feedback(entry).model_dump(mode="json") for entry in feedback_entries],
     }
     return json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
@@ -179,10 +191,14 @@ def delete_account(session: Session, user: User, payload: AccountDeletePayload) 
     for token in auth_tokens:
         session.delete(token)
 
+    style_profile = session.exec(select(TeacherStyleProfile).where(TeacherStyleProfile.user_id == user.id)).first()
+    if style_profile is not None:
+        session.delete(style_profile)
+
     tasks = session.exec(select(Task).where(Task.user_id == user.id)).all()
     for task in tasks:
-        document = session.exec(select(Document).where(Document.task_id == task.id)).first()
-        if document is not None:
+        documents = session.exec(select(Document).where(Document.task_id == task.id)).all()
+        for document in documents:
             snapshots = session.exec(
                 select(DocumentSnapshot).where(DocumentSnapshot.document_id == document.id)
             ).all()

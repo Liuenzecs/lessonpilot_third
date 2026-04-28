@@ -183,6 +183,26 @@ class TestLessonPlanExport:
         assert "教学重难点" in text
         assert "教学过程" in text
 
+    def test_latex_formula_exports_as_word_math(self) -> None:
+        """LaTeX 公式应导出为 Word 原生 OMML 公式对象。"""
+        task = _make_task()
+        content = _make_lesson_plan(
+            objectives=[
+                TeachingObjective(
+                    dimension="knowledge",
+                    content=r"理解三角形面积公式 \(S=\frac{1}{2}ah+\sqrt{2}\)",
+                )
+            ],
+        )
+        result = build_docx(task, content)
+        xml = _extract_document_xml(result)
+
+        assert "<m:oMath" in xml
+        assert "<m:f>" in xml
+        assert "<m:rad>" in xml
+        assert r"\frac" not in xml
+        assert r"\sqrt" not in xml
+
 
 # ---------------------------------------------------------------------------
 # 学案导出测试
@@ -221,6 +241,28 @@ class TestStudyGuideExport:
         assert isinstance(result, bytes)
         assert len(result) > 0
 
+    def test_assessment_formula_exports_as_word_math(self) -> None:
+        task = _make_task()
+        content = _make_study_guide(
+            assessment=[
+                AssessmentItem(
+                    level="A",
+                    item_type="short_answer",
+                    prompt=r"已知 \(x^2=9\)，求 \(x\)。",
+                    options=[],
+                    answer=r"\(x=\pm 3\)",
+                    analysis=r"两边开方得到 \(x^2=9\Rightarrow x=\pm3\)。",
+                )
+            ],
+        )
+        result = build_docx(task, content)
+        xml = _extract_document_xml(result)
+
+        assert "<m:oMath" in xml
+        assert "<m:sSup>" in xml
+        assert "±" in xml
+        assert "⇒" in xml
+
 
 # ---------------------------------------------------------------------------
 # 辅助
@@ -244,3 +286,12 @@ def _extract_docx_text(data: bytes) -> str:
                 if cell.text:
                     parts.append(cell.text)
     return "\n".join(parts)
+
+
+def _extract_document_xml(data: bytes) -> str:
+    """读取 docx 主文档 XML。"""
+    from io import BytesIO
+    from zipfile import ZipFile
+
+    with ZipFile(BytesIO(data)) as archive:
+        return archive.read("word/document.xml").decode("utf-8")

@@ -6,7 +6,10 @@
 import Underline from '@tiptap/extension-underline';
 import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
-import { onBeforeUnmount, watch } from 'vue';
+import { computed, onBeforeUnmount, watch } from 'vue';
+
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
 
 const props = withDefaults(
   defineProps<{
@@ -23,6 +26,14 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:modelValue': [value: string];
 }>();
+
+const previewText = computed(() =>
+  props.modelValue
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .trim(),
+);
 
 const editor = useEditor({
   extensions: [StarterKit, Underline],
@@ -67,5 +78,11 @@ onBeforeUnmount(() => {
     <div v-if="placeholder && !modelValue" class="rich-text-placeholder">
       {{ placeholder }}
     </div>
+    <FormulaText
+      v-if="containsFormula(previewText)"
+      class="formula-preview rich-text-formula-preview"
+      :text="previewText"
+      preview
+    />
   </div>
 </template>

@@ -979,6 +979,61 @@
   - `pnpm test`：25 passed（18 content + 7 useEditorView）
 - Status: DONE
 
+## [Cycle 4] — 稳定性优先收口（section 流式 + 本地 BGE + Notion 化）
+- 完成日期：2026-04-19
+- 完成内容：
+
+  **1. 编辑器稳定性修复**
+  - 后端生成与重写统一为 section 级 SSE 协议：`section_start / section_delta / section_document / section_done / document_done`
+  - `section_document` 改为回传完整文档载荷，前端不再拿“半个文档”强行合并，类型和运行时一致
+  - 学案 `self_study / collaboration / presentation` 全部统一通过 `learning_process` 读写，修复之前会误写到顶层字段的缺陷
+  - 编辑器 section 完成后立即合并服务器文档，修复“生成时可见，结束后短暂不可见”的稳定性问题
+
+  **2. RAG 改本地 BGE**
+  - 默认 embedding provider 切到 `local_bge + BAAI/bge-m3 + cpu`
+  - `.env.example` 与 `apps/api/.env.example` 补齐 `EMBEDDING_PROVIDER / EMBEDDING_MODEL / EMBEDDING_DEVICE / RAG_* / MINIMAX_*`
+  - 知识新增接口与种子脚本开始写入 `embedding_runtime` 元数据，便于后续知识版本追踪
+  - `seed_knowledge.py` 修复字符串语法错误，新增批量重试与更可读的 embedding 错误日志
+  - `knowledge` 端点的 embedding 失败提示改为 provider 感知，不再裸抛内部异常文案
+
+  **3. Notion 风格收口**
+  - 工作台、创建页、编辑器主流程按 `DESIGN.md` 做一轮收口：容器宽度、留白、section 卡片密度、工具条降噪、引用徽标区和文档阅读宽度统一
+  - 创建页改为显式引入 `workspace.css`，修复直接进入创建页时样式不完整的问题
+  - 用户菜单移除主题切换入口，主流程固定亮色；暗色主题降级为内部实验能力
+
+  **4. 文档与说明同步**
+  - 新增 `docs/rag-current.md`：说明当前 RAG 能力、边界、配置与后续完善方向
+  - 新增 `docs/rag-sales.md`：沉淀客户介绍话术
+  - 更新 `CLAUDE.md`、`GOAL.md`、`NEXT.md`，统一为“稳定性优先 + 完全 Notion + RAG 改本地 BGE”的当前口径
+
+- 关键文件：
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/rewrite_service.py`
+  - `apps/api/app/services/knowledge_service.py`
+  - `apps/api/app/api/v1/endpoints/knowledge.py`
+  - `apps/api/scripts/seed_knowledge.py`
+  - `.env.example`
+  - `apps/api/.env.example`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/features/task/styles/workspace.css`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/shared/components/UserMenu.vue`
+  - `docs/rag-current.md`
+  - `docs/rag-sales.md`
+  - `CLAUDE.md`
+  - `docs/GOAL.md`
+  - `docs/NEXT.md`
+
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m py_compile apps/api/scripts/seed_knowledge.py`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：119 passed（2 条既有 Pydantic deprecation warnings）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：25 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE
+
 ## [Cycle 3] — UI/UX 润色
 - 完成日期：2026-04-16
 - 完成内容：
@@ -1063,3 +1118,436 @@
   - `pnpm build`：passed
   - `pnpm test`：25 passed（18 content + 7 useEditorView）
 - Status: DONE
+
+## [Cycle 4] — Section 生成兼容性热修复
+- 完成日期：2026-04-19
+- 完成内容：
+  - 为 `objectives / collaboration / presentation / assessment` 等结构化 section 增加模型返回归一化兼容层，支持常见字段别名、中文枚举和值形态后再做 schema 校验，避免解析失败后直接回退为空
+  - 空 section 上点击“生成”时，不再机械沿用空内容重写逻辑；后端会改走 section 重新生成链路
+  - `reflection / self_reflection` 在老师显式点击生成时，改为生成可编辑的反思草稿，不再固定回退为空字符串
+  - 修正后端 `KeyPoints` 的 `keyPoints` / `key_points` 兼容与序列化，收口一处前后端结构不一致
+  - 补充回归测试，覆盖目标归一化、题目归一化、空目标生成、空反思草稿生成
+- 关键文件：
+  - `apps/api/app/schemas/content.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/rewrite_service.py`
+  - `apps/api/tests/test_content_schema.py`
+  - `apps/api/tests/test_generation_service.py`
+  - `apps/api/tests/api/test_documents.py`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：123 passed（保留 2 条既有 Pydantic deprecation warnings）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+- Status: DONE
+
+## [Cycle 4] — RAG 文档补充与知识入库验真
+- 完成日期：2026-04-20
+- 完成内容：
+  - 新增面向小白的 RAG 说明文档，系统讲清楚 LessonPilot 中知识入库、embedding、检索、prompt 注入、citation 与 `section_references` 的整条链路
+  - 补齐“为什么这次没有触发 RAG”的排查说明，明确区分“路由命中但知识库为空”和“真正检索命中并写入引用”这两种状态
+  - 在本地 API 虚拟环境安装缺失依赖 `sentence-transformers` 与 `torch`，恢复本地 `BGE-M3` embedding 能力
+  - 重新执行知识入库脚本，成功写入 16 条《红楼梦》知识卡，恢复语文文学类课题的知识增强生成基础
+  - 通过真实后端生成链路重新生成“薛宝钗人物分析（RAG验证）”，确认生成过程中出现 citation 事件，且最终文档 `section_references` 非空
+  - 核验到 lesson plan 的 `preparation / board_design` 与 study guide 的 `learning_objectives / key_difficulties / prior_knowledge` 已落入真实引用来源，证明这次不是普通生成而是 RAG 生效
+- 关键文件：
+  - `docs/rag-implementation.md`
+  - `apps/api/scripts/seed_knowledge.py`
+  - `apps/api/app/services/knowledge_service.py`
+  - `apps/api/app/core/config.py`
+- 验证结果：
+  - `cd apps/api && .\.venv\Scripts\python.exe -m scripts.seed_knowledge`：成功入库，`knowledge_chunks = 16`
+  - 真实生成验证任务：`ef57f1ef-86ed-47bf-b570-9375c3ccc885`
+  - lesson plan 文档：`34590d92-a638-49ca-987c-21177d3a456f`，`section_references` 非空
+  - study guide 文档：`3ff51269-fcd8-4f21-ac99-780b1315b84d`，`section_references` 非空
+- Status: DONE
+
+## [Cycle 4] — 前端卡片层级与去 AI 感文案收口
+- 完成日期：2026-04-20
+- 完成内容：
+  - 重做前端共享表面体系，`app-card` 默认改为 whisper border + 无阴影，状态卡补齐统一样式，避免页面壳层、内容卡和浮层全部使用同等级阴影
+  - 收口公域页、Auth、备课台、创建页、设置页的卡片密度与留白节奏，减少“大卡套小卡”叠加感，让主页面更接近 `DESIGN.md` 的 Notion 式文档层级
+  - 收口编辑器壳层：顶部 header 改为轻量顶栏，outline panel 更窄更轻，主文档面板成为唯一视觉中心；section 引用区与流式区改成内嵌提示条
+  - 统一主流程文案，弱化 `AI / 生成 / 重写 / 扩写` 的工具感表达，改为“起草 / 整理 / 改写 / 补充展开 / 压缩表达”等老师视角语言；帮助、隐私、条款仍保留必要真实披露
+  - 新增前端断言，覆盖 Landing 主文案、创建页主文案与 CTA、编辑器 section 操作标签，并保留原有 action enum 契约不变
+  - 顺手清理一批前端 lint error（未使用导入、未使用变量、正则转义），让前端 lint quiet、测试和构建恢复通过
+- 关键文件：
+  - `apps/web/src/shared/styles/main.css`
+  - `apps/web/src/features/public/styles/public.css`
+  - `apps/web/src/features/task/styles/workspace.css`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/features/public/content.ts`
+- 验证结果：
+  - `pnpm --dir apps/web test`：29 passed
+  - `pnpm --dir apps/web lint -- --quiet`：passed
+  - `pnpm --dir apps/web build`：passed（含 `vue-tsc`）
+- Status: DONE
+
+## [Cycle 4] — 产品文档与 Codex skills 基础建设
+- 完成日期：2026-04-26
+- 完成内容：
+  - 创建 7 个 LessonPilot 专用 Codex skills：
+    - `lessonpilot-product-strategist`：产品策略、竞品迁移、路线图优先级
+    - `lessonpilot-teaching-quality-reviewer`：教案/学案内容质量审查
+    - `lessonpilot-word-template-importer`：学校 Word 模板识别与字段映射
+    - `lessonpilot-legacy-material-ingestor`：旧 Word/PPT/讲义/资料迁移到结构化内容
+    - `lessonpilot-rag-knowledge-pack-builder`：语文 RAG 知识包设计、入库与引用验证
+    - `lessonpilot-export-quality-checker`：导出前体检与 Word 提交质量检查
+    - `lessonpilot-cycle-maintainer`：`NEXT / PROGRESS / GOAL / CLAUDE` 等文档状态维护
+  - 新增产品与执行文档，沉淀产品定位、竞品迁移策略、老师真实工作流、质量标准、验收脚本和路线图
+  - 新增 `docs/specs/` 技术契约文档，记录内容模型、section SSE、Word 导出和 RAG 规格
+  - 新增 ADR，明确“结构化 JSON 是内容中枢”的架构决策
+  - 更新 `docs/NEXT.md`，把新增 docs 与 skills 纳入本轮待验收项，但不自动进入下一阶段
+- 关键文件：
+  - `docs/PRODUCT.md`（NEW）
+  - `docs/COMPETITIVE.md`（NEW）
+  - `docs/TEACHER_WORKFLOWS.md`（NEW）
+  - `docs/QUALITY_RUBRIC.md`（NEW）
+  - `docs/ACCEPTANCE.md`（NEW）
+  - `docs/ROADMAP.md`（NEW）
+  - `docs/specs/content-model.md`（NEW）
+  - `docs/specs/section-sse.md`（NEW）
+  - `docs/specs/export-docx.md`（NEW）
+  - `docs/specs/rag.md`（NEW）
+  - `docs/decisions/ADR-0001-structured-json-as-core.md`（NEW）
+  - `docs/NEXT.md`（UPDATE）
+  - `C:/Users/realfeeling1/.codex/skills/lessonpilot-*`（NEW）
+- 验证结果：
+  - 7 个新增 skill 均已通过 `quick_validate.py` 结构校验（使用 `PYTHONUTF8=1` 规避 Windows 默认 GBK 解码问题）
+  - 本次仅新增文档和本地 Codex skills，未改动产品运行代码，未运行前后端测试
+- Status: DONE（待用户确认新增文档与 skills 方向）
+
+## [Cycle 4] — Agent 入口文档同步与提交准备
+- 完成日期：2026-04-26
+- 完成内容：
+  - 完善 `AGENTS.md`：明确正式工作前先读行为约束，再读 `CLAUDE / NEXT / PROGRESS`，并补充文档口径冲突时的优先级
+  - 在 `AGENTS.md` 中加入 7 个 LessonPilot 专用 Codex skills 的使用场景，方便后续 agent 按任务触发
+  - 完善 `CLAUDE.md`：补齐 `docs/` 文档地图、当前新增文档状态和专用 skills 使用口径
+  - 更新 `docs/NEXT.md`，将 `AGENTS / CLAUDE` 同步纳入本轮已完成事项
+  - 准备按用户要求提交并推送当前 `ai` 分支
+- 关键文件：
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+- 验证结果：
+  - 本次仅同步项目文档入口，未改动产品运行代码，未运行前后端测试
+- Status: DONE（待提交推送）
+
+## [Cycle 4] — 阶段级自动执行 Skill
+- 完成日期：2026-04-26
+- 完成内容：
+  - 新增 `lessonpilot-phase-autopilot-runner` 本机 Codex skill，用于在用户明确授权的阶段内自动拆分多个内部 Cycle 并持续推进
+  - 明确该 skill 的边界：不能切换 Plan mode、不能自动替用户验收、不能绕过 `AGENTS.md`、不能无授权进入下一阶段
+  - 为该 skill 补充 phase charter、execution loop、stop gates 三份 reference，要求先有阶段目标、范围、验收标准和提交推送策略
+  - 同步 `AGENTS.md / CLAUDE.md / docs/NEXT.md` 中的 skills 列表，从 7 个扩展为 8 个
+- 关键文件：
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+  - `C:/Users/realfeeling1/.codex/skills/lessonpilot-phase-autopilot-runner`（NEW）
+- 验证结果：
+  - `lessonpilot-phase-autopilot-runner` 已通过 `quick_validate.py` 结构校验（使用 `PYTHONUTF8=1`）
+  - 本次未改动产品运行代码，未运行前后端测试
+- Status: DONE
+
+## [Phase 5] — 知识可信闭环自动推进至验收口
+- 完成日期：2026-04-26
+- 完成内容：
+  - 新增语文重点篇目知识包 manifest，首批覆盖 `红楼梦 / 春 / 背影 / 桃花源记 / 岳阳楼记 / 天净沙·秋思`
+  - 将 RAG 课题路由从代码常量迁移到知识包配置，支持 trigger terms 命中证据
+  - 重写知识入库脚本，写入 `pack_id / pack_version / trigger_terms / embedding_runtime`，并以 `domain + title` 避免重复入库
+  - 新增 `POST /api/v1/knowledge/diagnose`，返回 `disabled / unmatched / matched_empty / ready / degraded` 等老师可理解状态
+  - 生成 SSE 新增 `rag_status` 事件，编辑器状态条展示知识增强命中、未命中和降级提示
+  - 修复 Pydantic section 值中的 `[cite:...]` 未被递归清洗的问题，提升 `section_references` 落库可靠性
+  - DeepSeek 配置切到 `deepseek-v4-flash`，并通过 `DEEPSEEK_THINKING=disabled` 显式关闭 thinking
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-5-knowledge-trust.md`、`docs/specs/rag.md`、`docs/specs/section-sse.md`、`docs/rag-current.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/data/knowledge_packs/chinese_literature_v1.json`
+  - `apps/api/app/services/knowledge_pack_service.py`
+  - `apps/api/app/services/knowledge_service.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/api/v1/endpoints/knowledge.py`
+  - `apps/api/scripts/seed_knowledge.py`
+  - `apps/web/src/features/editor/components/EditorStatusBanner.vue`
+  - `apps/web/src/features/editor/composables/useEditorGeneration.ts`
+  - `.env.example`
+  - `apps/api/.env.example`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：131 passed（保留 2 条既有 Pydantic deprecation warning）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：31 passed
+  - `pnpm --dir apps/web build`：passed
+  - `docker compose up -d postgres`：本地 `pgvector/pgvector:pg16` PostgreSQL 已启动并 healthy
+  - `cd apps/api && .\.venv\Scripts\python.exe -m scripts.seed_knowledge`：passed，成功导入 16 条新知识；第二次执行显示“没有新的知识条目需要导入”
+  - 本地知识库当前 `knowledge_chunks = 32`：`红楼梦=17`、`春=3`、`背影=3`、`桃花源记=3`、`岳阳楼记=3`、`天净沙·秋思=3`
+  - 真实向量检索验证：`红楼梦薛宝钗人物分析`、`春 朱自清 第一课时`、`桃花源记文言文教学` 均命中对应 domain 并召回 3 条 chunk
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 6] — 迁移与提交闭环自动推进至验收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 新增 `.docx` 旧教案导入预览接口：识别教学目标、教学重难点、教学准备、教学过程、板书设计、教学反思，并保留未识别内容与 warning
+  - 新增导入确认接口：将预览结果创建为普通 `Task + Document`，导入内容默认保持 `pending`
+  - 新增导出前体检接口：返回 `ready / needs_fixes / blocked`、问题、提醒和修复建议
+  - 前端新增 `/tasks/import` 导入旧教案页面，备课台和创建页均可进入，支持上传、预览、元信息修正与确认导入
+  - 编辑器新增导出前体检按钮与结果面板，阻断项暂不建议导出，提醒项可由老师确认后继续导出
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-6-migration-submission.md`、`docs/specs/import-docx.md`、`docs/specs/export-docx.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/services/import_service.py`
+  - `apps/api/app/services/quality_service.py`
+  - `apps/api/app/api/v1/endpoints/imports.py`
+  - `apps/api/app/api/v1/endpoints/documents.py`
+  - `apps/api/app/schemas/lesson_import.py`
+  - `apps/api/app/schemas/quality.py`
+  - `apps/web/src/features/task/views/LessonPlanImportView.vue`
+  - `apps/web/src/features/editor/components/ExportQualityPanel.vue`
+  - `apps/web/src/features/editor/composables/useEditorView.ts`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：138 passed（保留 2 条既有 Pydantic deprecation warning）
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：34 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 7-10] — 学校格式与个人备课资产闭环自动推进至验收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 新增学校 Word 模板上传预览、确认保存、个人模板列表和删除能力，模板保存为结构化 export spec
+  - 将模板归属扩展到用户维度，Word 导出支持 `template_id`，可按个人学校模板渲染元信息、栏目顺序、教学过程表格列和空白区域
+  - 导出前体检升级为质量检查 2.0，新增目标空泛、目标-过程承接、重难点展开、学生活动主动性、学案测评覆盖等检查，并返回 `alignment_map`
+  - 新增上课包生成能力，从已确认教案生成学案草稿、PPT 大纲和课堂口播稿，所有内容默认 pending
+  - 新增个人资料库，支持 `.docx` / `.pptx` 上传预览、确认保存、列表、删除和用户隔离
+  - 前端备课台新增“学校模板”“个人资料库”入口，编辑器新增学校模板选择与上课包面板，体检面板展示一致性结果
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-7-10-teaching-asset-loop.md`、`docs/specs/school-template.md`、`docs/specs/quality-check-v2.md`、`docs/specs/teaching-package.md`、`docs/specs/personal-assets.md`、`docs/specs/export-docx.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/services/template_service.py`
+  - `apps/api/app/services/export_service.py`
+  - `apps/api/app/services/quality_service.py`
+  - `apps/api/app/services/personal_asset_service.py`
+  - `apps/api/app/services/teaching_package_service.py`
+  - `apps/web/src/features/task/views/SchoolTemplatesView.vue`
+  - `apps/web/src/features/task/views/PersonalAssetsView.vue`
+  - `apps/web/src/features/editor/components/TeachingPackagePanel.vue`
+  - `apps/web/src/features/editor/components/ExportQualityPanel.vue`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：142 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：38 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 7-10] — 本地前端端口规则收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 明确本地前端开发服务固定使用 `5173`
+  - 若 `5173` 被占用，后续 agent 需先释放占用进程，再重新使用 `5173`
+  - 禁止未经用户明确指定时临时切换到 `5174` 或其他端口
+- 关键文件：
+  - `AGENTS.md`
+  - `CLAUDE.md`
+- 验证结果：
+  - 已停止 `5173` 与 `5174` 上的旧前端监听进程
+- Status: DONE（规则已写入，不涉及用户验收）
+
+## [Phase 11] — 真实样本验收与个人资料复用闭环自动推进至验收口
+- 完成日期：2026-04-27
+- 完成内容：
+  - 新增个人资料推荐接口，按当前用户、学科、年级、课题和关键词返回私有资料片段
+  - 生成请求新增 `use_personal_assets / personal_asset_ids`，生成 SSE 新增 `asset_status`
+  - 生成 prompt 注入“我的资料库参考”，并将个人资料 citation 写入 `section_references`
+  - 前端创建页和编辑器新增“参考我的资料库”选择，生成状态区展示个人资料命中情况
+  - 引用 tooltip 区分“知识库资料”和“我的资料”
+  - 新增 `POST /api/v1/documents/{document_id}/quality-fix`，支持将常见质量问题转成待确认修订
+  - 导出前体检面板新增“按建议调整”，修订结果保持 pending
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-11-personal-reuse-acceptance.md`、`docs/specs/personal-assets.md`、`docs/specs/quality-check-v2.md`、`docs/specs/section-sse.md`、`docs/specs/rag.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `apps/api/app/services/personal_asset_service.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/quality_fix_service.py`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/components/ExportQualityPanel.vue`
+  - `apps/web/src/features/editor/components/CitationTooltip.vue`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：146 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：41 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 12] — Google Docs 手感的教师备课桌 UI 重构推进至验收口
+- 完成日期：2026-04-28
+- 完成内容：
+  - 将 UI 设计方向从“完全 Notion”改为“教师文档桌 / Google Docs 手感”，同步 `DESIGN.md` 与 `CLAUDE.md`
+  - 公域首页首屏改为真实备课文档工作区预览，突出备课文档、质量检查、引用和 Word 导出
+  - 备课台改为“备课队列”，任务卡显示文档类型、课题、更新时间和下一步动作
+  - 创建页改为“备课启动台”，课题输入为主流程，右侧集中展示学校模板、个人资料库和知识增强提示
+  - 编辑器改为顶部文档工具栏、左侧文档目录、中间纸张画布、右侧检查栏
+  - 将学校模板、个人资料、导出前体检、引用数量和上课包从正文上方移入右侧辅助区
+  - 旧教案导入、学校模板、个人资料库、设置页同步新的文档桌视觉
+  - 拆分编辑器样式为 `editor.css` 与 `editor-fields.css`，保持单文件长度在项目约定内
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-12-google-docs-ui.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `DESIGN.md`
+  - `CLAUDE.md`
+  - `apps/web/src/shared/styles/main.css`
+  - `apps/web/src/features/public/views/LandingView.vue`
+  - `apps/web/src/features/public/components/HeroProductPreview.vue`
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/features/editor/styles/editor-fields.css`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：41 passed
+  - `pnpm --dir apps/web build`：passed
+  - `5173` 端口：已确认空闲后以 `--strictPort` 启动，监听进程为 `node`
+  - 本地 Chrome headless 打开 `http://127.0.0.1:5173/`：公域首屏正常渲染真实文档桌预览
+- Status: DONE（用户已验收）
+
+## [Cycle 12 Hotfix] — 数学公式生成与编辑器展示修复
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增后端 LaTeX 文本保护，避免模型输出的 `\frac / \theta / \sqrt / \(...\)` 在 JSON 解析时被转成控制字符
+  - 对已解析值中的常见公式控制字符做递归修复，降低旧内容或非严格输出造成的乱码
+  - 更新生成、重写、教案、学案 prompt，明确数学公式使用 LaTeX 且 JSON 字符串反斜杠必须双写
+  - 前端引入 KaTeX，新增公式解析工具与 `FormulaText` 组件
+  - 编辑器文字字段、测评题、答案解析、板书 / 反思与流式输出区域增加公式预览
+- 关键文件：
+  - `apps/api/app/services/formula_text.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/prompts/section_generation_prompt.md`
+  - `apps/api/app/prompts/section_rewrite_prompt.md`
+  - `apps/web/src/shared/utils/formula.ts`
+  - `apps/web/src/shared/components/FormulaText.vue`
+  - `apps/web/src/features/editor/components/SectionEditors/*.vue`
+  - `apps/web/src/features/editor/components/SectionPanel.vue`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_generation_service.py -q`：4 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app/services/formula_text.py apps/api/app/services/generation_service.py apps/api/tests/test_generation_service.py`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：148 passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：44 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Cycle 12 Hotfix] — 数学公式 Word 原生导出补齐
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增 Word OMML 公式构建工具，将常见 LaTeX 片段转换为 `m:oMath`
+  - Word 导出段落和表格单元格支持识别 `\\(...\\)`、`\\[...\\]`、`$$...$$` 公式
+  - 支持分式、根号、上下标、希腊字母和常用运算符的原生公式导出
+  - 教案目标、教学过程、板书以及学案测评题、答案、解析等文本字段导出时不再保留裸 LaTeX
+  - 更新 Word 导出规格和手动验收脚本，明确公式需在 Word 中可选中、可编辑
+- 关键文件：
+  - `apps/api/app/services/word_formula.py`
+  - `apps/api/app/services/export_service.py`
+  - `apps/api/tests/test_export.py`
+  - `docs/specs/export-docx.md`
+  - `docs/ACCEPTANCE.md`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_export.py -q`：12 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app/services/word_formula.py apps/api/app/services/export_service.py apps/api/tests/test_export.py`：passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：150 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：44 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 13] — 真实试用硬化与首份可交付闭环第一轮
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增 Phase 13 阶段文档，明确本阶段聚焦真实试用和首份可交付，不扩展全学科或新后端能力
+  - 备课台顶部入口新增“用样例体验”，空状态补充“填好课题 → 生成初稿 → 体检风险 → 导出 Word”的首份路径
+  - 创建页新增“套用试用样例”，支持通过 `preset=first-lesson` 自动填入语文七年级《春》第一课时演示字段
+  - 样例预填不改变后端创建接口，老师仍可修改所有字段后进入文档桌
+  - 新增 Phase 13 真实试用样本包，覆盖首份语文教案、旧 Word 教案导入、学校模板、个人资料库和公式导出
+  - 更新 `docs/NEXT.md`、`docs/ACCEPTANCE.md`、`CLAUDE.md`
+- 关键文件：
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/task/data/firstLessonPresets.ts`
+  - `apps/web/src/features/task/styles/workspace.css`
+  - `apps/web/src/features/task/views/__tests__/TaskCreateView.test.ts`
+  - `docs/milestones/phase-13-real-trial-hardening.md`
+  - `docs/fixtures/phase-13-real-trial-samples.md`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run src/features/task/views/__tests__/TaskCreateView.test.ts`：2 passed
+  - `pnpm --dir apps/web test --run`：45 passed
+  - `pnpm --dir apps/web build`：passed
+  - `git diff --check`：passed
+  - `5173` 端口：已按固定端口规则启动前端 dev server
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 14] — 老师个人风格记忆第一轮
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增用户私有 `teacher_style_profiles` 表、SQLModel 模型、Alembic 迁移、schema、service 与 `/api/v1/style-profile` API
+  - 设置页新增“风格记忆”入口，支持保存、回显、修改和启用 / 关闭目标写法、过程风格、学校措辞、常用活动和避免套话
+  - 生成链路和局部重写链路读取当前用户风格档案，并在启用且非空时注入 prompt 提示
+  - 风格提示明确不覆盖结构化 JSON、教学质量规则、RAG 引用或学校模板要求
+  - 账户数据导出包含个人风格档案，删除账号时同步清理风格档案
+  - 新增 Phase 14 阶段文档、风格档案规格和手动验收脚本
+- 关键文件：
+  - `apps/api/app/models/teacher_style_profile.py`
+  - `apps/api/app/services/style_profile_service.py`
+  - `apps/api/app/api/v1/endpoints/style_profile.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/rewrite_service.py`
+  - `apps/web/src/features/settings/views/SettingsView.vue`
+  - `docs/specs/teacher-style-profile.md`
+  - `docs/milestones/phase-14-teacher-style-memory.md`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_account_service.py apps/api/tests/test_style_profile.py -q`：17 passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/api/test_documents.py -q`：8 passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：157 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：46 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（用户已验收，准备提交推送）
+
+## [Phase 15] — 备案临时商业化收口
+- 完成日期：2026-04-28
+- 完成内容：
+  - 公域导航和页脚移除“定价”入口
+  - `/pricing` 前端路由改为重定向首页，删除定价页组件
+  - 帮助中心改为“账户与数据”口径，移除升级、续费、支付、方案限制等商业化文案
+  - 服务条款替换“付费与退款说明”为“服务性质说明”
+  - 删除未引用的 subscription / billing / invoice 前端类型、查询失效和样式残留
+  - 新增备案收口测试，覆盖导航 / 页脚、`/pricing` 重定向、帮助中心和服务条款商业化文案清理
+  - 新增 Phase 15 阶段文档并更新 `docs/NEXT.md`、`docs/ACCEPTANCE.md`、`CLAUDE.md`
+- 关键文件：
+  - `apps/web/src/app/router/index.ts`
+  - `apps/web/src/features/public/content.ts`
+  - `apps/web/src/features/public/components/PublicNav.vue`
+  - `apps/web/src/features/public/components/PublicFooter.vue`
+  - `apps/web/src/features/public/views/__tests__/FilingCleanup.test.ts`
+  - `docs/milestones/phase-15-filing-commercial-cleanup.md`
+- 验证结果：
+  - `pnpm --dir apps/web test --run src/features/public/views/__tests__/FilingCleanup.test.ts`：3 passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：49 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 15] — 用户验收通过
+- 完成日期：2026-04-29
+- 完成内容：
+  - 用户完成 Phase 15 手动查看，确认备案临时商业化收口可通过验收
+  - 将 `docs/NEXT.md` 收口为“等待下一步指示”，不自动进入下一阶段
+  - 准备提交当前 Phase 15 备案收口相关改动并推送到 `ai`
+- 关键文件：
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+  - `CLAUDE.md`
+- 验证结果：
+  - 用户手动验收：passed
+- Status: DONE（用户已验收，准备提交推送）

@@ -48,6 +48,15 @@ export interface AssessmentItem {
   analysis: string;
 }
 
+export interface CitationReference {
+  chunk_id: string;
+  source: string;
+  title: string;
+  knowledge_type: string;
+  chapter?: string;
+  content_snippet: string;
+}
+
 // ---------------------------------------------------------------------------
 // 教案
 // ---------------------------------------------------------------------------
@@ -76,6 +85,7 @@ export interface LessonPlanContent {
   board_design_status: SectionStatus;
   reflection: string;
   reflection_status: SectionStatus;
+  section_references: Record<string, CitationReference[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +126,7 @@ export interface StudyGuideContent {
   extension_status: SectionStatus;
   self_reflection: string;
   self_reflection_status: SectionStatus;
+  section_references: Record<string, CitationReference[]>;
 }
 
 // ---------------------------------------------------------------------------

@@ -13,28 +13,28 @@ import '@/features/public/styles/public.css';
     <PublicNav />
 
     <main class="auth-shell-main">
-      <section class="auth-brand-panel section-card">
+      <section class="auth-brand-panel">
         <p class="page-eyebrow">LessonPilot</p>
         <h1>今晚的课，今晚就能备好</h1>
         <p class="auth-brand-text">
           结构可见，操作极简。老师不需要先学一套复杂工具，打开就能开始备课。
         </p>
         <div class="auth-brand-points">
-          <article class="auth-brand-point app-card">
+          <article class="auth-brand-point">
             <WandSparkles :size="20" />
             <div>
               <strong>3 步完成创建</strong>
               <p>选学科、选年级、填主题，直接进入编辑器。</p>
             </div>
           </article>
-          <article class="auth-brand-point app-card">
+          <article class="auth-brand-point">
             <BookOpenText :size="20" />
             <div>
-              <strong>自动生成骨架</strong>
-              <p>结构化教案自动生成，老师只需要编辑和把关。</p>
+              <strong>先铺好备课骨架</strong>
+              <p>结构化文档会先整理出初稿，老师只需要编辑和把关。</p>
             </div>
           </article>
-          <article class="auth-brand-point app-card">
+          <article class="auth-brand-point">
             <FileDown :size="20" />
             <div>
               <strong>导出即可使用</strong>

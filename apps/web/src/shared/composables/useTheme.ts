@@ -1,7 +1,6 @@
 import { computed, reactive } from 'vue';
 
 import {
-  loadPersistedThemePreference,
   savePersistedThemePreference,
   type PersistedThemePreference,
 } from '@/shared/utils/storage';
@@ -14,13 +13,7 @@ const themeState = reactive({
 });
 
 function resolveInitialTheme(): AppTheme {
-  const persistedTheme = loadPersistedThemePreference();
-  if (persistedTheme) {
-    return persistedTheme;
-  }
-  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
-  }
+  // 主流程固定使用亮色主题；暗色主题仅保留给内部实验调用。
   return 'light';
 }
 

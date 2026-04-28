@@ -18,6 +18,8 @@ from app.schemas.document import (
     DocumentSnapshotRead,
     DocumentUpdatePayload,
 )
+from app.schemas.quality import QualityCheckResponse, QualityFixPayload
+from app.schemas.teaching_package import TeachingPackageRead
 from app.services.document_service import (
     get_document_snapshot,
     get_owned_document,
@@ -30,7 +32,10 @@ from app.services.document_service import (
     update_document,
 )
 from app.services.export_service import build_docx
+from app.services.quality_fix_service import apply_quality_fix
+from app.services.quality_service import check_export_quality
 from app.services.rewrite_service import get_document_task, stream_rewrite
+from app.services.teaching_package_service import generate_teaching_package, list_teaching_packages
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -170,6 +175,7 @@ def restore_history_snapshot(
 def export_document(
     document_id: str,
     format: str = Query("docx"),
+    template_id: str | None = Query(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> Response:
@@ -184,7 +190,8 @@ def export_document(
         content = load_content(document)
         doc_type_label = "学案" if document.doc_type == "study_guide" else "教案"
         filename = quote(f"{task.title}_{doc_type_label}.docx")
-        docx_bytes = build_docx(task, content)
+        template_spec = _load_template_spec(session, template_id, current_user.id)
+        docx_bytes = build_docx(task, content, template_spec=template_spec)
         return Response(
             content=docx_bytes,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -192,3 +199,67 @@ def export_document(
         )
 
     raise HTTPException(status_code=400, detail="Only docx export is supported")
+
+
+@router.get("/{document_id}/teaching-packages", response_model=list[TeachingPackageRead])
+def get_teaching_packages(
+    document_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> list[TeachingPackageRead]:
+    get_owned_document(session, document_id, current_user.id)
+    return list_teaching_packages(session, document_id, current_user.id)
+
+
+@router.post("/{document_id}/teaching-package", response_model=TeachingPackageRead, status_code=201)
+def create_teaching_package(
+    document_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> TeachingPackageRead:
+    return generate_teaching_package(session, document_id, current_user.id)
+
+
+@router.post("/{document_id}/quality-check", response_model=QualityCheckResponse)
+def quality_check_document(
+    document_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> QualityCheckResponse:
+    document = get_owned_document(session, document_id, current_user.id)
+    task = session.exec(
+        select(Task).where(Task.id == document.task_id, Task.user_id == current_user.id)
+    ).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return check_export_quality(task, load_content(document))
+
+
+@router.post("/{document_id}/quality-fix", response_model=DocumentRead)
+def quality_fix_document(
+    document_id: str,
+    payload: QualityFixPayload,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> DocumentRead:
+    document = get_owned_document(session, document_id, current_user.id)
+    task = session.exec(
+        select(Task).where(Task.id == document.task_id, Task.user_id == current_user.id)
+    ).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    updated_document = apply_quality_fix(session, document, task, payload)
+    return serialize_document(updated_document)
+
+
+def _load_template_spec(session: Session, template_id: str | None, user_id: str) -> dict | None:
+    if not template_id:
+        return None
+    from app.services.template_service import get_accessible_template
+
+    template = get_accessible_template(session, template_id, user_id)
+    if template is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if template.template_type != "school_lesson_export":
+        return None
+    return template.content

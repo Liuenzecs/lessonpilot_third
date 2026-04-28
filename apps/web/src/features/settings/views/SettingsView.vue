@@ -9,7 +9,9 @@ import {
   useChangePasswordMutation,
   useDeleteAccountMutation,
   useExportAccountMutation,
+  useStyleProfile,
   useUpdateAccountMutation,
+  useUpdateStyleProfileMutation,
 } from '@/features/settings/composables/useAccount';
 import { getAppErrorState, getErrorDescription } from '@/shared/api/errors';
 import StatePanel from '@/shared/components/StatePanel.vue';
@@ -25,10 +27,20 @@ const updateAccountMutation = useUpdateAccountMutation();
 const changePasswordMutation = useChangePasswordMutation();
 const exportAccountMutation = useExportAccountMutation();
 const deleteAccountMutation = useDeleteAccountMutation();
+const styleProfileQuery = useStyleProfile();
+const updateStyleProfileMutation = useUpdateStyleProfileMutation();
 const resendVerificationMutation = useResendVerificationMutation();
 
-const activeTab = ref<'profile' | 'password' | 'data'>('profile');
+const activeTab = ref<'profile' | 'style' | 'password' | 'data'>('profile');
 const profileForm = reactive({ name: '', email: '' });
+const styleForm = reactive({
+  enabled: true,
+  objective_style: '',
+  process_style: '',
+  school_wording: '',
+  activity_preferences: '',
+  avoid_phrases: '',
+});
 const passwordForm = reactive({
   current_password: '',
   new_password: '',
@@ -51,6 +63,22 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => styleProfileQuery.data.value,
+  (profile) => {
+    if (!profile) {
+      return;
+    }
+    styleForm.enabled = profile.enabled;
+    styleForm.objective_style = profile.objective_style;
+    styleForm.process_style = profile.process_style;
+    styleForm.school_wording = profile.school_wording;
+    styleForm.activity_preferences = profile.activity_preferences;
+    styleForm.avoid_phrases = profile.avoid_phrases;
+  },
+  { immediate: true },
+);
+
 const account = computed(() => accountQuery.data.value);
 const settingsErrorState = computed(() => {
   if (account.value) {
@@ -68,6 +96,7 @@ const settingsErrorState = computed(() => {
   });
 });
 const showProfileSkeleton = computed(() => activeTab.value === 'profile' && accountQuery.isLoading.value && !account.value);
+const showStyleSkeleton = computed(() => activeTab.value === 'style' && styleProfileQuery.isLoading.value);
 const showPasswordSkeleton = computed(() => activeTab.value === 'password' && accountQuery.isLoading.value && !account.value);
 const showDataSkeleton = computed(() => activeTab.value === 'data' && accountQuery.isLoading.value && !account.value);
 
@@ -93,6 +122,15 @@ async function saveProfile() {
     );
   } catch (error) {
     toast.error('保存个人信息失败', getErrorDescription(error, '请稍后重试。'));
+  }
+}
+
+async function saveStyleProfile() {
+  try {
+    await updateStyleProfileMutation.mutateAsync({ ...styleForm });
+    toast.success('风格记忆已保存', styleForm.enabled ? '后续生成会参考这些表达偏好。' : '已关闭个人风格注入。');
+  } catch (error) {
+    toast.error('保存风格记忆失败', getErrorDescription(error, '请稍后重试。'));
   }
 }
 
@@ -158,6 +196,7 @@ async function confirmDeleteAccount() {
     <div class="settings-layout">
       <aside class="settings-tabs app-card">
         <button :class="{ active: activeTab === 'profile' }" type="button" @click="activeTab = 'profile'">个人信息</button>
+        <button :class="{ active: activeTab === 'style' }" type="button" @click="activeTab = 'style'">风格记忆</button>
         <button :class="{ active: activeTab === 'password' }" type="button" @click="activeTab = 'password'">密码安全</button>
         <button :class="{ active: activeTab === 'data' }" type="button" @click="activeTab = 'data'">数据管理</button>
       </aside>
@@ -177,7 +216,7 @@ async function confirmDeleteAccount() {
           </template>
         </StatePanel>
 
-        <section v-else-if="showProfileSkeleton || showPasswordSkeleton || showDataSkeleton" class="settings-panel app-card settings-skeleton-panel">
+        <section v-else-if="showProfileSkeleton || showStyleSkeleton || showPasswordSkeleton || showDataSkeleton" class="settings-panel app-card settings-skeleton-panel">
           <div class="settings-skeleton-line short" />
           <div class="settings-skeleton-line" />
           <div class="settings-skeleton-card" />
@@ -210,6 +249,73 @@ async function confirmDeleteAccount() {
           </div>
           <button class="button primary" type="button" :disabled="updateAccountMutation.isPending.value" @click="saveProfile">
             {{ updateAccountMutation.isPending.value ? '保存中...' : '保存个人信息' }}
+          </button>
+        </section>
+
+        <section v-else-if="activeTab === 'style'" class="settings-panel app-card">
+          <div class="settings-panel-heading">
+            <div>
+              <h2>风格记忆</h2>
+              <p>保存你常用的目标写法、过程风格和学校措辞。它只影响生成参考，不会替你自动确认内容。</p>
+            </div>
+            <label class="settings-switch">
+              <input v-model="styleForm.enabled" type="checkbox" />
+              <span>{{ styleForm.enabled ? '已启用' : '已关闭' }}</span>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>教学目标写法</span>
+            <textarea
+              v-model.trim="styleForm.objective_style"
+              rows="3"
+              placeholder="例如：目标要以“通过……，学生能够……”开头，强调可观察、可评价。"
+            />
+          </label>
+
+          <label class="field">
+            <span>教学过程风格</span>
+            <textarea
+              v-model.trim="styleForm.process_style"
+              rows="3"
+              placeholder="例如：每个环节写清教师追问、学生批注和小组交流，设计意图要贴近课堂真实操作。"
+            />
+          </label>
+
+          <label class="field">
+            <span>学校提交措辞</span>
+            <textarea
+              v-model.trim="styleForm.school_wording"
+              rows="3"
+              placeholder="例如：使用“学习任务群”“核心素养”“朗读品味”等学校常用表达。"
+            />
+          </label>
+
+          <label class="field">
+            <span>常用课堂活动</span>
+            <textarea
+              v-model.trim="styleForm.activity_preferences"
+              rows="3"
+              placeholder="例如：情境导入、圈点批注、同桌互说、板书归纳、当堂检测。"
+            />
+          </label>
+
+          <label class="field">
+            <span>尽量避免的套话</span>
+            <textarea
+              v-model.trim="styleForm.avoid_phrases"
+              rows="3"
+              placeholder="例如：避免“提高学生综合素质”“培养学习兴趣”等空泛表述。"
+            />
+          </label>
+
+          <button
+            class="button primary"
+            type="button"
+            :disabled="updateStyleProfileMutation.isPending.value"
+            @click="saveStyleProfile"
+          >
+            {{ updateStyleProfileMutation.isPending.value ? '保存中...' : '保存风格记忆' }}
           </button>
         </section>
 

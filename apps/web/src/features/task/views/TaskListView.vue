@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { useAuthStore } from '@/app/stores/auth';
 import { exportDocx } from '@/features/export/composables/useExport';
 import TaskCard from '@/features/task/components/TaskCard.vue';
 import { useDeleteTaskMutation, useDuplicateTaskMutation, useTasks } from '@/features/task/composables/useTasks';
+import { FIRST_LESSON_PRESET_QUERY } from '@/features/task/data/firstLessonPresets';
 import type { TaskRecord } from '@/features/task/types';
 import { request } from '@/shared/api/client';
 import { getAppErrorState, getErrorDescription } from '@/shared/api/errors';
@@ -15,7 +15,6 @@ import { useToast } from '@/shared/composables/useToast';
 import '@/features/task/styles/workspace.css';
 
 const router = useRouter();
-const authStore = useAuthStore();
 const toast = useToast();
 const tasksQuery = useTasks();
 const deleteTaskMutation = useDeleteTaskMutation();
@@ -62,6 +61,10 @@ const filteredTasks = computed(() => {
 
 function startFirstTask() {
   void router.push({ name: 'task-create' });
+}
+
+function startSampleTask() {
+  void router.push({ name: 'task-create', query: { preset: FIRST_LESSON_PRESET_QUERY } });
 }
 
 async function removeTask(taskId: string) {
@@ -116,22 +119,40 @@ async function exportTask(task: TaskRecord) {
       </div>
 
       <div class="task-grid">
-        <div v-for="index in 4" :key="index" class="task-card-skeleton app-card" />
+        <div v-for="index in 4" :key="index" class="task-card-skeleton" />
       </div>
     </template>
 
     <template v-else>
-      <div class="workspace-hero app-card">
+      <div class="workspace-hero">
         <div class="workspace-hero-copy">
-          <p class="page-eyebrow">备课台</p>
-          <h1 class="page-title">我的备课</h1>
-          <p class="subtitle">打开就是你的备课桌，最近的教案、搜索、复制和导出都在这里完成。</p>
+          <p class="page-eyebrow">备课队列</p>
+          <h1 class="page-title">今天要处理的备课</h1>
+          <p class="subtitle">从这里开始新备课、导入旧教案、管理学校格式，也能快速判断每份文档下一步该做什么。</p>
         </div>
 
-        <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
-          <span class="workspace-start-title">+ 开始备课</span>
-          <span class="workspace-start-subtitle">选择学科和主题，快速生成教案</span>
-        </button>
+        <div class="workspace-hero-actions">
+          <button class="workspace-start-card" type="button" @click="startSampleTask">
+            <span class="workspace-start-title">用样例体验</span>
+            <span class="workspace-start-subtitle">自动填好《春》第一课时，快速跑通生成、体检和导出</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-create' })">
+            <span class="workspace-start-title">从课题开始</span>
+            <span class="workspace-start-subtitle">输入自己的课题，直接进入文档桌起草</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
+            <span class="workspace-start-title">导入旧教案</span>
+            <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'school-templates' })">
+            <span class="workspace-start-title">学校格式库</span>
+            <span class="workspace-start-subtitle">保存常用 Word 格式，导出时直接套用</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'personal-assets' })">
+            <span class="workspace-start-title">个人资料柜</span>
+            <span class="workspace-start-subtitle">迁移旧讲义和 PPT，沉淀私有资料</span>
+          </button>
+        </div>
       </div>
 
       <StatePanel
@@ -154,9 +175,19 @@ async function exportTask(task: TaskRecord) {
       >
         <div class="workspace-empty-icon">📘</div>
         <h2>你的备课台还是空的</h2>
-        <p>创建第一份教案，开启高效备课。</p>
+        <p>可以先用样例跑完整链路，也可以从自己的课题或旧教案开始。</p>
+        <div class="workspace-first-path">
+          <span>1. 填好课题</span>
+          <span>2. 生成初稿</span>
+          <span>3. 体检风险</span>
+          <span>4. 导出 Word</span>
+        </div>
         <div class="button-row">
-          <button class="button primary" type="button" @click="startFirstTask">开始第一次备课</button>
+          <button class="button primary" type="button" @click="startSampleTask">用样例体验</button>
+          <button class="button secondary" type="button" @click="startFirstTask">从课题开始</button>
+          <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
+            导入旧教案
+          </button>
           <button class="button ghost" type="button" @click="router.push({ name: 'help' })">
             3 分钟快速上手指南
           </button>
@@ -166,24 +197,24 @@ async function exportTask(task: TaskRecord) {
       <template v-else>
         <div class="workspace-toolbar">
           <div>
-            <h2>最近备课</h2>
-            <p class="subtitle">卡片点击直接进入编辑器，不再多一层详情页。</p>
+            <h2>最近备课队列</h2>
+            <p class="subtitle">每一行都是一份可继续处理的备课文档。</p>
           </div>
 
           <div class="workspace-filters">
-            <label class="workspace-search app-card">
+            <label class="workspace-search">
               <span>🔍</span>
               <input v-model.trim="search" type="text" placeholder="搜索" />
             </label>
 
-            <label class="workspace-select app-card">
+            <label class="workspace-select">
               <span>学科</span>
               <select v-model="subjectFilter">
                 <option v-for="subject in availableSubjects" :key="subject" :value="subject">{{ subject }}</option>
               </select>
             </label>
 
-            <label class="workspace-select app-card">
+            <label class="workspace-select">
               <span>排序</span>
               <select v-model="sortOrder">
                 <option value="recent">最近修改</option>

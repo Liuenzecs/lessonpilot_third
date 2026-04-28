@@ -7,6 +7,7 @@
 
 import type {
   AssessmentItem,
+  CitationReference,
   DocumentContent,
   KeyPoints,
   LessonPlanContent,
@@ -49,6 +50,12 @@ const STUDY_GUIDE_SECTION_MAP: Record<string, string> = {
   assessment: '达标测评',
   extension: '拓展延伸',
   self_reflection: '自主反思',
+};
+
+const LEARNING_PROCESS_SECTION_MAP: Record<string, keyof StudyGuideContent['learning_process']> = {
+  self_study: 'selfStudy',
+  collaboration: 'collaboration',
+  presentation: 'presentation',
 };
 
 export function getSectionTitle(docType: string, sectionName: string): string {
@@ -147,8 +154,10 @@ export type StudyGuideSectionName =
 export type StudyGuideSectionValue<K extends StudyGuideSectionName> =
   K extends 'self_study' | 'collaboration' | 'presentation' | 'assessment' | 'extension'
     ? AssessmentItem[]
-    : K extends 'self_reflection' | 'learning_objectives' | 'key_difficulties' | 'prior_knowledge'
+    : K extends 'learning_objectives' | 'key_difficulties' | 'prior_knowledge'
       ? string[]
+      : K extends 'self_reflection'
+        ? string
       : never;
 
 export function updateStudyGuideSection<K extends StudyGuideSectionName>(
@@ -156,14 +165,15 @@ export function updateStudyGuideSection<K extends StudyGuideSectionName>(
   section: K,
   value: StudyGuideSectionValue<K>,
 ): StudyGuideContent {
-  if (section === 'self_study') {
-    return { ...content, learning_process: { ...content.learning_process, selfStudy: value as AssessmentItem[] } };
-  }
-  if (section === 'collaboration') {
-    return { ...content, learning_process: { ...content.learning_process, collaboration: value as AssessmentItem[] } };
-  }
-  if (section === 'presentation') {
-    return { ...content, learning_process: { ...content.learning_process, presentation: value as AssessmentItem[] } };
+  const learningProcessSection = LEARNING_PROCESS_SECTION_MAP[section];
+  if (learningProcessSection) {
+    return {
+      ...content,
+      learning_process: {
+        ...content.learning_process,
+        [learningProcessSection]: value as AssessmentItem[],
+      },
+    };
   }
   return { ...content, [section]: value };
 }
@@ -193,7 +203,18 @@ export function updateSection<T extends DocumentContent>(
   sectionName: string,
   value: unknown,
 ): T {
-  return { ...content, [sectionName]: value } as T;
+  if (isStudyGuide(content)) {
+    return updateStudyGuideSection(
+      content,
+      sectionName as StudyGuideSectionName,
+      value as StudyGuideSectionValue<StudyGuideSectionName>,
+    ) as T;
+  }
+  return updateLessonPlanSection(
+    content as LessonPlanContent,
+    sectionName as LessonPlanSectionName,
+    value as LessonPlanContent[LessonPlanSectionName],
+  ) as T;
 }
 
 /** 将指定 section 的 status 改为 confirmed。 */
@@ -248,8 +269,21 @@ export function getStudyGuideSectionContent(
   content: StudyGuideContent,
   name: StudyGuideSectionName,
 ): unknown {
-  if (name === 'self_study') return content.learning_process.selfStudy;
-  if (name === 'collaboration') return content.learning_process.collaboration;
-  if (name === 'presentation') return content.learning_process.presentation;
+  const learningProcessSection = LEARNING_PROCESS_SECTION_MAP[name];
+  if (learningProcessSection) return content.learning_process[learningProcessSection];
   return content[name as keyof StudyGuideContent];
+}
+
+export function getSectionContent(content: DocumentContent, sectionName: string): unknown {
+  if (isStudyGuide(content)) {
+    return getStudyGuideSectionContent(content, sectionName as StudyGuideSectionName);
+  }
+  return getLessonPlanSectionContent(content as LessonPlanContent, sectionName as LessonPlanSectionName);
+}
+
+export function getSectionReferences(
+  content: DocumentContent,
+  sectionName: string,
+): CitationReference[] {
+  return content.section_references?.[sectionName] ?? [];
 }

@@ -1,6 +1,6 @@
 # 教案生成 Prompt
 
-你是 LessonPilot 的教案生成引擎。请根据以下信息生成一份完整的语文教案。
+你是 LessonPilot 的教案生成引擎。请根据以下信息生成一份完整的{subject}教案。
 
 ## 输入信息
 
@@ -11,6 +11,12 @@
 - 使用场景：{scene}
 - 课时：{class_hour} 课时
 - 课型：{lesson_category}
+
+## 教学策略指导
+
+{prompt_hints}
+
+{knowledge_context}
 
 ## 使用场景说明
 
@@ -92,3 +98,6 @@
 4. 内容要贴合教材和年级特点，不能是泛泛而谈
 5. duration 的单位是分钟，总和应等于 class_hour × 40（每课时 40 分钟）
 6. 不要输出 markdown code fence，直接输出 JSON
+7. 教学过程至少包含 3 个环节，导入环节应联系学生已有经验
+8. 每个环节的 teacher_activity 和 student_activity 均不得为空
+9. 如需输出数学公式，请使用 LaTeX：行内公式写成 `\\(...\\)`，独立公式写成 `$$...$$`；JSON 字符串中的反斜杠必须写成双反斜杠，例如 `\\frac{1}{2}`

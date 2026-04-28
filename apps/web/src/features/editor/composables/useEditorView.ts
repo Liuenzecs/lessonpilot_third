@@ -3,28 +3,39 @@
  * 组合 useAutoSave、useEditorGeneration、useEditorRewrite，
  * 管理文档加载、Tab 切换、section 状态。
  */
-import type { DocumentContent, SectionInfo } from '@lessonpilot/shared-types';
+import type { SectionInfo } from '@lessonpilot/shared-types';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import {
   useDocumentHistory,
   useDocumentSnapshot,
+  useQualityCheckMutation,
+  useQualityFixMutation,
   useRestoreSnapshotMutation,
   useTaskDocuments,
+  useTeachingPackageMutation,
 } from '@/features/editor/composables/useEditor';
 import { useAutoSave } from '@/features/editor/composables/useAutoSave';
 import { useEditorGeneration } from '@/features/editor/composables/useEditorGeneration';
 import { useEditorRewrite } from '@/features/editor/composables/useEditorRewrite';
-import type { DocumentSnapshotRecord, LessonDocument } from '@/features/editor/types';
+import type {
+  DocumentSnapshotRecord,
+  LessonDocument,
+  QualityCheckResponse,
+  QualityIssue,
+  TeachingPackageRecord,
+} from '@/features/editor/types';
 import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
-import { useTask } from '@/features/task/composables/useTasks';
+import { usePersonalAssetRecommendations, useSchoolTemplates, useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
 import {
   cloneSerializable,
   confirmAllSections,
   confirmSection as confirmSectionUtil,
+  getSectionContent,
+  getSectionReferences as getSectionReferencesUtil,
   getSections,
   updateSection,
 } from '@/shared/utils/content';
@@ -45,6 +56,12 @@ export function useEditorView() {
   const historyOpen = ref(false);
   const exportMenuOpen = ref(false);
   const exportPreviewOpen = ref(false);
+  const qualityPanelOpen = ref(false);
+  const qualityResult = ref<QualityCheckResponse | null>(null);
+  const selectedExportTemplateId = ref('');
+  const teachingPackageResult = ref<TeachingPackageRecord | null>(null);
+  const usePersonalAssetsForGeneration = ref(false);
+  const selectedPersonalAssetIds = ref<string[]>([]);
   const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
   const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
   const selectedSnapshotId = ref('');
@@ -52,8 +69,6 @@ export function useEditorView() {
   const activeDocTabIndex = ref(0);
 
   const primaryDocument = computed(() => documentsQuery.data.value?.items[0] ?? null);
-  const secondaryDocument = computed(() => documentsQuery.data.value?.items[1] ?? null);
-
   // Current active document based on tab
   const activeDocument = computed(() => {
     const docs = documentsQuery.data.value?.items ?? [];
@@ -76,18 +91,22 @@ export function useEditorView() {
     () => currentDocumentId.value,
     () => taskId.value,
   );
+  const qualityCheckMutation = useQualityCheckMutation(() => currentDocumentId.value);
+  const qualityFixMutation = useQualityFixMutation(
+    () => currentDocumentId.value,
+    () => taskId.value,
+  );
+  const teachingPackageMutation = useTeachingPackageMutation(() => currentDocumentId.value);
+  const schoolTemplatesQuery = useSchoolTemplates();
+  const assetRecommendationsQuery = usePersonalAssetRecommendations(() => ({
+    subject: taskQuery.data.value?.subject ?? '',
+    grade: taskQuery.data.value?.grade ?? '',
+    topic: taskQuery.data.value?.topic ?? '',
+    keywords: taskQuery.data.value?.requirements ?? '',
+  }));
   const previewSnapshot = computed<DocumentSnapshotRecord | null>(() => snapshotQuery.data.value ?? null);
 
-  // Flash notice
   const notice = reactive<{ text: string; tone: 'success' | 'info' }>({ text: '', tone: 'success' });
-  let noticeTimer: number | undefined;
-
-  function flashNotice(text: string, tone: 'success' | 'info' = 'success') {
-    notice.text = text;
-    notice.tone = tone;
-    if (noticeTimer) window.clearTimeout(noticeTimer);
-    noticeTimer = window.setTimeout(() => { notice.text = ''; }, 3200);
-  }
 
   // Auto-save
   function applyServerDocument(doc: LessonDocument) {
@@ -109,7 +128,6 @@ export function useEditorView() {
   // Generation
   const { generationProgress, startGeneration, stopGeneration } = useEditorGeneration({
     taskId: taskId.value,
-    draftDocument,
     ensureLatestDocumentSaved,
     onApplyServerDocument: applyServerDocument,
     onRefetch: () => {
@@ -164,7 +182,13 @@ export function useEditorView() {
       const hasContent = secs.some((s) => s.status !== 'pending' || _sectionHasActualContent(getSectionData(s.name)));
       if (task.status === 'draft' && !hasContent) {
         initialGenerationTriggered.value = true;
-        void startGeneration();
+        const routeOptions = _generationOptionsFromRoute();
+        usePersonalAssetsForGeneration.value = routeOptions.usePersonalAssets;
+        selectedPersonalAssetIds.value = routeOptions.personalAssetIds;
+        void startGeneration({
+          usePersonalAssets: routeOptions.usePersonalAssets,
+          personalAssetIds: routeOptions.personalAssetIds,
+        });
       }
     },
     { immediate: true },
@@ -198,8 +222,12 @@ export function useEditorView() {
 
   function getSectionData(sectionName: string): unknown {
     if (!draftDocument.value) return null;
-    const content = draftDocument.value.content as Record<string, unknown>;
-    return content[sectionName] ?? null;
+    return getSectionContent(draftDocument.value.content, sectionName) ?? null;
+  }
+
+  function getSectionReferences(sectionName: string) {
+    if (!draftDocument.value) return [];
+    return getSectionReferencesUtil(draftDocument.value.content, sectionName);
   }
 
   function updateSectionData(sectionName: string, value: unknown) {
@@ -258,16 +286,74 @@ export function useEditorView() {
     }
   }
 
-  async function handleExport() {
+  async function runQualityCheck(options: { openPanel?: boolean } = {}) {
     if (!activeDocument.value || !taskQuery.data.value) return;
     if (!(await ensureLatestDocumentSaved())) return;
+    const openPanel = options.openPanel ?? true;
+    try {
+      const result = await qualityCheckMutation.mutateAsync();
+      qualityResult.value = result;
+      if (openPanel) {
+        qualityPanelOpen.value = true;
+        toast.success('导出前体检完成');
+      }
+      return result;
+    } catch (error) {
+      toast.error('导出前体检失败', getErrorDescription(error, '请稍后重试。'));
+      return null;
+    }
+  }
+
+  async function applyQualityFix(issue: QualityIssue) {
+    if (!activeDocument.value) return;
+    if (!(await ensureLatestDocumentSaved())) return;
+    try {
+      const updatedDocument = await qualityFixMutation.mutateAsync({
+        section: issue.section,
+        message: issue.message,
+        suggestion: issue.suggestion,
+      });
+      applyServerDocument(updatedDocument);
+      const result = await qualityCheckMutation.mutateAsync();
+      qualityResult.value = result;
+      qualityPanelOpen.value = true;
+      toast.success('已生成待确认修订', '请检查对应 section 后再确认。');
+    } catch (error) {
+      toast.error('调整失败', getErrorDescription(error, '这个问题暂不支持自动调整。'));
+    }
+  }
+
+  async function exportCurrentDocument() {
+    if (!activeDocument.value || !taskQuery.data.value) return;
     exportMenuOpen.value = false;
     try {
-      await exportDocx(activeDocument.value.id, taskQuery.data.value.title);
+      await exportDocx(activeDocument.value.id, taskQuery.data.value.title, selectedExportTemplateId.value || null);
       toast.success('Word 文档已开始下载');
     } catch (error) {
       toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
     }
+  }
+
+  async function handleExport() {
+    const result = await runQualityCheck({ openPanel: false });
+    if (!result) return;
+    if (result.readiness === 'blocked') {
+      qualityPanelOpen.value = true;
+      toast.error('导出前还有阻断项', '请先处理体检中标出的关键问题。');
+      return;
+    }
+    if (result.readiness === 'needs_fixes') {
+      qualityPanelOpen.value = true;
+      toast.info('导出前有提醒项', '你可以先处理，也可以确认后继续导出。');
+      return;
+    }
+    await exportCurrentDocument();
+  }
+
+  async function exportAfterQualityCheck() {
+    qualityPanelOpen.value = false;
+    if (!(await ensureLatestDocumentSaved())) return;
+    await exportCurrentDocument();
   }
 
   function openExportPreview() {
@@ -303,6 +389,33 @@ export function useEditorView() {
     }
   }
 
+  async function generateTeachingPackage() {
+    if (!activeDocument.value || currentDocType.value !== 'lesson_plan') return;
+    if (!(await ensureLatestDocumentSaved())) return;
+    try {
+      const result = await teachingPackageMutation.mutateAsync();
+      teachingPackageResult.value = result;
+      toast.success('上课包已整理', '学案、PPT 大纲和口播稿都已生成待确认草稿。');
+    } catch (error) {
+      toast.error('生成上课包失败', getErrorDescription(error, '请先确认教案核心内容。'));
+    }
+  }
+
+  function togglePersonalAssetSelection(assetId: string) {
+    if (selectedPersonalAssetIds.value.includes(assetId)) {
+      selectedPersonalAssetIds.value = selectedPersonalAssetIds.value.filter((id) => id !== assetId);
+      return;
+    }
+    selectedPersonalAssetIds.value = [...selectedPersonalAssetIds.value, assetId];
+  }
+
+  async function startGenerationWithPersonalAssets() {
+    await startGeneration({
+      usePersonalAssets: usePersonalAssetsForGeneration.value,
+      personalAssetIds: selectedPersonalAssetIds.value,
+    });
+  }
+
   function handleKeydown(event: KeyboardEvent) {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
@@ -322,6 +435,16 @@ export function useEditorView() {
     if (window.innerWidth < 1100) outlineCollapsed.value = true;
   }
 
+  function _generationOptionsFromRoute() {
+    const useAssets = route.query.usePersonalAssets === '1' || route.query.usePersonalAssets === 'true';
+    const rawIds = route.query.personalAssetIds;
+    const idsText = Array.isArray(rawIds) ? rawIds.join(',') : rawIds || '';
+    return {
+      usePersonalAssets: useAssets,
+      personalAssetIds: idsText.split(',').map((item) => item.trim()).filter(Boolean),
+    };
+  }
+
   onMounted(() => {
     syncOutlineForViewport();
     window.addEventListener('keydown', handleKeydown);
@@ -335,7 +458,6 @@ export function useEditorView() {
     window.removeEventListener('resize', syncOutlineForViewport);
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
-    if (noticeTimer) window.clearTimeout(noticeTimer);
   });
 
   // Computed for template
@@ -358,6 +480,17 @@ export function useEditorView() {
     historyOpen,
     exportMenuOpen,
     exportPreviewOpen,
+    qualityPanelOpen,
+    qualityResult,
+    qualityChecking: qualityCheckMutation.isPending,
+    qualityFixing: qualityFixMutation.isPending,
+    selectedExportTemplateId,
+    schoolTemplatesQuery,
+    assetRecommendationsQuery,
+    usePersonalAssetsForGeneration,
+    selectedPersonalAssetIds,
+    teachingPackageResult,
+    teachingPackageGenerating: teachingPackageMutation.isPending,
     outlineCollapsed,
     isMobileViewport,
     selectedSnapshotId,
@@ -383,11 +516,18 @@ export function useEditorView() {
     refreshFromServer,
     handleExport,
     handleExportAll,
+    runQualityCheck,
+    applyQualityFix,
+    exportAfterQualityCheck,
+    generateTeachingPackage,
+    startGenerationWithPersonalAssets,
+    togglePersonalAssetSelection,
     openExportPreview,
     restoreSnapshot,
     confirmSectionByName,
     confirmAll,
     getSectionData,
+    getSectionReferences,
     updateSectionData,
     toggleSectionCollapse,
     toggleAllSections,

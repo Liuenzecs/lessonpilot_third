@@ -7,7 +7,7 @@ import { reactive } from 'vue';
 
 import { useStartDocumentRewriteMutation } from '@/features/editor/composables/useEditor';
 import type { LessonDocument } from '@/features/editor/types';
-import { consumeRewriteStream } from '@/features/generation/composables/useGeneration';
+import { consumeSectionStream } from '@/features/generation/composables/useGeneration';
 import { useAuthStore } from '@/app/stores/auth';
 import { useToast } from '@/shared/composables/useToast';
 
@@ -57,35 +57,32 @@ export function useEditorRewrite(options: UseEditorRewriteOptions) {
         instruction: instruction ?? null,
       });
 
-      await consumeRewriteStream(response.stream_url, authStore.token, {
-        onEvent(event, eventPayload) {
-          if (event === 'section_delta') {
-            const payload = eventPayload as { delta?: string };
-            if (payload.delta) {
-              rewriteState.streamingText += payload.delta;
-            }
-          }
-          if (event === 'document') {
-            onApplyServerDocument(eventPayload as LessonDocument);
-            rewriteState.streamingText = '';
-          }
-          if (event === 'done') {
-            rewriteState.isRewriting = false;
-            rewriteState.sectionName = null;
-            rewriteState.streamingText = '';
-            onRefetch();
-            toast.success('重写完成', '请确认新内容。');
-          }
-          if (event === 'error') {
-            streamError.value = (eventPayload as { message: string }).message;
-            rewriteState.isRewriting = false;
-            rewriteState.sectionName = null;
-            rewriteState.streamingText = '';
+      await consumeSectionStream(response.stream_url, authStore.token, {
+        onSectionDelta(payload) {
+          if (payload.delta) {
+            rewriteState.streamingText += payload.delta;
           }
         },
+        onSectionDocument(payload) {
+          onApplyServerDocument(payload);
+          rewriteState.streamingText = '';
+        },
+        onDocumentDone() {
+          rewriteState.isRewriting = false;
+          rewriteState.sectionName = null;
+          rewriteState.streamingText = '';
+          onRefetch();
+          toast.success('改写完成', '请确认更新后的内容。');
+        },
+        onError(eventPayload) {
+          streamError.value = eventPayload.message;
+          rewriteState.isRewriting = false;
+          rewriteState.sectionName = null;
+          rewriteState.streamingText = '';
+        },
       });
-    } catch (error) {
-      streamError.value = '重写失败，请稍后再试。';
+    } catch {
+      streamError.value = '改写失败，请稍后再试。';
       rewriteState.isRewriting = false;
       rewriteState.sectionName = null;
       rewriteState.streamingText = '';

@@ -8,6 +8,8 @@ import type {
   AccountUpdatePayload,
   FeedbackCreatePayload,
   FeedbackRead,
+  TeacherStyleProfile,
+  TeacherStyleProfileUpdatePayload,
 } from '@/features/settings/types';
 import { download, request } from '@/shared/api/client';
 
@@ -58,6 +60,27 @@ export function useDeleteAccountMutation() {
         method: 'DELETE',
         body: JSON.stringify(payload),
       }),
+  });
+}
+
+export function useStyleProfile() {
+  return useQuery({
+    queryKey: ['style-profile'],
+    queryFn: () => request<TeacherStyleProfile>('/api/v1/style-profile'),
+  });
+}
+
+export function useUpdateStyleProfileMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: TeacherStyleProfileUpdatePayload) =>
+      request<TeacherStyleProfile>('/api/v1/style-profile', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: (profile) => {
+      queryClient.setQueryData(['style-profile'], profile);
+    },
   });
 }
 

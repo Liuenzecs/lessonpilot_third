@@ -1,29 +1,29 @@
-/**
- * AI 生成流式消费 composable。
- * 从 useEditorView 中提取的 AI 生成逻辑。
- */
-import type { Ref } from 'vue';
 import { reactive } from 'vue';
 
 import type { LessonDocument } from '@/features/editor/types';
-import { consumeGenerationStream } from '@/features/generation/composables/useGeneration';
-import { useStartGenerationMutation, useTask } from '@/features/task/composables/useTasks';
+import type { AssetStatusInfo, RagStatusInfo } from '@/features/generation/composables/useGeneration';
+import { consumeSectionStream } from '@/features/generation/composables/useGeneration';
+import { useStartGenerationMutation } from '@/features/task/composables/useTasks';
 import { useAuthStore } from '@/app/stores/auth';
 import { useToast } from '@/shared/composables/useToast';
 
 interface UseEditorGenerationOptions {
   taskId: string;
-  draftDocument: Ref<LessonDocument | null>;
   ensureLatestDocumentSaved: () => Promise<boolean>;
   onApplyServerDocument: (doc: LessonDocument) => void;
   onRefetch: () => void;
   getSectionsCount: () => number;
 }
 
+export interface EditorGenerationOptions {
+  sectionName?: string;
+  usePersonalAssets?: boolean;
+  personalAssetIds?: string[];
+}
+
 export function useEditorGeneration(options: UseEditorGenerationOptions) {
   const {
     taskId,
-    draftDocument,
     ensureLatestDocumentSaved,
     onApplyServerDocument,
     onRefetch,
@@ -42,14 +42,17 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
     currentSectionName: null as string | null,
     streamingText: '',
     docType: '',
+    ragStatus: null as RagStatusInfo | null,
+    assetStatus: null as AssetStatusInfo | null,
   });
 
   let abortController: AbortController | null = null;
 
-  async function startGeneration(sectionName?: string) {
+  async function startGeneration(options: EditorGenerationOptions = {}) {
     if (!authStore.token) return;
     if (!(await ensureLatestDocumentSaved())) return;
 
+    const sectionName = options.sectionName;
     generationProgress.isGenerating = true;
     generationProgress.completed = 0;
     generationProgress.total = getSectionsCount();
@@ -57,11 +60,17 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
     generationProgress.currentSectionName = sectionName ?? null;
     generationProgress.streamingText = '';
     generationProgress.docType = '';
+    generationProgress.ragStatus = null;
+    generationProgress.assetStatus = null;
     abortController = new AbortController();
 
     try {
-      const response = await startGenerationMutation.mutateAsync(sectionName);
-      await consumeGenerationStream(
+      const response = await startGenerationMutation.mutateAsync({
+        section_id: sectionName ?? null,
+        use_personal_assets: Boolean(options.usePersonalAssets),
+        personal_asset_ids: options.personalAssetIds ?? [],
+      });
+      await consumeSectionStream(
         response.stream_url,
         authStore.token,
         {
@@ -71,7 +80,11 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
             }
           },
           onProgress(payload) {
-            generationProgress.total = Math.max(generationProgress.total, 1);
+            if (typeof payload.total === 'number') {
+              generationProgress.total = payload.total;
+            } else {
+              generationProgress.total = Math.max(generationProgress.total, 1);
+            }
             if (payload.doc_type) {
               generationProgress.docType = payload.doc_type;
             }
@@ -79,32 +92,41 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
           onSectionStart(payload) {
             generationProgress.currentSection = payload.title;
             generationProgress.currentSectionName = payload.section_name;
-            generationProgress.docType = payload.doc_type;
+            generationProgress.docType = payload.doc_type ?? generationProgress.docType;
           },
           onSectionDelta(payload) {
-            generationProgress.streamingText += payload.text;
+            generationProgress.streamingText += payload.delta ?? payload.text ?? '';
           },
-          onSectionComplete() {
-            generationProgress.completed++;
-          },
-          onDocument(payload) {
-            onApplyServerDocument(payload as unknown as LessonDocument);
+          onSectionDocument(payload) {
+            onApplyServerDocument(payload);
             generationProgress.streamingText = '';
           },
-          onDone() {
+          onSectionDone() {
+            generationProgress.completed++;
+          },
+          onRagStatus(payload) {
+            generationProgress.ragStatus = payload;
+          },
+          onAssetStatus(payload) {
+            generationProgress.assetStatus = payload;
+          },
+          onWarning(payload) {
+            toast.info('整理提醒', payload.message);
+          },
+          onDocumentDone() {
             generationProgress.isGenerating = false;
             generationProgress.currentSectionName = null;
             generationProgress.streamingText = '';
             abortController = null;
             onRefetch();
-            toast.success(sectionName ? '本节内容已生成' : '教案已生成，你可以开始编辑。');
+            toast.success(sectionName ? '本节内容已写入草稿' : '初稿已整理完成，你可以开始编辑。');
           },
-          onError(payload) {
+          onError() {
             generationProgress.streamingText = '';
             generationProgress.isGenerating = false;
             generationProgress.currentSectionName = null;
             abortController = null;
-            toast.error('生成失败', '内容生成出现问题，请稍后重试。');
+            toast.error('整理失败', '内容整理出现问题，请稍后重试。');
           },
         },
         abortController.signal,
@@ -114,14 +136,14 @@ export function useEditorGeneration(options: UseEditorGenerationOptions) {
         generationProgress.isGenerating = false;
         generationProgress.streamingText = '';
         abortController = null;
-        toast.info('已停止生成。');
+        toast.info('已停止整理。');
         return;
       }
       generationProgress.isGenerating = false;
       generationProgress.currentSectionName = null;
       generationProgress.streamingText = '';
       abortController = null;
-      toast.error('生成失败', '生成流打开失败，请稍后重试。');
+      toast.error('整理失败', '整理通道打开失败，请稍后重试。');
     }
   }
 

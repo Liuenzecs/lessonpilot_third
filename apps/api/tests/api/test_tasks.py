@@ -105,10 +105,14 @@ def test_task_document_generation_flow(client, auth_headers):
     event_names = [event_name for event_name, _ in events]
     assert "status" in event_names
     assert "progress" in event_names
-    assert "done" in event_names
-    # Sprint 3：流式 section 级事件
+    assert "document_done" in event_names
     assert "section_delta" in event_names
-    assert "document" in event_names
+    assert "section_document" in event_names
+    assert "section_done" in event_names
+    section_documents = [payload for event, payload in events if event == "section_document"]
+    assert len(section_documents) == 6
+    versions = [item["version"] for item in section_documents]
+    assert versions == sorted(versions)
 
     refreshed_document = client.get(f"/api/v1/documents/{document_id}", headers=auth_headers).json()
     assert refreshed_document["content"]["doc_type"] == "lesson_plan"

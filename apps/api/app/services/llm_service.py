@@ -36,6 +36,8 @@ class LessonPlanContext:
     scene: str = "public_school"
     class_hour: int = 1
     lesson_category: str = "new"
+    prompt_hints: str = ""
+    knowledge_context: str = ""
 
 
 @dataclass(slots=True)
@@ -48,6 +50,8 @@ class StudyGuideContext:
     requirements: str = ""
     scene: str = "public_school"
     class_hour: int = 1
+    prompt_hints: str = ""
+    knowledge_context: str = ""
 
 
 @dataclass(slots=True)
@@ -61,6 +65,28 @@ class RewriteSectionContext:
     current_content: str = ""
     action: str = "rewrite"
     instruction: str = ""
+
+
+@dataclass(slots=True)
+class SectionGenerationContext:
+    """单个 section 生成上下文。"""
+
+    doc_type: str = "lesson_plan"
+    subject: str = ""
+    grade: str = ""
+    topic: str = ""
+    requirements: str = ""
+    scene: str = "public_school"
+    class_hour: int = 1
+    lesson_category: str = "new"
+    prompt_hints: str = ""
+    knowledge_context: str = ""
+    personal_asset_context: str = ""
+    section_name: str = ""
+    section_title: str = ""
+    section_schema: str = ""
+    existing_sections: str = ""
+    section_rules: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -84,15 +110,6 @@ def _render(template: str, **kwargs: str) -> str:
 # ---------------------------------------------------------------------------
 # JSON delta 解析
 # ---------------------------------------------------------------------------
-
-_SECTION_PATTERN = re.compile(r'"section"\s*:\s*"([^"]+)"')
-
-
-def _extract_section_name(delta: str) -> str:
-    """从 JSON delta 中提取 section 名（用于 progress 事件）。"""
-    m = _SECTION_PATTERN.search(delta)
-    return m.group(1) if m else ""
-
 
 # ---------------------------------------------------------------------------
 # Provider Protocol
@@ -121,6 +138,13 @@ class LLMProvider:
         self, ctx: RewriteSectionContext
     ) -> AsyncIterator[str]:
         """流式重写某个 section。每次 yield 一段文本 delta。"""
+        raise NotImplementedError
+        yield ""  # type: ignore[unreachable]
+
+    async def generate_document_section(
+        self, ctx: SectionGenerationContext
+    ) -> AsyncIterator[str]:
+        """流式生成单个 section。"""
         raise NotImplementedError
         yield ""  # type: ignore[unreachable]
 
@@ -317,6 +341,133 @@ class FakeProvider(LLMProvider):
             yield rewritten[i : i + chunk_size]
             await asyncio.sleep(0.02)
 
+    async def generate_document_section(
+        self, ctx: SectionGenerationContext
+    ) -> AsyncIterator[str]:
+        section_json = json.dumps(
+            _build_fake_section_payload(ctx),
+            ensure_ascii=False,
+            indent=2,
+        )
+        chunk_size = 16
+        for i in range(0, len(section_json), chunk_size):
+            yield section_json[i : i + chunk_size]
+            await asyncio.sleep(0.02)
+
+
+def _first_citation_id(*contexts: str) -> str | None:
+    match = re.search(r"ID:\s*([a-f0-9\-]+)", "\n".join(contexts))
+    return match.group(1) if match else None
+
+
+def _build_fake_section_payload(ctx: SectionGenerationContext):
+    cite_suffix = ""
+    citation_id = _first_citation_id(ctx.knowledge_context, ctx.personal_asset_context)
+    if citation_id:
+        cite_suffix = f"[cite:{citation_id}]"
+
+    if ctx.doc_type == "lesson_plan":
+        mapping = {
+            "objectives": [
+                {"dimension": "knowledge", "content": f"掌握{ctx.topic}的核心知识点{cite_suffix}"},
+                {"dimension": "ability", "content": f"能够围绕{ctx.topic}组织课堂分析"},
+                {"dimension": "emotion", "content": f"在学习{ctx.topic}的过程中形成主动探究意识"},
+            ],
+            "key_points": {
+                "keyPoints": [f"{ctx.topic}的重点内容", f"{ctx.topic}的表达特点"],
+                "difficulties": [f"{ctx.topic}的深层理解", "教学环节中的迁移应用"],
+            },
+            "preparation": ["教学课件", "课堂任务单", "分层练习题"],
+            "teaching_process": [
+                {
+                    "phase": "导入",
+                    "duration": 6,
+                    "teacher_activity": f"联系学生已有经验，引入{ctx.topic}",
+                    "student_activity": "回忆相关知识，进入情境",
+                    "design_intent": "激活旧知，明确学习任务",
+                },
+                {
+                    "phase": "精读探究",
+                    "duration": 22,
+                    "teacher_activity": f"围绕{ctx.topic}组织精读、提问与示范{cite_suffix}",
+                    "student_activity": "朗读、批注、讨论并表达观点",
+                    "design_intent": "在任务驱动中完成重点理解",
+                },
+                {
+                    "phase": "迁移练习",
+                    "duration": 12,
+                    "teacher_activity": "布置分层练习并点评共性问题",
+                    "student_activity": "独立作答后同伴交流",
+                    "design_intent": "检验理解并完成课堂巩固",
+                },
+            ],
+            "board_design": f"{ctx.topic}\\n一、关键内容\\n二、表达特点\\n三、课堂收获",
+            "reflection": "",
+        }
+        return mapping[ctx.section_name]
+
+    mapping = {
+        "learning_objectives": [
+            f"我能说出{ctx.topic}的核心内容{cite_suffix}",
+            f"我能结合课堂任务分析{ctx.topic}",
+            "我能完成基础到提升层的学习任务",
+        ],
+        "key_difficulties": [f"{ctx.topic}的重点把握", f"{ctx.topic}的难点突破"],
+        "prior_knowledge": ["回顾相关背景知识", "回顾已学表达方法"],
+        "self_study": [
+            {
+                "level": "A",
+                "itemType": "short_answer",
+                "prompt": f"用自己的话概括{ctx.topic}的主要内容{cite_suffix}",
+                "options": [],
+                "answer": "",
+                "analysis": "",
+            }
+        ],
+        "collaboration": [
+            {
+                "level": "B",
+                "itemType": "short_answer",
+                "prompt": f"小组讨论：{ctx.topic}最打动你的地方是什么？",
+                "options": [],
+                "answer": "",
+                "analysis": "",
+            }
+        ],
+        "presentation": [
+            {
+                "level": "C",
+                "itemType": "short_answer",
+                "prompt": f"结合文本和课堂讨论，展示你对{ctx.topic}的理解。",
+                "options": [],
+                "answer": "",
+                "analysis": "",
+            }
+        ],
+        "assessment": [
+            {
+                "level": "A",
+                "itemType": "choice",
+                "prompt": f"以下对{ctx.topic}的理解最准确的是：",
+                "options": ["A. 选项一", "B. 选项二", "C. 选项三", "D. 选项四"],
+                "answer": "A",
+                "analysis": "围绕课堂重点进行判断。",
+            }
+        ],
+        "extension": [
+            {
+                "level": "D",
+                "itemType": "short_answer",
+                "prompt": f"查找与{ctx.topic}相关的延伸资料，补充一条新的理解。",
+                "options": [],
+                "answer": "",
+                "analysis": "",
+            }
+        ],
+        "self_reflection": "",
+    }
+    return mapping[ctx.section_name]
+
 
 # ---------------------------------------------------------------------------
 # DeepSeek / MiniMax 共用流式逻辑
@@ -330,6 +481,7 @@ async def _stream_chat_completion(
     model: str,
     system_prompt: str,
     user_prompt: str,
+    thinking: str | None = None,
 ) -> AsyncIterator[str]:
     """通用的 chat completion 流式调用。"""
     url = f"{base_url.rstrip('/')}/chat/completions"
@@ -337,16 +489,12 @@ async def _stream_chat_completion(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "stream": True,
-        "temperature": 0.6,
-        "max_tokens": 8192,
-    }
+    payload = _build_chat_completion_payload(
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        thinking=thinking,
+    )
 
     async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
         async with client.stream("POST", url, json=payload, headers=headers) as resp:
@@ -368,17 +516,28 @@ async def _stream_chat_completion(
                     continue
 
 
-def _strip_code_fence(text: str) -> str:
-    """移除 markdown code fence。"""
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines)
-    return text
+def _build_chat_completion_payload(
+    *,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    thinking: str | None = None,
+) -> dict:
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "stream": True,
+        "temperature": 0.6,
+        "max_tokens": 8192,
+    }
+    if thinking:
+        payload["thinking"] = {"type": thinking}
+        if thinking == "enabled":
+            payload.pop("temperature", None)
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -392,6 +551,7 @@ class DeepSeekProvider(LLMProvider):
         self._base_url = s.deepseek_base_url
         self._api_key = s.deepseek_api_key
         self._model = s.deepseek_model
+        self._thinking = s.deepseek_thinking
 
     async def generate_lesson_plan(
         self, ctx: LessonPlanContext
@@ -406,6 +566,8 @@ class DeepSeekProvider(LLMProvider):
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
             lesson_category=ctx.lesson_category,
+            prompt_hints=ctx.prompt_hints or "",
+            knowledge_context=ctx.knowledge_context or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -413,6 +575,7 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的教案生成引擎。请严格按照要求输出结构化 JSON，不要输出其他内容。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 
@@ -428,6 +591,8 @@ class DeepSeekProvider(LLMProvider):
             requirements=ctx.requirements or "无特殊要求",
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
+            prompt_hints=ctx.prompt_hints or "",
+            knowledge_context=ctx.knowledge_context or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -435,6 +600,7 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的学案生成引擎。请严格按照要求输出结构化 JSON，不要输出其他内容。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 
@@ -458,6 +624,40 @@ class DeepSeekProvider(LLMProvider):
             model=self._model,
             system_prompt="你是 LessonPilot 的教案/学案内容重写引擎。请输出重写后的 JSON 片段，不要输出其他内容。",
             user_prompt=user_prompt,
+            thinking=self._thinking,
+        ):
+            yield chunk
+
+    async def generate_document_section(
+        self, ctx: SectionGenerationContext
+    ) -> AsyncIterator[str]:
+        template = _load_prompt("section_generation_prompt.md")
+        user_prompt = _render(
+            template,
+            doc_type=ctx.doc_type,
+            section_name=ctx.section_name,
+            section_title=ctx.section_title,
+            subject=ctx.subject,
+            grade=ctx.grade,
+            topic=ctx.topic,
+            requirements=ctx.requirements or "无特殊要求",
+            scene=ctx.scene,
+            class_hour=str(ctx.class_hour),
+            lesson_category=ctx.lesson_category,
+            prompt_hints=ctx.prompt_hints or "",
+            knowledge_context=ctx.knowledge_context or "",
+            personal_asset_context=ctx.personal_asset_context or "",
+            section_schema=ctx.section_schema,
+            existing_sections=ctx.existing_sections or "暂无已完成内容",
+            section_rules=ctx.section_rules or "保证内容具体、可直接给老师使用。",
+        )
+        async for chunk in _stream_chat_completion(
+            base_url=self._base_url,
+            api_key=self._api_key,
+            model=self._model,
+            system_prompt="你是 LessonPilot 的 section 生成引擎。只输出当前 section 的 JSON 值，不要输出额外说明。",
+            user_prompt=user_prompt,
+            thinking=self._thinking,
         ):
             yield chunk
 
@@ -487,6 +687,8 @@ class MiniMaxProvider(LLMProvider):
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
             lesson_category=ctx.lesson_category,
+            prompt_hints=ctx.prompt_hints or "",
+            knowledge_context=ctx.knowledge_context or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -509,6 +711,8 @@ class MiniMaxProvider(LLMProvider):
             requirements=ctx.requirements or "无特殊要求",
             scene=ctx.scene,
             class_hour=str(ctx.class_hour),
+            prompt_hints=ctx.prompt_hints or "",
+            knowledge_context=ctx.knowledge_context or "",
         )
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
@@ -538,6 +742,38 @@ class MiniMaxProvider(LLMProvider):
             api_key=self._api_key,
             model=self._model,
             system_prompt="你是 LessonPilot 的教案/学案内容重写引擎。请输出重写后的 JSON 片段，不要输出其他内容。",
+            user_prompt=user_prompt,
+        ):
+            yield chunk
+
+    async def generate_document_section(
+        self, ctx: SectionGenerationContext
+    ) -> AsyncIterator[str]:
+        template = _load_prompt("section_generation_prompt.md")
+        user_prompt = _render(
+            template,
+            doc_type=ctx.doc_type,
+            section_name=ctx.section_name,
+            section_title=ctx.section_title,
+            subject=ctx.subject,
+            grade=ctx.grade,
+            topic=ctx.topic,
+            requirements=ctx.requirements or "无特殊要求",
+            scene=ctx.scene,
+            class_hour=str(ctx.class_hour),
+            lesson_category=ctx.lesson_category,
+            prompt_hints=ctx.prompt_hints or "",
+            knowledge_context=ctx.knowledge_context or "",
+            personal_asset_context=ctx.personal_asset_context or "",
+            section_schema=ctx.section_schema,
+            existing_sections=ctx.existing_sections or "暂无已完成内容",
+            section_rules=ctx.section_rules or "保证内容具体、可直接给老师使用。",
+        )
+        async for chunk in _stream_chat_completion(
+            base_url=self._base_url,
+            api_key=self._api_key,
+            model=self._model,
+            system_prompt="你是 LessonPilot 的 section 生成引擎。只输出当前 section 的 JSON 值，不要输出额外说明。",
             user_prompt=user_prompt,
         ):
             yield chunk

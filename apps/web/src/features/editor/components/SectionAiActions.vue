@@ -51,20 +51,20 @@ function cancelClose() {
       type="button"
       class="ai-trigger-btn"
       :disabled="disabled"
-      title="辅助编辑"
+      title="辅助修改"
       @click="toggleMenu"
     >
-      生成
+      调整
     </button>
     <div v-if="showMenu" class="ai-menu">
       <button type="button" class="ai-menu-item" @click="trigger('rewrite')">
-        重写
+        改写
       </button>
       <button type="button" class="ai-menu-item" @click="trigger('expand')">
-        扩写
+        补充展开
       </button>
       <button type="button" class="ai-menu-item" @click="trigger('simplify')">
-        精简
+        压缩表达
       </button>
       <div class="ai-menu-divider" />
       <button
@@ -87,7 +87,7 @@ function cancelClose() {
           class="ai-instruction-go"
           @click="trigger('rewrite')"
         >
-          执行
+          应用
         </button>
       </div>
     </div>

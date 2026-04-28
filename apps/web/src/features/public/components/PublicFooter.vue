@@ -13,7 +13,6 @@ import { RouterLink } from 'vue-router';
       <div>
         <div class="public-footer-title">产品</div>
         <RouterLink :to="{ name: 'landing', hash: '#features' }">功能介绍</RouterLink>
-        <RouterLink :to="{ name: 'pricing' }">定价</RouterLink>
         <RouterLink :to="{ name: 'changelog' }">更新日志</RouterLink>
       </div>
 

@@ -6,26 +6,32 @@
  */
 import type {
   AssessmentItem,
+  CitationReference,
   KeyPoints,
-  LearningProcess,
   SectionInfo,
   TeachingObjective,
   TeachingProcessStep,
 } from '@lessonpilot/shared-types';
 import { computed } from 'vue';
+
+import FormulaText from '@/shared/components/FormulaText.vue';
+import { containsFormula } from '@/shared/utils/formula';
+
+import CitationTooltip from './CitationTooltip.vue';
 import KeyPointsEditor from './SectionEditors/KeyPointsEditor.vue';
 import GenericListEditor from './SectionEditors/GenericListEditor.vue';
 import ObjectivesEditor from './SectionEditors/ObjectivesEditor.vue';
 import RichTextEditor from './SectionEditors/RichTextEditor.vue';
 import TeachingProcessEditor from './SectionEditors/TeachingProcessEditor.vue';
-import LearningProcessEditor from './SectionEditors/LearningProcessEditor.vue';
 import AssessmentEditor from './SectionEditors/AssessmentEditor.vue';
 import SectionAiActions from './SectionAiActions.vue';
+import { stripCitations } from '../utils/citation';
 
 const props = defineProps<{
   section: SectionInfo;
   docType: string;
   sectionData: unknown;
+  sectionReferences: CitationReference[];
   collapsed: boolean;
   streamingText: string;
   isRewriting: boolean;
@@ -72,9 +78,27 @@ const statusClass = computed(() =>
     </div>
 
     <div v-if="!collapsed" class="section-body">
+      <div v-if="sectionReferences.length" class="section-references">
+        <span class="section-references-label">参考资料</span>
+        <CitationTooltip
+          v-for="reference in sectionReferences"
+          :key="reference.chunk_id"
+          :source="reference.source"
+          :title="reference.title"
+          :knowledge-type="reference.knowledge_type"
+          :chapter="reference.chapter"
+          :snippet="reference.content_snippet"
+        />
+      </div>
+
       <!-- 流式输出显示区 -->
       <div v-if="streamingText" class="streaming-content">
-        <span class="streaming-text">{{ streamingText }}</span>
+        <FormulaText
+          v-if="containsFormula(stripCitations(streamingText))"
+          class="streaming-text"
+          :text="stripCitations(streamingText)"
+        />
+        <span v-else class="streaming-text">{{ stripCitations(streamingText) }}</span>
         <span class="streaming-cursor" />
       </div>
 
@@ -123,15 +147,8 @@ const statusClass = computed(() =>
           :placeholder="section.title"
           @update:model-value="emit('update-section', $event)"
         />
-        <!-- 学习流程（自主/合作/展示） -->
-        <LearningProcessEditor
-          v-else-if="section.name === 'learning_process'"
-          :model-value="(sectionData as LearningProcess)"
-          @update:model-value="emit('update-section', $event)"
-        />
-        <!-- 达标测评 / 拓展延伸 -->
         <AssessmentEditor
-          v-else-if="['assessment', 'extension'].includes(section.name)"
+          v-else-if="['self_study', 'collaboration', 'presentation', 'assessment', 'extension'].includes(section.name)"
           :model-value="(sectionData as AssessmentItem[])"
           @update:model-value="emit('update-section', $event)"
         />

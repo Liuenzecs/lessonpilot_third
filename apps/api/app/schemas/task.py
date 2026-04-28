@@ -17,6 +17,7 @@ class TaskCreatePayload(BaseModel):
     lesson_type: LessonType = "lesson_plan"
     class_hour: int = Field(default=1, ge=1, le=10)
     lesson_category: LessonCategory = "new"
+    template_id: str | None = None
 
 
 class TaskUpdatePayload(BaseModel):
@@ -37,6 +38,7 @@ class TaskRead(BaseModel):
     lesson_type: str
     class_hour: int
     lesson_category: str
+    template_id: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -50,6 +52,8 @@ class PaginatedTasks(BaseModel):
 
 class GenerationStartPayload(BaseModel):
     section_id: str | None = None
+    use_personal_assets: bool = False
+    personal_asset_ids: list[str] = Field(default_factory=list)
 
 
 class GenerationStartResponse(BaseModel):

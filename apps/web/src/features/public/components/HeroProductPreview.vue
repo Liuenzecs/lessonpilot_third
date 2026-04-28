@@ -1,59 +1,61 @@
 <template>
-  <div class="hero-preview">
-    <div class="hero-preview-window">
-      <div class="hero-preview-bar">
-        <span />
-        <span />
-        <span />
+  <div class="hero-preview-window">
+    <div class="hero-preview-toolbar">
+      <div>
+        <div class="hero-preview-label">LessonPilot 文档</div>
+        <div class="hero-preview-title">《春》第一课时教案</div>
       </div>
-
-      <div class="hero-preview-content">
-        <aside class="hero-preview-sidebar">
-          <div class="hero-preview-sidebar-title">备课台</div>
-          <div class="hero-preview-sidebar-card active">
-            <div class="hero-preview-label">数学 · 八年级</div>
-            <div class="hero-preview-strong">一元二次方程</div>
-          </div>
-          <div class="hero-preview-sidebar-card">
-            <div class="hero-preview-label">生成中...</div>
-            <div class="hero-preview-muted">导入环节 / 练习巩固</div>
-          </div>
-        </aside>
-
-        <section class="hero-preview-editor">
-          <div class="hero-preview-editor-head">
-            <div>
-              <div class="hero-preview-label">编辑器</div>
-              <div class="hero-preview-strong">10 分钟，搞定一份好教案</div>
-            </div>
-            <div class="hero-preview-export">导出 ▾</div>
-          </div>
-
-          <div class="hero-preview-section">
-            <div class="hero-preview-section-title">教学目标</div>
-            <div class="hero-preview-line long" />
-            <div class="hero-preview-line medium" />
-          </div>
-
-          <div class="hero-preview-section pending">
-            <div class="hero-preview-chip">待确认</div>
-            <div class="hero-preview-section-title">导入环节（5 分钟）</div>
-            <div class="hero-preview-line long" />
-            <div class="hero-preview-line medium" />
-            <div class="hero-preview-actions">
-              <span>接受</span>
-              <span>拒绝</span>
-              <span>重新生成</span>
-            </div>
-          </div>
-
-          <div class="hero-preview-bottom">
-            <span>开始备课</span>
-            <span>补充内容</span>
-            <span>添加练习</span>
-          </div>
-        </section>
+      <div class="hero-preview-toolbar-actions">
+        <span>已保存</span>
+        <span class="hero-preview-primary">导出 Word</span>
       </div>
+    </div>
+
+    <div class="hero-preview-content">
+      <aside class="hero-preview-sidebar">
+        <div class="hero-preview-sidebar-title">目录</div>
+        <div class="hero-preview-outline active">教学目标</div>
+        <div class="hero-preview-outline">教学重难点</div>
+        <div class="hero-preview-outline pending">教学过程</div>
+        <div class="hero-preview-outline">板书设计</div>
+      </aside>
+
+      <section class="hero-preview-paper">
+        <div class="hero-preview-paper-head">
+          <div class="hero-preview-label">语文 · 七年级 · 1 课时</div>
+          <h3>春</h3>
+          <p>朱自清散文精读，围绕景物描写和情感表达组织课堂。</p>
+        </div>
+
+        <div class="hero-preview-section">
+          <div class="hero-preview-section-title">教学目标</div>
+          <p>能够圈画文中描写春草、春花、春风的关键语句，并说出比喻、拟人手法的表达效果。</p>
+        </div>
+
+        <div class="hero-preview-section pending">
+          <div class="hero-preview-section-meta">
+            <span class="hero-preview-chip">待确认</span>
+            <span>教学过程 · 18 分钟</span>
+          </div>
+          <div class="hero-preview-section-title">品读“春风图”</div>
+          <p>教师引导学生朗读第三自然段，学生分组标注感官描写，随后用一句话概括春风的特点。</p>
+        </div>
+      </section>
+
+      <aside class="hero-preview-inspector">
+        <div class="hero-preview-inspector-card ready">
+          <span>导出前体检</span>
+          <strong>可提交</strong>
+        </div>
+        <div class="hero-preview-inspector-card">
+          <span>参考资料</span>
+          <strong>知识库 3 条</strong>
+        </div>
+        <div class="hero-preview-inspector-card">
+          <span>学校模板</span>
+          <strong>七年级语文组</strong>
+        </div>
+      </aside>
     </div>
   </div>
 </template>

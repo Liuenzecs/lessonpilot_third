@@ -1,8 +1,12 @@
 import { download } from '@/shared/api/client';
 
 /** 导出单个文档为 Word 文件。 */
-export async function exportDocx(documentId: string, title: string): Promise<void> {
-  const blob = await download(`/api/v1/documents/${documentId}/export?format=docx`);
+export async function exportDocx(documentId: string, title: string, templateId?: string | null): Promise<void> {
+  const params = new URLSearchParams({ format: 'docx' });
+  if (templateId) {
+    params.set('template_id', templateId);
+  }
+  const blob = await download(`/api/v1/documents/${documentId}/export?${params.toString()}`);
   triggerDownload(blob, `${title}.docx`);
 }
 

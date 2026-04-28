@@ -57,11 +57,13 @@ def serialize_document(document: Document) -> DocumentRead:
 
 
 def serialize_snapshot(snapshot: DocumentSnapshot) -> DocumentSnapshotRead:
+    content_data = snapshot.content or {}
+    content_model = StudyGuideContent if content_data.get("doc_type") == "study_guide" else LessonPlanContent
     return DocumentSnapshotRead(
         id=snapshot.id,
         document_id=snapshot.document_id,
         version=snapshot.version,
-        content=LessonPlanContent.model_validate(snapshot.content),
+        content=content_model.model_validate(content_data),
         source=snapshot.source,
         created_at=snapshot.created_at,
     )
