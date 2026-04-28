@@ -1459,3 +1459,29 @@
   - `pnpm --dir apps/web test --run`：44 passed
   - `pnpm --dir apps/web build`：passed
 - Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 13] — 真实试用硬化与首份可交付闭环第一轮
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增 Phase 13 阶段文档，明确本阶段聚焦真实试用和首份可交付，不扩展全学科或新后端能力
+  - 备课台顶部入口新增“用样例体验”，空状态补充“填好课题 → 生成初稿 → 体检风险 → 导出 Word”的首份路径
+  - 创建页新增“套用试用样例”，支持通过 `preset=first-lesson` 自动填入语文七年级《春》第一课时演示字段
+  - 样例预填不改变后端创建接口，老师仍可修改所有字段后进入文档桌
+  - 新增 Phase 13 真实试用样本包，覆盖首份语文教案、旧 Word 教案导入、学校模板、个人资料库和公式导出
+  - 更新 `docs/NEXT.md`、`docs/ACCEPTANCE.md`、`CLAUDE.md`
+- 关键文件：
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/task/data/firstLessonPresets.ts`
+  - `apps/web/src/features/task/styles/workspace.css`
+  - `apps/web/src/features/task/views/__tests__/TaskCreateView.test.ts`
+  - `docs/milestones/phase-13-real-trial-hardening.md`
+  - `docs/fixtures/phase-13-real-trial-samples.md`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run src/features/task/views/__tests__/TaskCreateView.test.ts`：2 passed
+  - `pnpm --dir apps/web test --run`：45 passed
+  - `pnpm --dir apps/web build`：passed
+  - `git diff --check`：passed
+  - `5173` 端口：已按固定端口规则启动前端 dev server
+- Status: DONE（待用户验收，不自动提交推送）

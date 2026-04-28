@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useCreateTaskMutation, usePersonalAssetRecommendations } from '@/features/task/composables/useTasks';
+import { FIRST_LESSON_PRESET, FIRST_LESSON_PRESET_QUERY } from '@/features/task/data/firstLessonPresets';
 import type { LessonCategory, LessonType, Scene } from '@lessonpilot/shared-types';
 import type { TemplateRecord } from '@/features/task/types';
 import { ApiError } from '@/shared/api/client';
@@ -20,10 +21,12 @@ import { request } from '@/shared/api/client';
 import '@/features/task/styles/workspace.css';
 
 const router = useRouter();
+const route = useRoute();
 const createTaskMutation = useCreateTaskMutation();
 const toast = useToast();
 
 const submitError = ref('');
+const presetApplied = ref(false);
 const form = reactive({
   subject: '',
   grade: '',
@@ -77,6 +80,24 @@ watch(() => form.lesson_type, () => {
 
 const canSubmit = computed(() => Boolean(form.subject) && Boolean(form.grade) && form.topic.trim().length > 0);
 
+function applyFirstLessonPreset(showToast = true) {
+  Object.assign(form, FIRST_LESSON_PRESET);
+  form.template_id = null;
+  usePersonalAssets.value = false;
+  selectedPersonalAssetIds.value = [];
+  presetApplied.value = true;
+  void fetchTemplates();
+  if (showToast) {
+    toast.info('已套用首份备课样例', '你可以直接进入文档桌，也可以先改课题和要求。');
+  }
+}
+
+onMounted(() => {
+  if (route.query.preset === FIRST_LESSON_PRESET_QUERY) {
+    applyFirstLessonPreset(false);
+  }
+});
+
 async function submit() {
   submitError.value = '';
 
@@ -124,6 +145,9 @@ function togglePersonalAsset(assetId: string) {
         <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
           返回备课台
         </button>
+        <button class="button secondary" type="button" @click="applyFirstLessonPreset()">
+          套用试用样例
+        </button>
         <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
           导入旧教案
         </button>
@@ -137,6 +161,11 @@ function togglePersonalAsset(assetId: string) {
 
     <div class="create-layout">
       <form class="create-body create-main-panel" @submit.prevent="submit">
+        <div v-if="presetApplied" class="create-trial-banner">
+          <strong>首份备课样例已填好</strong>
+          <span>这是一份脱敏演示样例，适合快速体验生成、体检和 Word 导出；所有字段仍可修改。</span>
+        </div>
+
         <div class="create-topic-card">
           <label class="create-label">课题主题 <span class="required">*</span></label>
           <input
@@ -320,6 +349,16 @@ function togglePersonalAsset(assetId: string) {
         <section class="create-assist-section">
           <h2>知识增强</h2>
           <p class="create-helper">语文重点篇目会在生成时自动判断是否命中知识库；未命中时按普通生成处理。</p>
+        </section>
+
+        <section class="create-assist-section">
+          <h2>试用验收路径</h2>
+          <ol class="create-trial-list">
+            <li>确认课题和年级</li>
+            <li>进入文档桌等待初稿</li>
+            <li>运行导出前体检</li>
+            <li>导出 Word 检查格式</li>
+          </ol>
         </section>
       </aside>
     </div>

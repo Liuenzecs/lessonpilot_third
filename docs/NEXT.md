@@ -1,45 +1,53 @@
-# 当前任务：数学公式生成、编辑器展示与 Word 导出修复（待验收）
+# 当前任务：Phase 13 真实试用硬化与首份可交付闭环（进行中）
 
-## 本轮目标
+## 本阶段目标
 
-解决生成内容中的数学公式“乱码”问题，让 LessonPilot 能在结构化 JSON 仍作为内容中枢的前提下，稳定保留、展示并导出可编辑的 Word 原生公式。
+把已经实现的导入、生成、质量检查、资料复用、模板导出和公式导出能力，收束成老师第一次试用时能走通的“首份可交付”路径。
+
+本阶段不继续堆新平台功能，优先让一个新老师在 10-15 分钟内完成：
+
+- 知道从哪里开始。
+- 能用样例快速体验完整流程。
+- 能创建一份语文备课文档。
+- 能检查是否可交。
+- 能导出可打开、可编辑的 Word。
 
 ## 已授权范围
 
-- 不改变后端 API、数据库表和文档内容模型。
-- 不引入完整数学公式编辑器，只做可编辑原文 + 公式预览。
-- 优先解决生成、重写、编辑器展示和 Word 导出链路。
+- 允许调整备课台、创建页和帮助性文案。
+- 允许新增脱敏样本和验收文档。
+- 允许补充前端测试与必要的回归测试。
+- 不新增后端 API，不新增数据库表。
+- 不做全学科扩张、真实 `.pptx` 导出、PDF/OCR、学校后台或计费。
 - 不自动提交 / 推送，等待用户验收。
 
-## 已实现
+## 本轮实施切片
 
-- 后端新增 LaTeX 文本保护：生成 / 重写解析 JSON 前会保护 `\frac`、`\theta`、`\sqrt`、`\(...\)` 等反斜杠写法。
-- 后端新增控制字符修复：对已被 JSON 转坏的常见公式片段做递归修复。
-- Prompt 增加公式输出约束：行内公式使用 `\\(...\\)`，独立公式使用 `$$...$$`，JSON 字符串里的反斜杠必须双写。
-- 前端引入 KaTeX，新增 `FormulaText` 渲染组件与公式解析工具。
-- 编辑器目标、重难点、教学准备、教学过程、测评题、答案、解析、板书 / 反思和流式输出区域支持公式预览。
-- Word 导出新增 OMML 公式写入：常见 LaTeX 公式会导出为 Word 原生 `m:oMath`，支持分式、根号、上下标、希腊字母和常用运算符。
-- 保持老师可编辑原始文本，不把结构化内容改成富公式 block。
+- [x] 新增 Phase 13 阶段文档，明确首份可交付闭环。
+- [x] 备课台增加首份备课路径，空状态和顶部入口都能引导老师走“样例体验 / 导入旧教案 / 创建新备课”。
+- [x] 创建页支持一键套用脱敏样例，降低新用户第一次填写成本。
+- [x] 新增 Phase 13 样本验收包，覆盖样例课题、旧教案、学校模板、PPT 大纲、含公式导出。
+- [x] 补充前端测试，验证样例预填和首份路径文案。
+- [x] 更新 `docs/ACCEPTANCE.md`、`docs/PROGRESS.md`、`CLAUDE.md`。
 
 ## 验证结果
 
-- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_generation_service.py -q`：4 passed
-- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_export.py -q`：12 passed
-- `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app/services/formula_text.py apps/api/app/services/generation_service.py apps/api/tests/test_generation_service.py`：passed
-- `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
-- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：150 passed
 - `pnpm --dir apps/web type-check`：passed
-- `pnpm --dir apps/web test --run`：44 passed
+- `pnpm --dir apps/web test --run src/features/task/views/__tests__/TaskCreateView.test.ts`：2 passed
+- `pnpm --dir apps/web test --run`：45 passed
 - `pnpm --dir apps/web build`：passed
+- `git diff --check`：passed
+- `5173` 端口：已按固定端口规则启动前端 dev server
 
-## 待用户验收
+## 待验收
 
-- 生成一个含数学公式的教案或学案，例如“勾股定理 第一课时”或“二次函数配方法练习”。
-- 检查生成过程和最终 section 中的 `\\(...\\)` / `$$...$$` 公式是否显示为正常数学排版。
-- 手动编辑一段公式文本，确认下方公式预览随内容更新。
-- 导出 Word 后打开 `.docx`，确认公式不是 LaTeX 源码，而是 Word 中可选中、可编辑的公式对象。
-- 确认原有语文教案 / 学案生成、改写、确认、引用和导出入口不受影响。
+- 新用户进入空备课台时，能明确看到首份备课的推荐路径。
+- 点击样例体验后进入创建页，课题、学科、年级、课型、场景和补充说明自动填好。
+- 老师仍可修改样例内容并按原有创建接口进入编辑器。
+- 旧教案导入、学校模板、个人资料库入口没有被弱化。
+- Phase 13 样本验收包能指导一次完整本地演示。
+- 前端 type-check / test / build 通过。
 
 ## 停止条件
 
-本轮停在公式展示修复验收口；不自动进入下一阶段，不自动提交推送。
+本轮已停在 Phase 13 第一轮验收口；不自动进入下一阶段，不自动提交推送。

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { exportDocx } from '@/features/export/composables/useExport';
 import TaskCard from '@/features/task/components/TaskCard.vue';
 import { useDeleteTaskMutation, useDuplicateTaskMutation, useTasks } from '@/features/task/composables/useTasks';
+import { FIRST_LESSON_PRESET_QUERY } from '@/features/task/data/firstLessonPresets';
 import type { TaskRecord } from '@/features/task/types';
 import { request } from '@/shared/api/client';
 import { getAppErrorState, getErrorDescription } from '@/shared/api/errors';
@@ -60,6 +61,10 @@ const filteredTasks = computed(() => {
 
 function startFirstTask() {
   void router.push({ name: 'task-create' });
+}
+
+function startSampleTask() {
+  void router.push({ name: 'task-create', query: { preset: FIRST_LESSON_PRESET_QUERY } });
 }
 
 async function removeTask(taskId: string) {
@@ -127,9 +132,13 @@ async function exportTask(task: TaskRecord) {
         </div>
 
         <div class="workspace-hero-actions">
-          <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
-            <span class="workspace-start-title">开始备课</span>
-            <span class="workspace-start-subtitle">输入课题，直接进入文档桌起草</span>
+          <button class="workspace-start-card" type="button" @click="startSampleTask">
+            <span class="workspace-start-title">用样例体验</span>
+            <span class="workspace-start-subtitle">自动填好《春》第一课时，快速跑通生成、体检和导出</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-create' })">
+            <span class="workspace-start-title">从课题开始</span>
+            <span class="workspace-start-subtitle">输入自己的课题，直接进入文档桌起草</span>
           </button>
           <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
             <span class="workspace-start-title">导入旧教案</span>
@@ -166,9 +175,16 @@ async function exportTask(task: TaskRecord) {
       >
         <div class="workspace-empty-icon">📘</div>
         <h2>你的备课台还是空的</h2>
-        <p>创建第一份教案，让备课从一份可修改的初稿开始。</p>
+        <p>可以先用样例跑完整链路，也可以从自己的课题或旧教案开始。</p>
+        <div class="workspace-first-path">
+          <span>1. 填好课题</span>
+          <span>2. 生成初稿</span>
+          <span>3. 体检风险</span>
+          <span>4. 导出 Word</span>
+        </div>
         <div class="button-row">
-          <button class="button primary" type="button" @click="startFirstTask">开始第一次备课</button>
+          <button class="button primary" type="button" @click="startSampleTask">用样例体验</button>
+          <button class="button secondary" type="button" @click="startFirstTask">从课题开始</button>
           <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
             导入旧教案
           </button>
