@@ -78,6 +78,52 @@
   letter-spacing: 0;
 }
 
+.settings-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.settings-panel-heading p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.settings-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.settings-panel textarea {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.55;
+}
+
+.settings-panel textarea:focus {
+  outline: none;
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
 .settings-skeleton-panel,
 .settings-skeleton-stack { display: grid; gap: 14px; }
 

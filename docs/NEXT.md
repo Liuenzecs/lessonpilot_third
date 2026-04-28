@@ -1,53 +1,44 @@
-# 当前任务：Phase 13 真实试用硬化与首份可交付闭环（进行中）
+# 当前任务：等待下一步指示（Phase 14 已验收）
 
 ## 本阶段目标
 
-把已经实现的导入、生成、质量检查、资料复用、模板导出和公式导出能力，收束成老师第一次试用时能走通的“首份可交付”路径。
-
-本阶段不继续堆新平台功能，优先让一个新老师在 10-15 分钟内完成：
-
-- 知道从哪里开始。
-- 能用样例快速体验完整流程。
-- 能创建一份语文备课文档。
-- 能检查是否可交。
-- 能导出可打开、可编辑的 Word。
+让 LessonPilot 逐步记住老师常用的目标写法、教学过程风格和学校提交措辞，使后续生成内容更像“我平时会交的教案”，而不是每次都从通用模板重新开始。
 
 ## 已授权范围
 
-- 允许调整备课台、创建页和帮助性文案。
-- 允许新增脱敏样本和验收文档。
-- 允许补充前端测试与必要的回归测试。
-- 不新增后端 API，不新增数据库表。
-- 不做全学科扩张、真实 `.pptx` 导出、PDF/OCR、学校后台或计费。
+- 新增用户私有的个人风格档案。
+- 设置页可查看、编辑和启用 / 关闭风格记忆。
+- 生成和局部重写时读取当前用户风格档案并注入 prompt。
+- 文档更新 Phase 14 规格、验收脚本和进度记录。
+- 不做跨用户共享，不把风格数据混入公共知识库。
+- 不做不可控的全自动学习；v1 先做老师显式维护的风格偏好。
+- 不扩展全学科，不做学校后台、团队共享或复杂画像系统。
 - 不自动提交 / 推送，等待用户验收。
 
 ## 本轮实施切片
 
-- [x] 新增 Phase 13 阶段文档，明确首份可交付闭环。
-- [x] 备课台增加首份备课路径，空状态和顶部入口都能引导老师走“样例体验 / 导入旧教案 / 创建新备课”。
-- [x] 创建页支持一键套用脱敏样例，降低新用户第一次填写成本。
-- [x] 新增 Phase 13 样本验收包，覆盖样例课题、旧教案、学校模板、PPT 大纲、含公式导出。
-- [x] 补充前端测试，验证样例预填和首份路径文案。
+- [x] 新增 Phase 14 阶段文档和当前任务边界。
+- [x] 后端新增个人风格档案模型、迁移、schema、service 和 API。
+- [x] 生成 / 重写链路注入老师个人风格提示。
+- [x] 设置页新增“风格记忆”入口，可编辑目标写法、过程风格、学校措辞和禁用词。
+- [x] 补充后端 / 前端测试。
 - [x] 更新 `docs/ACCEPTANCE.md`、`docs/PROGRESS.md`、`CLAUDE.md`。
 
 ## 验证结果
 
+- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_account_service.py apps/api/tests/test_style_profile.py -q`：17 passed
+- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/api/test_documents.py -q`：8 passed
+- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：157 passed
+- `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
 - `pnpm --dir apps/web type-check`：passed
-- `pnpm --dir apps/web test --run src/features/task/views/__tests__/TaskCreateView.test.ts`：2 passed
-- `pnpm --dir apps/web test --run`：45 passed
+- `pnpm --dir apps/web test --run`：46 passed
 - `pnpm --dir apps/web build`：passed
-- `git diff --check`：passed
-- `5173` 端口：已按固定端口规则启动前端 dev server
 
-## 待验收
+## 验收结论
 
-- 新用户进入空备课台时，能明确看到首份备课的推荐路径。
-- 点击样例体验后进入创建页，课题、学科、年级、课型、场景和补充说明自动填好。
-- 老师仍可修改样例内容并按原有创建接口进入编辑器。
-- 旧教案导入、学校模板、个人资料库入口没有被弱化。
-- Phase 13 样本验收包能指导一次完整本地演示。
-- 前端 type-check / test / build 通过。
+- 用户已要求提交推送，Phase 14 第一轮视为通过验收。
+- 当前不自动进入下一阶段。
 
 ## 停止条件
 
-本轮已停在 Phase 13 第一轮验收口；不自动进入下一阶段，不自动提交推送。
+等待用户明确指定下一阶段或新的 Cycle。

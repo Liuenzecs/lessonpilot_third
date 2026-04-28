@@ -34,6 +34,7 @@ from app.services.llm_service import (
     get_provider,
 )
 from app.services.sse_utils import ClientDisconnected, ensure_client_connected, format_sse
+from app.services.style_profile_service import get_teacher_style_context
 
 logger = logging.getLogger("lessonpilot.rewrite")
 
@@ -101,6 +102,9 @@ async def stream_rewrite(
         current_section_value = _get_section_value(content, payload.section_name)
         current_section_json = json.dumps(current_section_value, ensure_ascii=False)
         prompt_hints = _load_prompt_hints(session, task.template_id, document.doc_type)
+        teacher_style_ctx = get_teacher_style_context(session, task.user_id)
+        if teacher_style_ctx:
+            prompt_hints = "\n\n".join(part for part in (prompt_hints, teacher_style_ctx) if part)
         should_generate_from_scratch = (
             payload.action == "rewrite" and not _section_has_content(current_section_value)
         )
@@ -147,6 +151,10 @@ async def stream_rewrite(
                 action=payload.action,
                 instruction=payload.instruction or "",
             )
+            if teacher_style_ctx:
+                rewrite_ctx.instruction = "\n\n".join(
+                    part for part in (rewrite_ctx.instruction, teacher_style_ctx) if part
+                )
             async for chunk in provider.rewrite_section(rewrite_ctx):
                 chunks.append(chunk)
                 yield format_sse(

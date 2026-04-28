@@ -1485,3 +1485,31 @@
   - `git diff --check`：passed
   - `5173` 端口：已按固定端口规则启动前端 dev server
 - Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 14] — 老师个人风格记忆第一轮
+- 完成日期：2026-04-28
+- 完成内容：
+  - 新增用户私有 `teacher_style_profiles` 表、SQLModel 模型、Alembic 迁移、schema、service 与 `/api/v1/style-profile` API
+  - 设置页新增“风格记忆”入口，支持保存、回显、修改和启用 / 关闭目标写法、过程风格、学校措辞、常用活动和避免套话
+  - 生成链路和局部重写链路读取当前用户风格档案，并在启用且非空时注入 prompt 提示
+  - 风格提示明确不覆盖结构化 JSON、教学质量规则、RAG 引用或学校模板要求
+  - 账户数据导出包含个人风格档案，删除账号时同步清理风格档案
+  - 新增 Phase 14 阶段文档、风格档案规格和手动验收脚本
+- 关键文件：
+  - `apps/api/app/models/teacher_style_profile.py`
+  - `apps/api/app/services/style_profile_service.py`
+  - `apps/api/app/api/v1/endpoints/style_profile.py`
+  - `apps/api/app/services/generation_service.py`
+  - `apps/api/app/services/rewrite_service.py`
+  - `apps/web/src/features/settings/views/SettingsView.vue`
+  - `docs/specs/teacher-style-profile.md`
+  - `docs/milestones/phase-14-teacher-style-memory.md`
+- 验证结果：
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_account_service.py apps/api/tests/test_style_profile.py -q`：17 passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/api/test_documents.py -q`：8 passed
+  - `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：157 passed
+  - `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：46 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（用户已验收，准备提交推送）

@@ -47,6 +47,7 @@ from app.services.personal_asset_service import (
     recommend_personal_assets,
 )
 from app.services.sse_utils import ClientDisconnected, ensure_client_connected, format_sse
+from app.services.style_profile_service import get_teacher_style_context
 
 logger = logging.getLogger("lessonpilot.generation")
 
@@ -97,6 +98,10 @@ def _load_prompt_hints(session: Session, template_id: str | None, doc_type: str)
         if section.prompt_hints:
             hints.append(f"【{section.section_name}】{section.prompt_hints}")
     return "\n".join(hints)
+
+
+def _merge_prompt_hints(*parts: str) -> str:
+    return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
 
 def get_task_and_documents(
@@ -807,6 +812,7 @@ async def stream_generation(
         knowledge_ctx = ""
         personal_asset_ctx = ""
         personal_references: dict[str, CitationReference] = {}
+        teacher_style_ctx = get_teacher_style_context(session, task.user_id)
         if not settings.rag_enabled or settings.rag_trigger_mode == "disabled":
             yield format_sse(
                 "rag_status",
@@ -951,6 +957,7 @@ async def stream_generation(
             doc = _get_or_create_document(session, task, doc_type)
             content = load_content(doc)
             prompt_hints = _load_prompt_hints(session, task.template_id, doc_type)
+            prompt_hints = _merge_prompt_hints(prompt_hints, teacher_style_ctx)
             specs = _get_section_specs(doc_type)
 
             for index, spec in enumerate(specs):

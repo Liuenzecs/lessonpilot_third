@@ -99,6 +99,28 @@ export interface AccountDeletePayload {
   confirm_text: string;
 }
 
+export interface TeacherStyleProfile {
+  id: string | null;
+  enabled: boolean;
+  objective_style: string;
+  process_style: string;
+  school_wording: string;
+  activity_preferences: string;
+  avoid_phrases: string;
+  sample_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface TeacherStyleProfileUpdatePayload {
+  enabled: boolean;
+  objective_style: string;
+  process_style: string;
+  school_wording: string;
+  activity_preferences: string;
+  avoid_phrases: string;
+}
+
 export interface FeedbackCreatePayload {
   mood: 'happy' | 'neutral' | 'sad';
   message: string;

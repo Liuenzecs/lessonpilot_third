@@ -7,6 +7,7 @@ from sqlmodel import Session
 from app.core.db import get_engine
 from app.models.knowledge import KnowledgeChunk
 from app.services import generation_service, rewrite_service
+from app.services.llm_service import FakeProvider
 
 
 def _parse_sse_events(raw_text: str) -> list[tuple[str, dict]]:
@@ -134,6 +135,43 @@ def test_generation_rag_status_ready_and_section_references(client, auth_headers
     assert content["section_references"]["objectives"][0]["title"] == "薛宝钗人物分析"
 
 
+def test_generation_injects_enabled_teacher_style(client, auth_headers, monkeypatch):
+    task_id, _ = _create_task_and_document(client, auth_headers)
+    client.put(
+        "/api/v1/style-profile",
+        headers=auth_headers,
+        json={
+            "enabled": True,
+            "objective_style": "目标使用“通过……学生能够……”句式。",
+            "process_style": "过程要写清教师追问。",
+            "school_wording": "",
+            "activity_preferences": "",
+            "avoid_phrases": "",
+        },
+    )
+    captured: dict[str, str] = {}
+
+    class CaptureProvider(FakeProvider):
+        async def generate_document_section(self, ctx):
+            captured.setdefault(ctx.section_name, ctx.prompt_hints)
+            async for chunk in super().generate_document_section(ctx):
+                yield chunk
+
+    monkeypatch.setattr(generation_service, "get_provider", lambda: CaptureProvider())
+
+    start_response = client.post(
+        f"/api/v1/tasks/{task_id}/generate",
+        headers=auth_headers,
+        json={},
+    )
+    with client.stream("GET", start_response.json()["stream_url"], headers=auth_headers) as resp:
+        events = _parse_sse_events("".join(resp.iter_text()))
+
+    assert events[-1][0] == "document_done"
+    assert "老师个人风格记忆" in captured["objectives"]
+    assert "通过……学生能够" in captured["objectives"]
+
+
 def test_section_rewrite_flow(client, auth_headers):
     _, document = _create_task_and_document(client, auth_headers)
 
@@ -165,6 +203,56 @@ def test_section_rewrite_flow(client, auth_headers):
         events = _parse_sse_events("".join(resp.iter_text()))
     assert events[-1][0] == "document_done"
     assert "section_document" in [event_name for event_name, _ in events]
+
+
+def test_rewrite_injects_enabled_teacher_style(client, auth_headers, monkeypatch):
+    _, document = _create_task_and_document(client, auth_headers)
+    task_id = document["task_id"]
+    start_response = client.post(
+        f"/api/v1/tasks/{task_id}/generate",
+        headers=auth_headers,
+        json={},
+    )
+    with client.stream("GET", start_response.json()["stream_url"], headers=auth_headers) as resp:
+        "".join(resp.iter_text())
+    refreshed = client.get(f"/api/v1/documents/{document['id']}", headers=auth_headers).json()
+    client.put(
+        "/api/v1/style-profile",
+        headers=auth_headers,
+        json={
+            "enabled": True,
+            "objective_style": "目标写得具体可评价。",
+            "process_style": "",
+            "school_wording": "使用学习任务群措辞。",
+            "activity_preferences": "",
+            "avoid_phrases": "",
+        },
+    )
+    captured: dict[str, str] = {}
+
+    class CaptureProvider(FakeProvider):
+        async def rewrite_section(self, ctx):
+            captured["instruction"] = ctx.instruction
+            async for chunk in super().rewrite_section(ctx):
+                yield chunk
+
+    monkeypatch.setattr(rewrite_service, "get_provider", lambda: CaptureProvider())
+
+    rewrite_start = client.post(
+        f"/api/v1/documents/{refreshed['id']}/rewrite",
+        headers=auth_headers,
+        json={
+            "document_version": refreshed["version"],
+            "section_name": "objectives",
+            "action": "rewrite",
+        },
+    )
+    with client.stream("GET", rewrite_start.json()["stream_url"], headers=auth_headers) as resp:
+        events = _parse_sse_events("".join(resp.iter_text()))
+
+    assert events[-1][0] == "document_done"
+    assert "老师个人风格记忆" in captured["instruction"]
+    assert "学习任务群" in captured["instruction"]
 
 
 def test_empty_objectives_rewrite_uses_section_generation(client, auth_headers, monkeypatch):

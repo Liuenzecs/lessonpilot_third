@@ -8,7 +8,7 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.models import Task, User
+from app.models import Task, TeacherStyleProfile, User
 from app.schemas.account import (
     AccountChangePasswordPayload,
     AccountDeletePayload,
@@ -160,21 +160,41 @@ def test_export_account_data_includes_tasks(session):
     assert parsed["tasks"][0]["title"] == "Test Task"
 
 
+def test_export_account_data_includes_style_profile(session):
+    user = _make_user(session)
+    session.add(
+        TeacherStyleProfile(
+            user_id=user.id,
+            objective_style="目标要具体可评价。",
+            process_style="过程要写清追问。",
+        )
+    )
+    session.commit()
+
+    parsed = json.loads(account_service.export_account_data(session, user))
+
+    assert parsed["style_profile"]["objective_style"] == "目标要具体可评价。"
+
+
 # --- delete_account ---
 
 
 def test_delete_account_removes_user_and_data(session):
     user = _make_user(session)
     task = Task(user_id=user.id, title="Test", subject="语文", grade="七年级", topic="春")
+    style_profile = TeacherStyleProfile(user_id=user.id, objective_style="目标要具体可评价。")
     session.add(task)
+    session.add(style_profile)
     session.commit()
     task_id = task.id
+    style_profile_id = style_profile.id
 
     account_service.delete_account(
         session, user, AccountDeletePayload(confirm_text="DELETE"),
     )
     assert session.get(User, user.id) is None
     assert session.get(Task, task_id) is None
+    assert session.get(TeacherStyleProfile, style_profile_id) is None
 
 
 def test_delete_account_rejects_wrong_confirm():
