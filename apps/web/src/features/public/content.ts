@@ -1,37 +1,37 @@
 export const landingPainPoints = [
-  { icon: 'clock', title: '每次从零写教案', description: '一份完整教案经常要耗掉两个小时。' },
-  { icon: 'files', title: '网上抄来的教案', description: '结构混乱、内容不贴班级情况，改起来更累。' },
-  { icon: 'folder', title: '改完的 Word 文档', description: '下次想复用时又找不到，经验沉淀不下来。' },
+  { icon: 'clock', title: '明天要交，今晚才开始', description: '最焦虑的不是写不出来，而是不知道这份能不能交。' },
+  { icon: 'files', title: '旧资料散在各处', description: 'Word、PPT、讲义都能用，但每次复用都要重新翻。' },
+  { icon: 'folder', title: '学校格式总要返工', description: '内容写完还要套表格、补栏目、检查反思和签字区。' },
 ];
 
 export const landingFeatures = [
   {
     id: 'features',
     index: '①',
-    title: '选学科和主题',
-    description: '3 步定好一份备课的起点。',
-    bullets: ['学科卡片选择', '年级卡片选择', '输入课题与补充说明'],
+    title: '课题和旧资料一起进来',
+    description: '新备课可以从课题开始，也可以从旧 Word 教案开始。',
+    bullets: ['输入课题快速起草', '导入旧教案预览结构', '推荐个人资料库内容'],
   },
   {
     id: 'generate',
     index: '②',
     title: '先整理出完整初稿',
-    description: '教学目标、重难点和流程会先写进文档。',
-    bullets: ['先出现固定骨架', '按章节补齐正文', '需要确认的内容单独标记'],
+    description: '教学目标、重难点和流程会按 section 写进文档。',
+    bullets: ['纸张画布直接阅读', '按章节补齐正文', '待确认内容清楚标记'],
   },
   {
     id: 'edit',
     index: '③',
-    title: '在线修改，边看边调',
-    description: '哪里不顺手，就在原位继续改。',
-    bullets: ['像文档一样直接编辑', '局部改写与补充展开', '历史版本可恢复'],
+    title: '质量、引用、资料在右侧',
+    description: '不用在多个页面之间跳，导出风险和参考资料都在文档旁边。',
+    bullets: ['导出前体检', '知识库和我的资料引用', '学校模板随时切换'],
   },
   {
     id: 'export',
     index: '④',
-    title: '导出 Word，直接用',
-    description: '排版整洁，导出后就能打印或继续发给同事。',
-    bullets: ['Word/PDF 导出', '预览导出效果', '仅导出已确认内容'],
+    title: '导出学校格式 Word',
+    description: '确认过的内容进入 Word，未确认内容不会悄悄混进去。',
+    bullets: ['模板化 Word 导出', '预览导出效果', '仅导出已确认内容'],
   },
 ];
 
@@ -46,13 +46,13 @@ export const landingPersonas = [
     icon: 'book',
     title: '教培老师',
     problem: '每天备 3 到 5 节课，时间根本不够。',
-    value: '10 分钟拿到可继续修改的备课初稿，把时间还给授课本身。',
+    value: '先拿到可修改初稿，再让质量体检帮你找提交风险。',
   },
   {
     icon: 'home',
     title: '大学生家教',
     problem: '第一次带学生，不知道怎么组织讲解。',
-    value: '选好主题就能拿到完整讲义和练习结构，直接上手。',
+    value: '选好主题就能拿到教案、学案或讲义结构，直接上手。',
   },
 ];
 

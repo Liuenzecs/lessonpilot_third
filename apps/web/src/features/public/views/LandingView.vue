@@ -26,17 +26,17 @@ function resolveLandingIcon(icon: string) {
   <div class="landing-page">
     <section class="landing-hero">
       <div class="landing-hero-copy">
-        <p class="page-eyebrow">结构可见，操作极简</p>
-        <h1>10 分钟，搞定一份好教案</h1>
+        <p class="page-eyebrow">教师文档桌</p>
+        <h1><span>教案能交，</span><span>也能上课</span></h1>
         <p class="landing-hero-text">
-          输入课题，先整理出完整初稿，你来调整和把关。选学科、定主题，LessonPilot 会把骨架和主要内容先铺开。
+          输入课题或导入旧 Word，LessonPilot 会先整理出完整初稿，再把知识引用、质量体检和学校格式导出放在同一张备课桌上。
         </p>
         <div class="button-row landing-hero-actions">
           <RouterLink class="button primary" :to="{ name: 'register' }" @click="(() => {})">
-            免费开始备课
+            试做一份教案
           </RouterLink>
           <RouterLink class="landing-link" :to="{ name: 'login' }" @click="(() => {})">
-            已有账号？登录 →
+            导入旧教案看看 →
           </RouterLink>
         </div>
       </div>
@@ -62,8 +62,8 @@ function resolveLandingIcon(icon: string) {
 
     <section id="features" class="landing-section">
       <div class="landing-section-head">
-        <p class="page-eyebrow">核心功能</p>
-        <h2>老师打开就知道下一步该点哪里</h2>
+        <p class="page-eyebrow">核心工作流</p>
+        <h2>从旧资料到学校 Word，路径短一点</h2>
       </div>
 
       <div
@@ -114,13 +114,13 @@ function resolveLandingIcon(icon: string) {
 
     <section class="landing-cta">
       <p class="page-eyebrow">立即开始</p>
-      <h2>今晚的课，现在就能备好</h2>
+      <h2>今晚要交的教案，先放到文档桌上</h2>
       <RouterLink
         class="button primary landing-cta-button"
         :to="{ name: 'register' }"
         @click="(() => {})"
       >
-        免费开始备课
+        试做一份教案
       </RouterLink>
       <p class="subtitle">无需信用卡 · 免费额度足够先把流程跑通</p>
     </section>

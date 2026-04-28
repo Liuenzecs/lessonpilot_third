@@ -119,28 +119,28 @@ async function exportTask(task: TaskRecord) {
     </template>
 
     <template v-else>
-      <div class="workspace-hero app-card">
+      <div class="workspace-hero">
         <div class="workspace-hero-copy">
-          <p class="page-eyebrow">备课台</p>
-          <h1 class="page-title">我的备课</h1>
-          <p class="subtitle">打开就是你的备课桌，最近的教案、搜索、复制和导出都在这里完成。</p>
+          <p class="page-eyebrow">备课队列</p>
+          <h1 class="page-title">今天要处理的备课</h1>
+          <p class="subtitle">从这里开始新备课、导入旧教案、管理学校格式，也能快速判断每份文档下一步该做什么。</p>
         </div>
 
         <div class="workspace-hero-actions">
           <button class="workspace-start-card" type="button" @click="router.push({ name: 'task-create' })">
-            <span class="workspace-start-title">+ 开始备课</span>
-            <span class="workspace-start-subtitle">选择学科和主题，快速起草教案</span>
+            <span class="workspace-start-title">开始备课</span>
+            <span class="workspace-start-subtitle">输入课题，直接进入文档桌起草</span>
           </button>
           <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
             <span class="workspace-start-title">导入旧教案</span>
             <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
           </button>
           <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'school-templates' })">
-            <span class="workspace-start-title">学校模板</span>
+            <span class="workspace-start-title">学校格式库</span>
             <span class="workspace-start-subtitle">保存常用 Word 格式，导出时直接套用</span>
           </button>
           <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'personal-assets' })">
-            <span class="workspace-start-title">个人资料库</span>
+            <span class="workspace-start-title">个人资料柜</span>
             <span class="workspace-start-subtitle">迁移旧讲义和 PPT，沉淀私有资料</span>
           </button>
         </div>
@@ -181,8 +181,8 @@ async function exportTask(task: TaskRecord) {
       <template v-else>
         <div class="workspace-toolbar">
           <div>
-            <h2>最近备课</h2>
-            <p class="subtitle">卡片点击直接进入编辑器，不再多一层详情页。</p>
+            <h2>最近备课队列</h2>
+            <p class="subtitle">每一行都是一份可继续处理的备课文档。</p>
           </div>
 
           <div class="workspace-filters">

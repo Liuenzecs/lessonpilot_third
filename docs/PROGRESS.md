@@ -1378,3 +1378,34 @@
   - `pnpm --dir apps/web test --run`：41 passed
   - `pnpm --dir apps/web build`：passed
 - Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 12] — Google Docs 手感的教师备课桌 UI 重构推进至验收口
+- 完成日期：2026-04-28
+- 完成内容：
+  - 将 UI 设计方向从“完全 Notion”改为“教师文档桌 / Google Docs 手感”，同步 `DESIGN.md` 与 `CLAUDE.md`
+  - 公域首页首屏改为真实备课文档工作区预览，突出备课文档、质量检查、引用和 Word 导出
+  - 备课台改为“备课队列”，任务卡显示文档类型、课题、更新时间和下一步动作
+  - 创建页改为“备课启动台”，课题输入为主流程，右侧集中展示学校模板、个人资料库和知识增强提示
+  - 编辑器改为顶部文档工具栏、左侧文档目录、中间纸张画布、右侧检查栏
+  - 将学校模板、个人资料、导出前体检、引用数量和上课包从正文上方移入右侧辅助区
+  - 旧教案导入、学校模板、个人资料库、设置页同步新的文档桌视觉
+  - 拆分编辑器样式为 `editor.css` 与 `editor-fields.css`，保持单文件长度在项目约定内
+  - 更新 `docs/NEXT.md`、`docs/milestones/phase-12-google-docs-ui.md`、`docs/ACCEPTANCE.md`
+- 关键文件：
+  - `DESIGN.md`
+  - `CLAUDE.md`
+  - `apps/web/src/shared/styles/main.css`
+  - `apps/web/src/features/public/views/LandingView.vue`
+  - `apps/web/src/features/public/components/HeroProductPreview.vue`
+  - `apps/web/src/features/task/views/TaskListView.vue`
+  - `apps/web/src/features/task/views/TaskCreateView.vue`
+  - `apps/web/src/features/editor/views/EditorView.vue`
+  - `apps/web/src/features/editor/styles/editor.css`
+  - `apps/web/src/features/editor/styles/editor-fields.css`
+- 验证结果：
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：41 passed
+  - `pnpm --dir apps/web build`：passed
+  - `5173` 端口：已确认空闲后以 `--strictPort` 启动，监听进程为 `node`
+  - 本地 Chrome headless 打开 `http://127.0.0.1:5173/`：公域首屏正常渲染真实文档桌预览
+- Status: DONE（用户已验收）

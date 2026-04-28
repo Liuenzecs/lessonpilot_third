@@ -15,6 +15,7 @@ import { getAppErrorState } from '@/shared/api/errors';
 import StatePanel from '@/shared/components/StatePanel.vue';
 
 import '@/features/editor/styles/editor.css';
+import '@/features/editor/styles/editor-fields.css';
 
 const {
   router,
@@ -92,6 +93,14 @@ const showMissingState = computed(
   () => !showInitialSkeleton.value && !draftDocument.value && !editorErrorState.value,
 );
 
+const pendingSectionCount = computed(() =>
+  sections.value.filter((section) => section.status === 'pending').length,
+);
+
+const referenceCount = computed(() =>
+  sections.value.reduce((total, section) => total + getSectionReferences(section.name).length, 0),
+);
+
 function getStreamingTextForSection(sectionName: string): string {
   if (generationProgress.isGenerating && generationProgress.currentSectionName === sectionName) {
     return generationProgress.streamingText;
@@ -157,10 +166,10 @@ function isRewritingSection(sectionName: string): boolean {
     </StatePanel>
 
     <div v-else-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
-      <aside v-if="!outlineCollapsed" class="outline-panel app-card">
+      <aside v-if="!outlineCollapsed" class="outline-panel">
         <div class="outline-panel-head">
-          <h3>文档结构</h3>
-          <p class="outline-panel-copy">起草、确认和编辑都按 section 逐节进行。</p>
+          <h3>文档目录</h3>
+          <p class="outline-panel-copy">{{ pendingSectionCount }} 节待确认</p>
         </div>
 
         <div class="outline-list">
@@ -179,7 +188,7 @@ function isRewritingSection(sectionName: string): boolean {
         </div>
       </aside>
 
-      <main class="editor-panel app-card">
+      <main class="editor-panel">
         <div class="editor-panel-head">
           <EditorStatusBanner
             :is-generating="generationProgress.isGenerating"
@@ -224,67 +233,8 @@ function isRewritingSection(sectionName: string): boolean {
               @toggle-all="toggleAllSections"
               @confirm-all="confirmAll"
             />
-            <p class="editor-toolbar-note">内容会按章节即时落库，老师看到的是当前草稿而不是最后一次性替换。</p>
+            <p class="editor-toolbar-note">文档会逐节自动保存；待确认内容不会直接混入最终导出。</p>
           </div>
-
-          <div class="editor-export-template-bar">
-            <label>
-              <span>学校导出模板</span>
-              <select v-model="selectedExportTemplateId">
-                <option value="">默认 Word 格式</option>
-                <option
-                  v-for="template in schoolTemplatesQuery.data.value ?? []"
-                  :key="template.id"
-                  :value="template.id"
-                >
-                  {{ template.name }}
-                </option>
-              </select>
-            </label>
-            <button class="button ghost" type="button" @click="router.push({ name: 'school-templates' })">
-              管理模板
-            </button>
-          </div>
-
-          <div class="editor-personal-assets-bar">
-            <label class="personal-assets-toggle">
-              <input v-model="usePersonalAssetsForGeneration" type="checkbox" />
-              <span>参考我的资料库</span>
-            </label>
-            <div v-if="usePersonalAssetsForGeneration" class="personal-assets-picker">
-              <button
-                v-for="asset in assetRecommendationsQuery.data.value ?? []"
-                :key="asset.asset_id"
-                type="button"
-                class="asset-choice-chip"
-                :class="{ active: selectedPersonalAssetIds.includes(asset.asset_id) }"
-                @click="togglePersonalAssetSelection(asset.asset_id)"
-              >
-                {{ asset.title }} · {{ asset.section_title }}
-              </button>
-              <button class="button ghost" type="button" @click="router.push({ name: 'personal-assets' })">
-                管理资料
-              </button>
-              <button
-                class="button secondary"
-                type="button"
-                :disabled="generationProgress.isGenerating"
-                @click="startGenerationWithPersonalAssets"
-              >
-                按当前资料重新整理
-              </button>
-            </div>
-            <p v-if="usePersonalAssetsForGeneration && !(assetRecommendationsQuery.data.value ?? []).length" class="editor-toolbar-note">
-              当前课题暂未匹配到个人资料，也可以先去资料库上传旧教案或 PPT。
-            </p>
-          </div>
-
-          <TeachingPackagePanel
-            :visible="currentDocType === 'lesson_plan'"
-            :loading="teachingPackageGenerating"
-            :package-result="teachingPackageResult"
-            @generate="generateTeachingPackage"
-          />
         </div>
 
         <div v-if="showInitialSkeleton" class="generation-banner">
@@ -320,6 +270,93 @@ function isRewritingSection(sectionName: string): boolean {
           </div>
         </div>
       </main>
+
+      <aside class="editor-inspector-panel">
+        <section class="inspector-section">
+          <div class="inspector-section-head">
+            <h3>导出前体检</h3>
+            <span
+              class="inspector-status"
+              :class="qualityResult?.readiness ?? 'idle'"
+            >
+              {{ qualityResult?.readiness === 'ready' ? '可提交' : qualityResult?.readiness === 'blocked' ? '有阻断' : qualityResult?.readiness === 'needs_fixes' ? '需修复' : '未检查' }}
+            </span>
+          </div>
+          <p class="inspector-copy">
+            {{ qualityResult?.summary || '检查目标、过程、评价和导出风险。' }}
+          </p>
+          <button class="button secondary inspector-action" type="button" :disabled="qualityChecking" @click="() => runQualityCheck()">
+            {{ qualityChecking ? '体检中...' : '运行体检' }}
+          </button>
+          <button v-if="qualityResult" class="button ghost inspector-action" type="button" @click="qualityPanelOpen = true">
+            查看问题与修复建议
+          </button>
+        </section>
+
+        <section class="inspector-section">
+          <div class="inspector-section-head">
+            <h3>学校格式</h3>
+            <button class="button ghost" type="button" @click="router.push({ name: 'school-templates' })">管理</button>
+          </div>
+          <label class="editor-export-template-bar">
+            <span>导出模板</span>
+            <select v-model="selectedExportTemplateId">
+              <option value="">默认 Word 格式</option>
+              <option
+                v-for="template in schoolTemplatesQuery.data.value ?? []"
+                :key="template.id"
+                :value="template.id"
+              >
+                {{ template.name }}
+              </option>
+            </select>
+          </label>
+        </section>
+
+        <section class="inspector-section">
+          <div class="inspector-section-head">
+            <h3>参考资料</h3>
+            <span class="inspector-status idle">{{ referenceCount }} 条引用</span>
+          </div>
+          <label class="personal-assets-toggle">
+            <input v-model="usePersonalAssetsForGeneration" type="checkbox" />
+            <span>参考我的资料库</span>
+          </label>
+          <div v-if="usePersonalAssetsForGeneration" class="personal-assets-picker">
+            <button
+              v-for="asset in assetRecommendationsQuery.data.value ?? []"
+              :key="asset.asset_id"
+              type="button"
+              class="asset-choice-chip"
+              :class="{ active: selectedPersonalAssetIds.includes(asset.asset_id) }"
+              @click="togglePersonalAssetSelection(asset.asset_id)"
+            >
+              {{ asset.title }} · {{ asset.section_title }}
+            </button>
+            <p v-if="!(assetRecommendationsQuery.data.value ?? []).length" class="editor-toolbar-note">
+              当前课题暂未匹配到个人资料。
+            </p>
+            <button class="button ghost inspector-action" type="button" @click="router.push({ name: 'personal-assets' })">
+              管理资料
+            </button>
+            <button
+              class="button secondary inspector-action"
+              type="button"
+              :disabled="generationProgress.isGenerating"
+              @click="startGenerationWithPersonalAssets"
+            >
+              按当前资料重新整理
+            </button>
+          </div>
+        </section>
+
+        <TeachingPackagePanel
+          :visible="currentDocType === 'lesson_plan'"
+          :loading="teachingPackageGenerating"
+          :package-result="teachingPackageResult"
+          @generate="generateTeachingPackage"
+        />
+      </aside>
     </div>
 
     <StatePanel

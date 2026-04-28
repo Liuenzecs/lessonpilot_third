@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import LandingView from '../LandingView.vue';
 
 describe('LandingView', () => {
-  it('uses the softer draft-first marketing copy', () => {
+  it('uses the document-desk migration copy', () => {
     const wrapper = mount(LandingView, {
       global: {
         stubs: {
@@ -14,7 +14,8 @@ describe('LandingView', () => {
       },
     });
 
-    expect(wrapper.text()).toContain('先整理出完整初稿');
+    expect(wrapper.text()).toContain('教案能交，也能上课');
+    expect(wrapper.text()).toContain('试做一份教案');
     expect(wrapper.text()).not.toContain('自动生成结构化教案');
   });
 });

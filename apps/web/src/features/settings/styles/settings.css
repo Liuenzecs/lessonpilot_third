@@ -1,4 +1,4 @@
-/* settings.css — Notion-style Settings */
+/* settings.css — Teacher Document Desk Settings */
 
 .settings-page {
   display: grid;
@@ -16,7 +16,7 @@
   margin: 0;
   font-size: var(--text-2xl);
   line-height: 1.23;
-  letter-spacing: -0.625px;
+  letter-spacing: 0;
 }
 
 .settings-layout {
@@ -32,7 +32,7 @@
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--surface-strong) 72%, white 28%);
+  background: var(--surface);
   position: sticky;
   top: 80px;
 }
@@ -75,7 +75,7 @@
 .settings-panel h2 {
   margin: 0;
   font-size: var(--text-xl);
-  letter-spacing: -0.25px;
+  letter-spacing: 0;
 }
 
 .settings-skeleton-panel,
@@ -115,7 +115,7 @@
 .subscription-plan {
   font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.625px;
+  letter-spacing: 0;
 }
 
 .subscription-upgrade {
@@ -151,7 +151,7 @@
   padding: 22px 24px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--surface-strong) 74%, white 26%);
+  background: var(--surface-strong);
 }
 
 .billing-records,

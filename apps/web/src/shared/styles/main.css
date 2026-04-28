@@ -12,62 +12,62 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* ── Notion Colors ── */
+  /* ── Teacher Document Desk Colors ── */
 
   /* Text */
-  --text: rgba(0, 0, 0, 0.95);
-  --text-rgb: 0, 0, 0;
-  --muted: #615d59;
-  --text-secondary: #615d59;
-  --text-tertiary: #a39e98;
+  --text: #172033;
+  --text-rgb: 23, 32, 51;
+  --muted: #64748b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
 
   /* Backgrounds */
-  --bg: #ffffff;
+  --bg: #f4f6f8;
   --surface: #ffffff;
-  --surface-strong: #f6f5f4;
-  --surface-soft: rgba(246, 245, 244, 0.5);
-  --surface-secondary: #efeeec;
+  --surface-strong: #f8fafc;
+  --surface-soft: rgba(248, 250, 252, 0.78);
+  --surface-secondary: #eef2f7;
 
-  /* Primary (Notion Blue) */
-  --primary: #0075de;
-  --primary-strong: #005bab;
-  --primary-soft: rgba(0, 117, 222, 0.1);
-  --primary-rgb: 0, 117, 222;
+  /* Primary (Teaching Blue) */
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --primary-soft: rgba(37, 99, 235, 0.1);
+  --primary-rgb: 37, 99, 235;
   --on-primary: #ffffff;
 
   /* Semantic */
-  --success: #1aae39;
-  --success-rgb: 26, 174, 57;
-  --danger: #dd5b00;
-  --danger-rgb: 221, 91, 0;
-  --warning: #dd5b00;
-  --warning-rgb: 221, 91, 0;
+  --success: #15803d;
+  --success-rgb: 21, 128, 61;
+  --danger: #dc2626;
+  --danger-rgb: 220, 38, 38;
+  --warning: #d97706;
+  --warning-rgb: 217, 119, 6;
 
   /* Accent / Secondary (used for streaming, secondary highlights) */
-  --secondary: #2a9d99;
-  --secondary-rgb: 42, 157, 153;
+  --secondary: #0f766e;
+  --secondary-rgb: 15, 118, 110;
 
   /* Borders */
-  --border: rgba(0, 0, 0, 0.1);
-  --border-strong: #dddddd;
+  --border: #d8dee8;
+  --border-strong: #c7d0dd;
 
   /* Badge */
-  --badge-bg: #f2f9ff;
-  --badge-text: #097fe8;
+  --badge-bg: #eff6ff;
+  --badge-text: #1d4ed8;
 
   /* Focus */
-  --focus-color: #097fe8;
+  --focus-color: #2563eb;
   --ring: 0 0 0 2px var(--focus-color);
 
   /* Shadows (multi-layer Notion spec) */
-  --shadow-soft: rgba(0, 0, 0, 0.04) 0px 4px 18px;
-  --shadow: rgba(0, 0, 0, 0.04) 0px 4px 18px, rgba(0, 0, 0, 0.027) 0px 2.025px 7.84688px, rgba(0, 0, 0, 0.02) 0px 0.8px 2.925px, rgba(0, 0, 0, 0.01) 0px 0.175px 1.04062px;
-  --shadow-elevated: rgba(0, 0, 0, 0.01) 0px 1px 3px, rgba(0, 0, 0, 0.02) 0px 3px 7px, rgba(0, 0, 0, 0.02) 0px 7px 15px, rgba(0, 0, 0, 0.04) 0px 14px 28px, rgba(0, 0, 0, 0.05) 0px 23px 52px;
-  --shadow-sm: rgba(0, 0, 0, 0.03) 0px 1px 4px, rgba(0, 0, 0, 0.02) 0px 0.4px 1.5px;
+  --shadow-soft: rgba(15, 23, 42, 0.06) 0px 8px 24px;
+  --shadow: rgba(15, 23, 42, 0.08) 0px 12px 32px, rgba(15, 23, 42, 0.04) 0px 2px 8px;
+  --shadow-elevated: rgba(15, 23, 42, 0.12) 0px 18px 48px, rgba(15, 23, 42, 0.06) 0px 4px 16px;
+  --shadow-sm: rgba(15, 23, 42, 0.06) 0px 2px 8px;
 
   /* Legacy shadow references */
   --shadow-dark-rgb: 0, 0, 0;
-  --cream-rgb: 246, 245, 244;
+  --cream-rgb: 248, 250, 252;
   --backdrop-rgb: 0, 0, 0;
 
   /* ── Spacing (8px base) ── */
@@ -93,11 +93,11 @@
   --text-5xl: 64px;
 
   /* ── Border Radius (DESIGN.md scale) ── */
-  --radius-micro: 4px;
-  --radius-subtle: 5px;
+  --radius-micro: 6px;
+  --radius-subtle: 6px;
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
   --radius-pill: 9999px;
 
   /* Backward compat — old names map to new scale */
@@ -152,25 +152,25 @@ h1, h2, h3, h4, h5, h6 {
 h1 {
   font-size: var(--text-5xl);
   line-height: 1.00;
-  letter-spacing: -2.125px;
+  letter-spacing: 0;
 }
 
 h2 {
   font-size: var(--text-4xl);
   line-height: 1.00;
-  letter-spacing: -1.5px;
+  letter-spacing: 0;
 }
 
 h3 {
   font-size: var(--text-3xl);
   line-height: 1.23;
-  letter-spacing: -0.625px;
+  letter-spacing: 0;
 }
 
 h4 {
   font-size: var(--text-2xl);
   line-height: 1.27;
-  letter-spacing: -0.25px;
+  letter-spacing: 0;
 }
 
 a {
@@ -248,12 +248,22 @@ button {
 
 .button.secondary {
   border-color: var(--border);
-  background: var(--surface-strong);
+  background: var(--surface);
   color: var(--text);
 }
 
 .button.secondary:hover:not(:disabled) {
   background: var(--surface-secondary);
+}
+
+.button.danger {
+  border-color: rgba(var(--danger-rgb), 0.24);
+  background: rgba(var(--danger-rgb), 0.08);
+  color: var(--danger);
+}
+
+.button.danger:hover:not(:disabled) {
+  background: rgba(var(--danger-rgb), 0.14);
 }
 
 .button.ghost {
@@ -262,7 +272,7 @@ button {
 }
 
 .button.ghost:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(var(--primary-rgb), 0.06);
 }
 
 .button.pill {
@@ -272,7 +282,7 @@ button {
   padding: 4px 8px;
   font-size: var(--text-xs);
   font-weight: 600;
-  letter-spacing: 0.125px;
+  letter-spacing: 0;
 }
 
 /* ── Badges ── */
@@ -286,7 +296,7 @@ button {
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
   font-weight: 600;
-  letter-spacing: 0.125px;
+  letter-spacing: 0;
 }
 
 /* ── Cards ── */
@@ -329,7 +339,7 @@ button {
   color: var(--text-tertiary);
   font-size: var(--text-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -337,7 +347,7 @@ button {
   margin: 0;
   font-size: clamp(24px, 3vw, 30px);
   line-height: 1.08;
-  letter-spacing: -0.625px;
+  letter-spacing: 0;
 }
 
 .state-panel-description {

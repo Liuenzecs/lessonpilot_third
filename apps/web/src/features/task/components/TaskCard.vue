@@ -43,6 +43,24 @@ const relativeTime = computed(() => {
   return '刚刚编辑';
 });
 
+const documentTypeLabel = computed(() => {
+  if (props.task.lesson_type === 'both') return '教案 + 学案';
+  if (props.task.lesson_type === 'study_guide') return '学案';
+  return '教案';
+});
+
+const nextAction = computed(() => {
+  if (props.task.status === 'completed') return '可导出';
+  if (props.task.status === 'generating') return '生成中';
+  return '继续确认';
+});
+
+const statusTone = computed(() => {
+  if (props.task.status === 'completed') return 'ready';
+  if (props.task.status === 'generating') return 'working';
+  return 'pending';
+});
+
 function handleDocumentClick(event: MouseEvent) {
   if (!rootRef.value?.contains(event.target as Node)) {
     menuOpen.value = false;
@@ -86,14 +104,24 @@ onBeforeUnmount(() => {
     @keydown.enter.prevent="emit('open')"
     @keydown.space.prevent="emit('open')"
   >
-    <div class="task-card-icon">📄</div>
-    <div class="task-card-body">
-      <h3>{{ task.title }}</h3>
-      <p>{{ task.subject }} · {{ task.grade }}</p>
+    <div class="task-card-main">
+      <div class="task-card-docmark">文档</div>
+      <div class="task-card-body">
+        <div class="task-card-meta-row">
+          <span>{{ documentTypeLabel }}</span>
+          <span>{{ task.subject }} · {{ task.grade }}</span>
+        </div>
+        <h3>{{ task.title }}</h3>
+        <p>{{ task.topic }}</p>
+      </div>
+    </div>
+
+    <div class="task-card-foot">
+      <span class="task-next-action" :class="statusTone">{{ nextAction }}</span>
       <span>{{ relativeTime }}</span>
     </div>
 
-    <div class="task-card-menu">
+    <div class="task-card-menu" @click.stop>
       <button
         class="task-card-menu-trigger"
         type="button"

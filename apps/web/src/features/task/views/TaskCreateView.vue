@@ -119,26 +119,50 @@ function togglePersonalAsset(assetId: string) {
 
 <template>
   <div class="page-shell create-page">
-    <div class="create-frame app-card">
-      <div class="create-head">
-        <div class="create-head-actions">
-          <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
-            ← 返回备课台
-          </button>
-          <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
-            导入旧教案
-          </button>
-        </div>
-        <div class="create-head-copy">
-          <p class="page-eyebrow">创建备课</p>
-          <h1 class="page-title">开始一份新备课</h1>
-          <p class="subtitle">先确定学科、年级和课题，系统会按 section 逐节整理初稿并实时写入编辑器。</p>
-        </div>
+    <div class="create-head">
+      <div class="create-head-actions">
+        <button class="button ghost" type="button" @click="router.push({ name: 'tasks' })">
+          返回备课台
+        </button>
+        <button class="button secondary" type="button" @click="router.push({ name: 'task-import' })">
+          导入旧教案
+        </button>
       </div>
+      <div class="create-head-copy">
+        <p class="page-eyebrow">备课启动台</p>
+        <h1 class="page-title">先告诉我这节课讲什么</h1>
+        <p class="subtitle">课题确定后，再匹配学校模板、个人资料和知识增强，最后进入文档桌逐节整理。</p>
+      </div>
+    </div>
 
-      <form class="create-body" @submit.prevent="submit">
-        <!-- 基本信息行 -->
-        <div class="create-row">
+    <div class="create-layout">
+      <form class="create-body create-main-panel" @submit.prevent="submit">
+        <div class="create-topic-card">
+          <label class="create-label">课题主题 <span class="required">*</span></label>
+          <input
+            v-model.trim="form.topic"
+            class="create-input create-topic-input"
+            type="text"
+            placeholder="例如：《春》朱自清 第一课时"
+          />
+          <div class="create-topic-meta">
+            <label>
+              <span>课时</span>
+              <input v-model.number="form.class_hour" class="create-input" type="number" min="1" max="10" />
+            </label>
+            <label>
+              <span>补充说明</span>
+              <textarea
+                v-model.trim="form.requirements"
+                class="create-textarea"
+                rows="2"
+                placeholder="例如：重点品读比喻拟人，练习增加分层题。"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div class="create-field-group">
           <div class="create-field">
             <label class="create-label">学科</label>
             <div class="create-choice-grid compact">
@@ -170,89 +194,79 @@ function togglePersonalAsset(assetId: string) {
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- 课题 + 课时 -->
-        <div class="create-row">
-          <div class="create-field grow">
-            <label class="create-label">课题主题 <span class="required">*</span></label>
-            <input
-              v-model.trim="form.topic"
-              class="create-input"
-              type="text"
-              placeholder="例如：《春》—— 朱自清"
-            />
+          <div class="create-field">
+            <label class="create-label">文档类型</label>
+            <div class="create-toggle-group">
+              <button
+                v-for="opt in LESSON_TYPE_OPTIONS"
+                :key="opt.value"
+                type="button"
+                class="create-toggle-btn"
+                :class="{ active: form.lesson_type === opt.value }"
+                @click="form.lesson_type = opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
           </div>
 
-          <div class="create-field shrink">
-            <label class="create-label">课时</label>
-            <input
-              v-model.number="form.class_hour"
-              class="create-input"
-              type="number"
-              min="1"
-              max="10"
-            />
+          <div class="create-field">
+            <label class="create-label">课型</label>
+            <div class="create-choice-grid inline">
+              <button
+                v-for="opt in LESSON_CATEGORY_OPTIONS"
+                :key="opt.value"
+                type="button"
+                class="wizard-choice-card"
+                :class="{ active: form.lesson_category === opt.value }"
+                @click="form.lesson_category = opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
           </div>
-        </div>
 
-        <!-- 课型 -->
-        <div class="create-field">
-          <label class="create-label">课型</label>
-          <div class="create-choice-grid inline">
-            <button
-              v-for="opt in LESSON_CATEGORY_OPTIONS"
-              :key="opt.value"
-              type="button"
-              class="wizard-choice-card"
-              :class="{ active: form.lesson_category === opt.value }"
-              @click="form.lesson_category = opt.value"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
-
-        <!-- 文档类型 -->
-        <div class="create-field">
-          <label class="create-label">文档类型</label>
-          <div class="create-toggle-group">
-            <button
-              v-for="opt in LESSON_TYPE_OPTIONS"
-              :key="opt.value"
-              type="button"
-              class="create-toggle-btn"
-              :class="{ active: form.lesson_type === opt.value }"
-              @click="form.lesson_type = opt.value"
-            >
-              {{ opt.label }}
-            </button>
+          <div class="create-field">
+            <label class="create-label">使用场景</label>
+            <div class="create-choice-grid inline">
+              <button
+                v-for="opt in SCENE_OPTIONS"
+                :key="opt.value"
+                type="button"
+                class="wizard-choice-card"
+                :class="{ active: form.scene === opt.value }"
+                @click="form.scene = opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- 使用场景 -->
-        <div class="create-field">
-          <label class="create-label">使用场景</label>
-          <div class="create-choice-grid inline">
-            <button
-              v-for="opt in SCENE_OPTIONS"
-              :key="opt.value"
-              type="button"
-              class="wizard-choice-card"
-              :class="{ active: form.scene === opt.value }"
-              @click="form.scene = opt.value"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
+        <p v-if="submitError" class="feedback">{{ submitError }}</p>
 
-        <!-- 模板选择 -->
-        <div v-if="templates.length > 0" class="create-field">
-          <label class="create-label">选择模板（可选）</label>
-          <p v-if="templatesLoading" class="create-helper">正在匹配可用模板…</p>
-          <p v-else class="create-helper">不选择也可以，系统会根据学科与文档类型自动匹配。</p>
-          <div class="template-choice-grid">
+        <div class="create-foot">
+          <button class="button ghost" type="button" @click="router.push({ name: 'task-import' })">从旧教案开始</button>
+          <button
+            class="button primary"
+            type="submit"
+            :disabled="!canSubmit || createTaskMutation.isPending.value"
+          >
+            {{ createTaskMutation.isPending.value ? '正在创建...' : '进入文档桌' }}
+          </button>
+        </div>
+      </form>
+
+      <aside class="create-assist-panel">
+        <section class="create-assist-section">
+          <div class="create-assist-heading">
+            <h2>学校模板</h2>
+            <button class="button ghost" type="button" @click="router.push({ name: 'school-templates' })">管理</button>
+          </div>
+          <p v-if="templatesLoading" class="create-helper">正在匹配可用模板...</p>
+          <p v-else-if="templates.length === 0" class="create-helper">选择学科后会自动匹配可用模板。</p>
+          <div v-else class="template-choice-grid compact-list">
             <button
               type="button"
               class="template-card"
@@ -260,7 +274,7 @@ function togglePersonalAsset(assetId: string) {
               @click="form.template_id = null"
             >
               <span class="template-card-name">系统推荐</span>
-              <span class="template-card-desc">根据当前场景匹配更合适的模板</span>
+              <span class="template-card-desc">使用默认 Word 格式</span>
             </button>
             <button
               v-for="tpl in templates"
@@ -271,19 +285,21 @@ function togglePersonalAsset(assetId: string) {
               @click="form.template_id = tpl.id"
             >
               <span class="template-card-name">{{ tpl.name }}</span>
-              <span class="template-card-desc">{{ tpl.description }}</span>
+              <span class="template-card-desc">{{ tpl.description || '学校模板' }}</span>
             </button>
           </div>
-        </div>
+        </section>
 
-        <div class="create-field personal-assets-field">
-          <label class="create-label">个人资料库（可选）</label>
+        <section class="create-assist-section">
+          <div class="create-assist-heading">
+            <h2>个人资料库</h2>
+            <button class="button ghost" type="button" @click="router.push({ name: 'personal-assets' })">管理</button>
+          </div>
           <label class="create-checkbox-line">
             <input v-model="usePersonalAssets" type="checkbox" />
             <span>整理初稿时参考我的资料库</span>
           </label>
-          <p class="create-helper">系统会按课题推荐当前账号的旧教案、讲义或 PPT 大纲。</p>
-          <div v-if="usePersonalAssets" class="template-choice-grid">
+          <div v-if="usePersonalAssets" class="template-choice-grid compact-list">
             <button
               v-for="asset in assetRecommendationsQuery.data.value ?? []"
               :key="asset.asset_id"
@@ -297,34 +313,15 @@ function togglePersonalAsset(assetId: string) {
             </button>
           </div>
           <p v-if="usePersonalAssets && !(assetRecommendationsQuery.data.value ?? []).length" class="create-helper">
-            当前课题暂未匹配到个人资料；仍可开启，生成时会自动提示未命中。
+            当前课题暂未匹配到个人资料；生成时会明确提示未命中。
           </p>
-        </div>
+        </section>
 
-        <!-- 补充说明 -->
-        <div class="create-field">
-          <label class="create-label">补充说明（可选）</label>
-          <textarea
-            v-model.trim="form.requirements"
-            class="create-textarea"
-            rows="3"
-            placeholder="例如：重点讲解配方法，练习部分增加一题分层题。"
-          />
-        </div>
-
-        <p v-if="submitError" class="feedback">{{ submitError }}</p>
-
-        <!-- 提交 -->
-        <div class="create-foot">
-          <button
-            class="button primary"
-            type="submit"
-            :disabled="!canSubmit || createTaskMutation.isPending.value"
-          >
-            {{ createTaskMutation.isPending.value ? '正在创建...' : '开始备课' }}
-          </button>
-        </div>
-      </form>
+        <section class="create-assist-section">
+          <h2>知识增强</h2>
+          <p class="create-helper">语文重点篇目会在生成时自动判断是否命中知识库；未命中时按普通生成处理。</p>
+        </section>
+      </aside>
     </div>
   </div>
 </template>

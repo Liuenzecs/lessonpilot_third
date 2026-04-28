@@ -40,12 +40,12 @@ vi.mock('@/shared/api/client', () => ({
 }));
 
 describe('TaskCreateView', () => {
-  it('uses the new copy for document type and primary CTA', () => {
+  it('uses the launch-desk copy for document type and primary CTA', () => {
     const wrapper = mount(TaskCreateView);
 
     expect(wrapper.text()).toContain('文档类型');
     expect(wrapper.text()).toContain('个人资料库');
-    expect(wrapper.text()).toContain('开始备课');
-    expect(wrapper.text()).toContain('系统会按 section 逐节整理初稿并实时写入编辑器。');
+    expect(wrapper.text()).toContain('进入文档桌');
+    expect(wrapper.text()).toContain('备课启动台');
   });
 });
