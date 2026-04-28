@@ -7,6 +7,7 @@ defineProps<{
   outlineCollapsed: boolean;
   exportMenuOpen: boolean;
   hasMultipleDocs: boolean;
+  currentDocType: 'lesson_plan' | 'study_guide';
   qualityReadiness: 'ready' | 'needs_fixes' | 'blocked' | null;
   qualityChecking: boolean;
 }>();
@@ -15,8 +16,10 @@ defineEmits<{
   back: [];
   'toggle-outline': [];
   'open-history': [];
+  'open-share': [];
+  'open-reimport': [];
   'toggle-export-menu': [];
-  export: [format: 'docx'];
+  export: [format: 'docx' | 'pptx'];
   'export-all': [];
   'open-export-preview': [];
   'quality-check': [];
@@ -103,6 +106,8 @@ function getQualityLabel(readiness: 'ready' | 'needs_fixes' | 'blocked' | null, 
       </div>
 
       <button class="button secondary" type="button" @click="$emit('open-history')">历史版本</button>
+      <button class="button secondary" type="button" @click="$emit('open-share')">分享</button>
+      <button v-if="currentDocType === 'lesson_plan'" class="button secondary" type="button" @click="$emit('open-reimport')">回导修改</button>
       <button
         class="button secondary quality-check-button"
         type="button"
@@ -118,7 +123,10 @@ function getQualityLabel(readiness: 'ready' | 'needs_fixes' | 'blocked' | null, 
         <div v-if="exportMenuOpen" class="export-menu editor-export-menu">
           <div class="export-menu-title">导出为</div>
           <button class="menu-button" type="button" @click="$emit('export', 'docx')">
-            Word 文档
+            Word 文档 (.docx)
+          </button>
+          <button v-if="currentDocType === 'lesson_plan'" class="menu-button" type="button" @click="$emit('export', 'pptx')">
+            课堂课件 (.pptx)
           </button>
           <button v-if="hasMultipleDocs" class="menu-button" type="button" @click="$emit('export-all')">
             导出全部（教案 + 学案）

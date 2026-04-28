@@ -1542,7 +1542,7 @@
 - 完成日期：2026-04-29
 - 完成内容：
   - 用户完成 Phase 15 手动查看，确认备案临时商业化收口可通过验收
-  - 将 `docs/NEXT.md` 收口为“等待下一步指示”，不自动进入下一阶段
+  - 将 `docs/NEXT.md` 收口为”等待下一步指示”，不自动进入下一阶段
   - 准备提交当前 Phase 15 备案收口相关改动并推送到 `ai`
 - 关键文件：
   - `docs/NEXT.md`
@@ -1551,3 +1551,72 @@
 - 验证结果：
   - 用户手动验收：passed
 - Status: DONE（用户已验收，准备提交推送）
+
+## [Phase 16] — 竞品迁移竞争力分析
+- 完成日期：2026-04-29
+- 完成内容：
+  - 分析 ClassIn / 科大讯飞 / 希沃三大竞品的护城河与弱点
+  - 评估 LessonPilot 当前五个”不可逆爽点”的真实完成度
+  - 识别六个关键缺口（课件输出、题库、回导、协作、日历、反思闭环）
+  - 制定三阶段迁移竞争力提升计划（P0→P2）
+  - 更新 `docs/ROADMAP.md`、`docs/NEXT.md`、`CLAUDE.md` 以固化计划
+  - 创建 `docs/milestones/phase-16-migration-competitiveness.md` 作为阶段主文档
+  - 保存项目记忆以确保跨会话不遗忘
+- 关键文件：
+  - `docs/milestones/phase-16-migration-competitiveness.md`
+  - `docs/ROADMAP.md`
+  - `docs/NEXT.md`
+  - `CLAUDE.md`
+  - `docs/PROGRESS.md`
+- 验证结果：
+  - 用户已确认分析方向并授权进入实施阶段
+- Status: DONE（三阶段计划已固化，等待用户确认开始 P0 实施）
+
+## [Phase 16 P0] — 课件大纲生成 + PPTX 导出 & 语文重点篇目分层题库
+- 完成日期：2026-04-29
+- 完成内容：
+  - **P0-1 课件**：`courseware_service.py` — 教案→课件大纲映射（标题页→目标页→环节页→提问页→总结页→作业页）+ python-pptx 构建
+  - **P0-1**：导出端点新增 `format=pptx`，前端编辑器导出菜单增加"课堂课件 (.pptx)"按钮
+  - **P0-2 题库**：Question 模型 + Alembic 迁移 + `question_bank_service.py`（篇目列表/筛选搜索/分层选题/种子加载）
+  - **P0-2**：题库 API 端点（GET chapters / GET search / GET by id / POST seed）
+  - **P0-2**：`question_bank.json` 种子数据，覆盖 6 个篇目 25 道分层题（A/B/C/D 四层）
+  - **P0-2**：前端题库浏览页（QuestionBankView.vue），按篇目/难度/题型筛选，备课台入口卡片
+  - 规格文档：`docs/specs/courseware-pptx.md`、`docs/specs/question-bank.md`
+- 关键文件：
+  - `apps/api/app/services/courseware_service.py`（241 行）
+  - `apps/api/app/models/question.py`
+  - `apps/api/app/services/question_bank_service.py`（102 行）
+  - `apps/api/app/api/v1/endpoints/questions.py`
+  - `apps/api/app/schemas/question.py`
+  - `apps/api/app/data/question_bank.json`
+  - `apps/api/alembic/versions/20260429_0012_question_bank.py`
+  - `apps/web/src/features/export/composables/useExport.ts`（新增 exportPptx）
+  - `apps/web/src/features/editor/components/EditorShellHeader.vue`（新增 PPTX 按钮）
+  - `apps/web/src/features/editor/composables/useEditorView.ts`（新增 PPTX 导出逻辑）
+  - `apps/web/src/features/task/views/QuestionBankView.vue`
+  - `apps/web/src/features/task/composables/useQuestionBank.ts`
+  - `docs/specs/courseware-pptx.md`
+  - `docs/specs/question-bank.md`
+- 验证结果：
+  - 后端测试：176 passed（新增 19 个测试）
+  - 前端测试：49 passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `ruff check`：passed
+- Status: DONE（等待用户手动验收 P0，不自动进入 P1）
+
+## [Phase 17 P1] — 批量导入 + 分享链接 + 教学日历 + Word 回导
+- 完成日期：2026-04-29
+- 完成内容：
+  - **P1-1 批量导入**：batch-preview/batch-confirm 端点 + BatchImportView.vue（多文件 → 预览 → 逐项编辑 → 批量确认），单项失败独立报告
+  - **P1-2 教研组分享**：ShareLink/ShareComment 模型 + 迁移 + 7 个 API 端点 + SharePanel.vue（权限/过期/复制链接）+ SharedDocumentView.vue（公开只读+评论）
+  - **P1-3 教学日历**：Semester/WeekSchedule/LessonScheduleEntry 三表模型 + 迁移 + 9 个 API 端点 + CalendarView.vue（学期面板+周网格+点击排课）
+  - **P1-4 Word 回导**：reimport_service diff 引擎（difflib+结构化比对）+ preview/merge 端点 + ReimportPanel.vue（三步向导：上传→逐 section 接受/拒绝→合并），合并前自动拍快照
+- 关键文件（共 37 个新文件）：
+  - 后端：`models/share_link.py`, `models/semester.py`, `schemas/share.py`, `schemas/calendar.py`, `schemas/reimport.py`, `schemas/lesson_import.py`（batch扩展）, `services/share_service.py`, `services/calendar_service.py`, `services/reimport_service.py`, `services/import_service.py`（batch扩展）, `endpoints/sharing.py`, `endpoints/calendar.py`, `endpoints/documents.py`（reimport扩展）, `endpoints/imports.py`（batch扩展）, `core/security.py`（get_optional_user）, 2 个 Alembic 迁移
+  - 前端：`features/sharing/`（4 文件）, `features/calendar/`（4 文件）, `features/reimport/`（3 文件）, `features/task/views/BatchImportView.vue`, 路由/编辑器/备课台改动
+  - 文档：`NEXT.md`, `PROGRESS.md`, `CLAUDE.md`
+- 验证结果：
+  - 后端测试：176 passed
+  - 前端测试：49 passed
+  - `pnpm --dir apps/web type-check`：passed
+- Status: DONE（等待用户手动验收 P1，不自动进入 P2）

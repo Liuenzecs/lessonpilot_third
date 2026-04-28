@@ -18,8 +18,12 @@ from app.schemas.content import (
 )
 from app.schemas.document import DocumentRead
 from app.schemas.lesson_import import (
+    BatchImportConfirmPayload,
+    BatchImportConfirmResponse,
+    BatchImportFailure,
     ImportWarning,
     LessonPlanImportConfirmPayload,
+    LessonPlanImportConfirmResponse,
     LessonPlanImportMetadata,
     LessonPlanImportPreview,
     UnmappedSection,
@@ -152,6 +156,37 @@ def create_imported_lesson_plan(
         updated_at=task.updated_at,
     )
     return task_read, serialize_document(document)
+
+
+def batch_create_imported_lesson_plans(
+    session: Session,
+    user_id: str,
+    payload: BatchImportConfirmPayload,
+) -> BatchImportConfirmResponse:
+    """批量导入教案，逐项创建，单项失败不影响其他。"""
+    items: list[LessonPlanImportConfirmResponse] = []
+    failures: list[BatchImportFailure] = []
+    succeeded = 0
+    failed = 0
+
+    for item_payload in payload.items:
+        try:
+            with session.begin_nested():
+                task_read, doc_read = create_imported_lesson_plan(session, user_id, item_payload)
+                items.append(LessonPlanImportConfirmResponse(task=task_read, document=doc_read))
+                succeeded += 1
+        except Exception as e:
+            failed += 1
+            source = getattr(item_payload.metadata, "title", "") or "unknown"
+            failures.append(BatchImportFailure(source_filename=source, error=str(e)))
+
+    return BatchImportConfirmResponse(
+        items=items,
+        total=len(payload.items),
+        succeeded=succeeded,
+        failed=failed,
+        failures=failures,
+    )
 
 
 def _bucket_document_items(

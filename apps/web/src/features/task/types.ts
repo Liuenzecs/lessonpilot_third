@@ -206,3 +206,28 @@ export interface LessonPlanImportConfirmResponse {
   task: TaskRecord;
   document: LessonDocument;
 }
+
+// ---------------------------------------------------------------------------
+// Batch import types
+// ---------------------------------------------------------------------------
+
+export interface BatchImportPreview {
+  items: LessonPlanImportPreview[];
+}
+
+export interface BatchImportConfirmPayload {
+  items: LessonPlanImportConfirmPayload[];
+}
+
+export interface BatchImportFailure {
+  source_filename: string;
+  error: string;
+}
+
+export interface BatchImportConfirmResponse {
+  items: LessonPlanImportConfirmResponse[];
+  total: number;
+  succeeded: number;
+  failed: number;
+  failures: BatchImportFailure[];
+}

@@ -52,3 +52,18 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
 
+
+def get_optional_user(
+    session: Session = Depends(get_session),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> User | None:
+    """不强制认证，有 token 则解析用户，无则返回 None。"""
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = payload.get("sub")
+        return session.get(User, user_id)
+    except HTTPException:
+        return None
+

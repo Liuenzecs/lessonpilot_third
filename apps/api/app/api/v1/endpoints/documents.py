@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from sqlmodel import Session, select
 
@@ -19,6 +19,7 @@ from app.schemas.document import (
     DocumentUpdatePayload,
 )
 from app.schemas.quality import QualityCheckResponse, QualityFixPayload
+from app.schemas.reimport import ReimportMergePayload, ReimportPreview
 from app.schemas.teaching_package import TeachingPackageRead
 from app.services.document_service import (
     get_document_snapshot,
@@ -32,6 +33,8 @@ from app.services.document_service import (
     update_document,
 )
 from app.services.export_service import build_docx
+from app.services.courseware_service import build_pptx
+from app.services.reimport_service import apply_reimport_merge, preview_reimport
 from app.services.quality_fix_service import apply_quality_fix
 from app.services.quality_service import check_export_quality
 from app.services.rewrite_service import get_document_task, stream_rewrite
@@ -198,7 +201,83 @@ def export_document(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
         )
 
-    raise HTTPException(status_code=400, detail="Only docx export is supported")
+    if format == "pptx":
+        if document.doc_type != "lesson_plan":
+            raise HTTPException(
+                status_code=400,
+                detail="PPTX 课件导出仅支持教案类型，当前文档为学案，请切换到教案文档后重试。",
+            )
+        content = load_content(document)
+        filename = quote(f"{task.title}_课件.pptx")
+        pptx_bytes = build_pptx(task, content)
+        return Response(
+            content=pptx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+        )
+
+    raise HTTPException(status_code=400, detail=f"Unsupported export format: {format}")
+
+
+@router.post("/{document_id}/reimport/preview", response_model=ReimportPreview)
+async def preview_reimport_endpoint(
+    document_id: str,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ReimportPreview:
+    document = get_owned_document(session, document_id, current_user.id)
+    if document.doc_type != "lesson_plan":
+        raise HTTPException(status_code=400, detail="回导仅支持教案类型")
+    file_bytes = await file.read()
+    return preview_reimport(file_bytes, file.filename or "modified.docx", document)
+
+
+@router.post("/{document_id}/reimport/merge", response_model=DocumentRead)
+async def merge_reimport_endpoint(
+    document_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> DocumentRead:
+    document = get_owned_document(session, document_id, current_user.id)
+    if document.doc_type != "lesson_plan":
+        raise HTTPException(status_code=400, detail="回导仅支持教案类型")
+
+    # Parse multipart: file + form fields
+    form = await request.form()
+    file = form.get("file")
+    if not file or not hasattr(file, "filename"):
+        raise HTTPException(status_code=400, detail="请上传修改后的 .docx 文件")
+    file_bytes = await file.read()
+
+    import json
+
+    sections_to_accept = json.loads(form.get("sections_to_accept", "[]"))
+    sections_to_reject = json.loads(form.get("sections_to_reject", "[]"))
+    document_version = int(form.get("document_version", "0"))
+
+    from app.services.import_service import (
+        _build_lesson_plan_content,
+        _bucket_document_items,
+        _clean_text,
+        _extract_metadata,
+    )
+    from docx import Document as DocxDocument
+    from io import BytesIO
+
+    docx = DocxDocument(BytesIO(file_bytes))
+    paragraphs = [_clean_text(p.text) for p in docx.paragraphs if _clean_text(p.text)]
+    metadata = _extract_metadata(paragraphs, file.filename or "modified.docx")
+    buckets, _unmapped, _warnings = _bucket_document_items(docx, paragraphs)
+    imported = _build_lesson_plan_content(metadata, buckets, _warnings)
+
+    payload = ReimportMergePayload(
+        sections_to_accept=sections_to_accept,
+        sections_to_reject=sections_to_reject,
+        document_version=document_version,
+    )
+    return apply_reimport_merge(session, document, payload, imported)
 
 
 @router.get("/{document_id}/teaching-packages", response_model=list[TeachingPackageRead])

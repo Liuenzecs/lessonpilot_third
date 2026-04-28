@@ -28,6 +28,14 @@ class Task(SQLModel, table=True):
         default=None,
         sa_column=Column(String(36), ForeignKey("templates.id"), nullable=True),
     )
+    base_task_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(36), ForeignKey("tasks.id"), nullable=True, index=True),
+    )
+    class_group_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(36), ForeignKey("class_groups.id"), nullable=True, index=True),
+    )
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False),

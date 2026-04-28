@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { computed } from 'vue';
 
 import type {
+  BatchImportConfirmPayload,
+  BatchImportConfirmResponse,
+  BatchImportPreview,
   GenerationStartResponse,
   GenerationStartPayload,
   LessonPlanImportConfirmPayload,
@@ -119,6 +122,33 @@ export function useConfirmLessonPlanImportMutation() {
   return useMutation({
     mutationFn: (payload: LessonPlanImportConfirmPayload) =>
       request<LessonPlanImportConfirmResponse>('/api/v1/import/lesson-plan/confirm', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function usePreviewBatchImportMutation() {
+  return useMutation({
+    mutationFn: (files: File[]) => {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('files', file));
+      return request<BatchImportPreview>('/api/v1/import/lesson-plan/batch-preview', {
+        method: 'POST',
+        body: formData,
+      });
+    },
+  });
+}
+
+export function useConfirmBatchImportMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BatchImportConfirmPayload) =>
+      request<BatchImportConfirmResponse>('/api/v1/import/lesson-plan/batch-confirm', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),

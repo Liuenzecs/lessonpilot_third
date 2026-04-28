@@ -26,7 +26,7 @@ import type {
   QualityIssue,
   TeachingPackageRecord,
 } from '@/features/editor/types';
-import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
+import { exportDocx, exportMultipleDocx, exportPptx } from '@/features/export/composables/useExport';
 import { usePersonalAssetRecommendations, useSchoolTemplates, useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
@@ -55,6 +55,8 @@ export function useEditorView() {
   const initialGenerationTriggered = ref(false);
   const historyOpen = ref(false);
   const exportMenuOpen = ref(false);
+  const sharePanelOpen = ref(false);
+  const reimportPanelOpen = ref(false);
   const exportPreviewOpen = ref(false);
   const qualityPanelOpen = ref(false);
   const qualityResult = ref<QualityCheckResponse | null>(null);
@@ -64,6 +66,8 @@ export function useEditorView() {
   const selectedPersonalAssetIds = ref<string[]>([]);
   const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
   const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
+  const mobileOutlineOpen = ref(false);
+  const mobileInspectorOpen = ref(false);
   const selectedSnapshotId = ref('');
   const collapsedSections = ref<Record<string, boolean>>({});
   const activeDocTabIndex = ref(0);
@@ -83,6 +87,7 @@ export function useEditorView() {
 
   // History
   const currentDocumentId = computed(() => activeDocument.value?.id ?? '');
+  const currentDocumentVersion = computed(() => activeDocument.value?.version ?? 0);
   const historyEnabled = computed(() => historyOpen.value && Boolean(currentDocumentId.value));
   const snapshotEnabled = computed(() => historyEnabled.value && Boolean(selectedSnapshotId.value));
   const historyQuery = useDocumentHistory(currentDocumentId, historyEnabled);
@@ -323,18 +328,28 @@ export function useEditorView() {
     }
   }
 
-  async function exportCurrentDocument() {
+  async function exportCurrentDocument(format: 'docx' | 'pptx' = 'docx') {
     if (!activeDocument.value || !taskQuery.data.value) return;
     exportMenuOpen.value = false;
     try {
-      await exportDocx(activeDocument.value.id, taskQuery.data.value.title, selectedExportTemplateId.value || null);
-      toast.success('Word 文档已开始下载');
+      if (format === 'pptx') {
+        await exportPptx(activeDocument.value.id, taskQuery.data.value.title);
+        toast.success('课件已开始下载');
+      } else {
+        await exportDocx(activeDocument.value.id, taskQuery.data.value.title, selectedExportTemplateId.value || null);
+        toast.success('Word 文档已开始下载');
+      }
     } catch (error) {
       toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
     }
   }
 
-  async function handleExport() {
+  async function handleExport(format: 'docx' | 'pptx' = 'docx') {
+    // PPTX 导出跳过质量检查，直接导出
+    if (format === 'pptx') {
+      await exportCurrentDocument('pptx');
+      return;
+    }
     const result = await runQualityCheck({ openPanel: false });
     if (!result) return;
     if (result.readiness === 'blocked') {
@@ -347,7 +362,7 @@ export function useEditorView() {
       toast.info('导出前有提醒项', '你可以先处理，也可以确认后继续导出。');
       return;
     }
-    await exportCurrentDocument();
+    await exportCurrentDocument('docx');
   }
 
   async function exportAfterQualityCheck() {
@@ -479,6 +494,8 @@ export function useEditorView() {
     streamError,
     historyOpen,
     exportMenuOpen,
+    sharePanelOpen,
+    reimportPanelOpen,
     exportPreviewOpen,
     qualityPanelOpen,
     qualityResult,
@@ -493,12 +510,16 @@ export function useEditorView() {
     teachingPackageGenerating: teachingPackageMutation.isPending,
     outlineCollapsed,
     isMobileViewport,
+    mobileOutlineOpen,
+    mobileInspectorOpen,
     selectedSnapshotId,
     notice,
     generationProgress,
     rewriteState,
     sections,
     currentDocType,
+    currentDocumentId,
+    currentDocumentVersion,
     hasMultipleDocs,
     activeDocTabIndex,
     historyQuery,

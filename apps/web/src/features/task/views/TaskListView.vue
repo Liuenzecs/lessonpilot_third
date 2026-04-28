@@ -144,6 +144,10 @@ async function exportTask(task: TaskRecord) {
             <span class="workspace-start-title">导入旧教案</span>
             <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
           </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'batch-import' })">
+            <span class="workspace-start-title">批量导入教案</span>
+            <span class="workspace-start-subtitle">一次导入多个 Word，集中确认并归档</span>
+          </button>
           <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'school-templates' })">
             <span class="workspace-start-title">学校格式库</span>
             <span class="workspace-start-subtitle">保存常用 Word 格式，导出时直接套用</span>
@@ -151,6 +155,14 @@ async function exportTask(task: TaskRecord) {
           <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'personal-assets' })">
             <span class="workspace-start-title">个人资料柜</span>
             <span class="workspace-start-subtitle">迁移旧讲义和 PPT，沉淀私有资料</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'question-bank' })">
+            <span class="workspace-start-title">语文题库</span>
+            <span class="workspace-start-subtitle">浏览重点篇目的分层题目，学案生成自动选题</span>
+          </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'calendar' })">
+            <span class="workspace-start-title">教学日历</span>
+            <span class="workspace-start-subtitle">学期计划与每周排课，按周查看教学安排</span>
           </button>
         </div>
       </div>

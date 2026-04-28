@@ -39,6 +39,8 @@ class TaskRead(BaseModel):
     class_hour: int
     lesson_category: str
     template_id: str | None
+    base_task_id: str | None = None
+    class_group_id: str | None = None
     created_at: datetime
     updated_at: datetime
 
