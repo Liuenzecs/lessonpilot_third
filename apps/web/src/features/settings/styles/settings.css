@@ -147,36 +147,9 @@
   animation: workspace-shimmer 1.6s linear infinite;
 }
 
-.data-card h3,
-.subscription-upgrade h3 { margin: 0; }
+.data-card h3 { margin: 0; }
 
-.subscription-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.subscription-plan {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.subscription-upgrade {
-  display: grid;
-  gap: 12px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: rgba(var(--primary-rgb), 0.04);
-}
-
-.subscription-upgrade p,
 .data-card p { margin: 0; color: var(--muted); font-size: var(--text-sm); line-height: 1.5; }
-
-.subscription-usage { display: grid; gap: 10px; }
 
 .usage-bar {
   height: 10px;
@@ -200,59 +173,9 @@
   background: var(--surface-strong);
 }
 
-.billing-records,
-.invoice-request-list { display: grid; gap: 10px; }
-
-.billing-record-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
-}
-
-.billing-record-row:first-child { border-top: 0; padding-top: 0; }
-
-.billing-record-meta {
-  display: grid;
-  gap: 4px;
-  text-align: right;
-}
-
 .data-card.danger {
   border-color: rgba(var(--danger-rgb), 0.2);
   background: color-mix(in srgb, rgba(var(--danger-rgb), 0.06) 70%, white 30%);
-}
-
-.billing-toggle-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.billing-toggle-row button {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--muted);
-  padding: 10px 14px;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.billing-toggle-row button:hover {
-  border-color: rgba(var(--primary-rgb), 0.2);
-  color: var(--text);
-}
-
-.billing-toggle-row button.active {
-  border-color: rgba(var(--primary-rgb), 0.3);
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-weight: 700;
 }
 
 .settings-modal-backdrop {
@@ -329,8 +252,5 @@
 
 @media (max-width: 600px) {
   .settings-tabs { grid-template-columns: 1fr; }
-  .billing-toggle-row { grid-template-columns: 1fr; }
-  .billing-record-row { flex-direction: column; }
-  .billing-record-meta { text-align: left; }
   .settings-panel { padding: 22px 20px; }
 }

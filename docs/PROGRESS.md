@@ -1513,3 +1513,41 @@
   - `pnpm --dir apps/web test --run`：46 passed
   - `pnpm --dir apps/web build`：passed
 - Status: DONE（用户已验收，准备提交推送）
+
+## [Phase 15] — 备案临时商业化收口
+- 完成日期：2026-04-28
+- 完成内容：
+  - 公域导航和页脚移除“定价”入口
+  - `/pricing` 前端路由改为重定向首页，删除定价页组件
+  - 帮助中心改为“账户与数据”口径，移除升级、续费、支付、方案限制等商业化文案
+  - 服务条款替换“付费与退款说明”为“服务性质说明”
+  - 删除未引用的 subscription / billing / invoice 前端类型、查询失效和样式残留
+  - 新增备案收口测试，覆盖导航 / 页脚、`/pricing` 重定向、帮助中心和服务条款商业化文案清理
+  - 新增 Phase 15 阶段文档并更新 `docs/NEXT.md`、`docs/ACCEPTANCE.md`、`CLAUDE.md`
+- 关键文件：
+  - `apps/web/src/app/router/index.ts`
+  - `apps/web/src/features/public/content.ts`
+  - `apps/web/src/features/public/components/PublicNav.vue`
+  - `apps/web/src/features/public/components/PublicFooter.vue`
+  - `apps/web/src/features/public/views/__tests__/FilingCleanup.test.ts`
+  - `docs/milestones/phase-15-filing-commercial-cleanup.md`
+- 验证结果：
+  - `pnpm --dir apps/web test --run src/features/public/views/__tests__/FilingCleanup.test.ts`：3 passed
+  - `pnpm --dir apps/web type-check`：passed
+  - `pnpm --dir apps/web test --run`：49 passed
+  - `pnpm --dir apps/web build`：passed
+- Status: DONE（待用户验收，不自动提交推送）
+
+## [Phase 15] — 用户验收通过
+- 完成日期：2026-04-29
+- 完成内容：
+  - 用户完成 Phase 15 手动查看，确认备案临时商业化收口可通过验收
+  - 将 `docs/NEXT.md` 收口为“等待下一步指示”，不自动进入下一阶段
+  - 准备提交当前 Phase 15 备案收口相关改动并推送到 `ai`
+- 关键文件：
+  - `docs/NEXT.md`
+  - `docs/PROGRESS.md`
+  - `CLAUDE.md`
+- 验证结果：
+  - 用户手动验收：passed
+- Status: DONE（用户已验收，准备提交推送）

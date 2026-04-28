@@ -8,7 +8,6 @@ import PublicLayout from '@/app/layouts/PublicLayout.vue';
 import { useAuthStore } from '@/app/stores/auth';
 
 const LandingView = () => import('@/features/public/views/LandingView.vue');
-const PricingView = () => import('@/features/public/views/PricingView.vue');
 const HelpView = () => import('@/features/public/views/HelpView.vue');
 const AboutView = () => import('@/features/public/views/AboutView.vue');
 const PrivacyView = () => import('@/features/public/views/PrivacyView.vue');
@@ -48,7 +47,7 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
           {
             path: 'pricing',
             name: 'pricing',
-            component: PricingView,
+            redirect: { name: 'landing' },
           },
           {
             path: 'help',

@@ -1,42 +1,38 @@
-# 当前任务：等待下一步指示（Phase 14 已验收）
+# 当前任务：等待下一步指示（Phase 15 已验收）
 
 ## 本阶段目标
 
-让 LessonPilot 逐步记住老师常用的目标写法、教学过程风格和学校提交措辞，使后续生成内容更像“我平时会交的教案”，而不是每次都从通用模板重新开始。
+为个人网站备案，临时去除公开网页中的定价、会员、套餐、付费、支付、退款、专业版升级等商业化表述。保留登录、注册和备课主功能；`/pricing` 直接跳回首页，不展示定价页。
 
 ## 已授权范围
 
-- 新增用户私有的个人风格档案。
-- 设置页可查看、编辑和启用 / 关闭风格记忆。
-- 生成和局部重写时读取当前用户风格档案并注入 prompt。
-- 文档更新 Phase 14 规格、验收脚本和进度记录。
-- 不做跨用户共享，不把风格数据混入公共知识库。
-- 不做不可控的全自动学习；v1 先做老师显式维护的风格偏好。
-- 不扩展全学科，不做学校后台、团队共享或复杂画像系统。
+- 移除公域导航和页脚中的“定价”入口。
+- `/pricing` 前端路由重定向到首页。
+- 清理帮助中心、服务条款等公开页面中的商业化文案。
+- 删除不用的定价页组件和未引用的前端计费类型 / 样式残留。
+- 不新增后端 API，不修改数据库，不恢复任何计费或订阅能力。
 - 不自动提交 / 推送，等待用户验收。
 
 ## 本轮实施切片
 
-- [x] 新增 Phase 14 阶段文档和当前任务边界。
-- [x] 后端新增个人风格档案模型、迁移、schema、service 和 API。
-- [x] 生成 / 重写链路注入老师个人风格提示。
-- [x] 设置页新增“风格记忆”入口，可编辑目标写法、过程风格、学校措辞和禁用词。
-- [x] 补充后端 / 前端测试。
-- [x] 更新 `docs/ACCEPTANCE.md`、`docs/PROGRESS.md`、`CLAUDE.md`。
+- [x] 公域导航和页脚移除“定价”入口。
+- [x] `/pricing` 路由跳回首页，删除 `PricingView.vue`。
+- [x] 帮助中心改为“账户与数据”口径，清理升级、续费、支付、方案限制等文案。
+- [x] 服务条款替换“付费与退款说明”为“服务性质说明”。
+- [x] 删除未引用的 subscription / billing / invoice 前端类型和样式残留。
+- [x] 补充备案收口前端测试。
+- [x] 更新 `docs/ACCEPTANCE.md`、`docs/PROGRESS.md`、`CLAUDE.md` 和阶段文档。
 
-## 验证结果
+## 已验证
 
-- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/test_account_service.py apps/api/tests/test_style_profile.py -q`：17 passed
-- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests/api/test_documents.py -q`：8 passed
-- `apps/api/.venv/Scripts/python.exe -m pytest apps/api/tests -q`：157 passed
-- `apps/api/.venv/Scripts/python.exe -m ruff check apps/api/app apps/api/tests`：passed
-- `pnpm --dir apps/web type-check`：passed
-- `pnpm --dir apps/web test --run`：46 passed
-- `pnpm --dir apps/web build`：passed
+- `pnpm --dir apps/web test --run src/features/public/views/__tests__/FilingCleanup.test.ts`：3 passed。
+- `pnpm --dir apps/web type-check`：passed。
+- `pnpm --dir apps/web test --run`：49 passed。
+- `pnpm --dir apps/web build`：passed。
 
 ## 验收结论
 
-- 用户已要求提交推送，Phase 14 第一轮视为通过验收。
+- 用户已完成 Phase 15 手动验收并要求提交推送。
 - 当前不自动进入下一阶段。
 
 ## 停止条件

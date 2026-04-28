@@ -58,7 +58,6 @@ onBeforeUnmount(() => {
       <nav class="public-nav-links" :class="{ open: menuOpen }">
         <template v-if="!authStore.isAuthenticated">
           <RouterLink :to="{ name: 'landing', hash: '#features' }">功能介绍</RouterLink>
-          <RouterLink :to="{ name: 'pricing' }">定价</RouterLink>
           <RouterLink :to="{ name: 'help' }">帮助中心</RouterLink>
 
           <template v-if="isAuthRoute">

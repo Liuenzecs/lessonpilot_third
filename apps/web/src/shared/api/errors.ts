@@ -6,7 +6,6 @@ export type AppErrorKind =
   | 'unauthorized'
   | 'rate_limited'
   | 'conflict'
-  | 'billing'
   | 'server'
   | 'unknown';
 
@@ -107,7 +106,7 @@ export function getAppErrorState(
 
   if (error.status === 402) {
     return {
-      kind: 'billing',
+      kind: 'unknown',
       status: 402,
       title: '当前能力暂不可用',
       description: detail || defaultDescription,

@@ -56,25 +56,6 @@ export const landingPersonas = [
   },
 ];
 
-export const pricingFaqs = [
-  {
-    question: '免费版有什么限制？',
-    answer: '免费版每月最多新建 5 份教案，支持基础编辑和 Word 导出；复制为新教案也会计入这 5 份额度。',
-  },
-  {
-    question: '会自动续费吗？',
-    answer: '不会。LessonPilot 当前采用手动续费，到期前你可以主动续费；如果不续费，到期后会自动回到免费版能力。',
-  },
-  {
-    question: '支持哪些支付方式？',
-    answer: '当前支持微信支付和支付宝。开发环境默认走 mock 流程，线上环境通过聚合网关完成真实支付。',
-  },
-  {
-    question: '学校或机构有团购优惠吗？',
-    answer: '团队版仍处于即将推出状态，如需机构采购可以先联系我们登记需求。',
-  },
-];
-
 export const helpGroups = [
   {
     title: '快速入门',
@@ -88,12 +69,12 @@ export const helpGroups = [
         answer: '系统整理出的内容会以内联待确认卡片出现，你可以保留、丢弃，或再次整理后再并入正式文档。',
       },
       {
-        question: '如何导出 Word 或 PDF 文档？',
-        answer: '在编辑器顶部点击“导出”，可以选择 Word 或 PDF。PDF 导出为专业版能力，仅导出已确认内容。',
+        question: '如何导出 Word 文档？',
+        answer: '在编辑器顶部点击“导出 Word”，系统会把已确认内容整理成 Word 文档。',
       },
       {
         question: '支持哪些学科和年级？',
-        answer: '当前覆盖常见中小学学科与年级，优先满足主流备课场景。',
+        answer: '当前优先围绕语文备课场景打磨，后续是否扩展会以实际使用反馈为准。',
       },
     ],
   },
@@ -119,7 +100,7 @@ export const helpGroups = [
     ],
   },
   {
-    title: '账户与付费',
+    title: '账户与数据',
     items: [
       {
         question: '如何验证邮箱？',
@@ -128,14 +109,6 @@ export const helpGroups = [
       {
         question: '忘记密码怎么办？',
         answer: '在登录页点击“忘记密码”，输入注册邮箱后即可收到重置链接。',
-      },
-      {
-        question: '如何升级到专业版？',
-        answer: '你可以在定价页、账户设置页，或在额度超限 / 使用专业版能力时弹出的升级弹层中完成试用或支付。',
-      },
-      {
-        question: '会自动续费吗？',
-        answer: '不会。LessonPilot 当前只支持手动续费，不做自动代扣。到期不续费会自动回到免费版。',
       },
       {
         question: '可以删除自己的数据吗？',
@@ -198,11 +171,11 @@ export const termsSections = [
     ],
   },
   {
-    id: 'payment',
-    title: '付费与退款说明',
+    id: 'service-nature',
+    title: '服务性质说明',
     paragraphs: [
-      '目前 LessonPilot 提供免费版和专业版两档方案。专业版支持 7 天试用、微信/支付宝支付，以及到期前手动续费。',
-      '产品不做自动续费；如果你没有在到期前手动续费，系统会在周期结束后自动回到免费版。退款暂不提供自助流程，需要联系客服人工处理。',
+      '当前阶段 LessonPilot 仅作为个人备课工具体验，重点验证备课、编辑、导入、检查和 Word 导出流程。',
+      '功能范围可能会随备案、测试和实际使用反馈调整，页面展示不构成任何服务可用性承诺。',
     ],
   },
   {
