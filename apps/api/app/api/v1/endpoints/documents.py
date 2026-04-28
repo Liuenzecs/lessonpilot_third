@@ -32,6 +32,7 @@ from app.services.document_service import (
     update_document,
 )
 from app.services.export_service import build_docx
+from app.services.courseware_service import build_pptx
 from app.services.quality_fix_service import apply_quality_fix
 from app.services.quality_service import check_export_quality
 from app.services.rewrite_service import get_document_task, stream_rewrite
@@ -198,7 +199,22 @@ def export_document(
             headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
         )
 
-    raise HTTPException(status_code=400, detail="Only docx export is supported")
+    if format == "pptx":
+        if document.doc_type != "lesson_plan":
+            raise HTTPException(
+                status_code=400,
+                detail="PPTX 课件导出仅支持教案类型，当前文档为学案，请切换到教案文档后重试。",
+            )
+        content = load_content(document)
+        filename = quote(f"{task.title}_课件.pptx")
+        pptx_bytes = build_pptx(task, content)
+        return Response(
+            content=pptx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
+        )
+
+    raise HTTPException(status_code=400, detail=f"Unsupported export format: {format}")
 
 
 @router.get("/{document_id}/teaching-packages", response_model=list[TeachingPackageRead])

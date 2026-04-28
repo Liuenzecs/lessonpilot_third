@@ -124,6 +124,7 @@ function isRewritingSection(sectionName: string): boolean {
       :outline-collapsed="outlineCollapsed"
       :export-menu-open="exportMenuOpen"
       :has-multiple-docs="hasMultipleDocs"
+      :current-doc-type="currentDocType"
       :quality-readiness="qualityResult?.readiness ?? null"
       :quality-checking="qualityChecking"
       @back="router.push({ name: 'tasks' })"

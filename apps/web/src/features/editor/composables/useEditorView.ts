@@ -26,7 +26,7 @@ import type {
   QualityIssue,
   TeachingPackageRecord,
 } from '@/features/editor/types';
-import { exportDocx, exportMultipleDocx } from '@/features/export/composables/useExport';
+import { exportDocx, exportMultipleDocx, exportPptx } from '@/features/export/composables/useExport';
 import { usePersonalAssetRecommendations, useSchoolTemplates, useTask } from '@/features/task/composables/useTasks';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
@@ -323,18 +323,28 @@ export function useEditorView() {
     }
   }
 
-  async function exportCurrentDocument() {
+  async function exportCurrentDocument(format: 'docx' | 'pptx' = 'docx') {
     if (!activeDocument.value || !taskQuery.data.value) return;
     exportMenuOpen.value = false;
     try {
-      await exportDocx(activeDocument.value.id, taskQuery.data.value.title, selectedExportTemplateId.value || null);
-      toast.success('Word 文档已开始下载');
+      if (format === 'pptx') {
+        await exportPptx(activeDocument.value.id, taskQuery.data.value.title);
+        toast.success('课件已开始下载');
+      } else {
+        await exportDocx(activeDocument.value.id, taskQuery.data.value.title, selectedExportTemplateId.value || null);
+        toast.success('Word 文档已开始下载');
+      }
     } catch (error) {
       toast.error('导出失败', getErrorDescription(error, '请稍后重试。'));
     }
   }
 
-  async function handleExport() {
+  async function handleExport(format: 'docx' | 'pptx' = 'docx') {
+    // PPTX 导出跳过质量检查，直接导出
+    if (format === 'pptx') {
+      await exportCurrentDocument('pptx');
+      return;
+    }
     const result = await runQualityCheck({ openPanel: false });
     if (!result) return;
     if (result.readiness === 'blocked') {
@@ -347,7 +357,7 @@ export function useEditorView() {
       toast.info('导出前有提醒项', '你可以先处理，也可以确认后继续导出。');
       return;
     }
-    await exportCurrentDocument();
+    await exportCurrentDocument('docx');
   }
 
   async function exportAfterQualityCheck() {

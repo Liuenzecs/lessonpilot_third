@@ -7,6 +7,7 @@ defineProps<{
   outlineCollapsed: boolean;
   exportMenuOpen: boolean;
   hasMultipleDocs: boolean;
+  currentDocType: 'lesson_plan' | 'study_guide';
   qualityReadiness: 'ready' | 'needs_fixes' | 'blocked' | null;
   qualityChecking: boolean;
 }>();
@@ -16,7 +17,7 @@ defineEmits<{
   'toggle-outline': [];
   'open-history': [];
   'toggle-export-menu': [];
-  export: [format: 'docx'];
+  export: [format: 'docx' | 'pptx'];
   'export-all': [];
   'open-export-preview': [];
   'quality-check': [];
@@ -118,7 +119,10 @@ function getQualityLabel(readiness: 'ready' | 'needs_fixes' | 'blocked' | null, 
         <div v-if="exportMenuOpen" class="export-menu editor-export-menu">
           <div class="export-menu-title">导出为</div>
           <button class="menu-button" type="button" @click="$emit('export', 'docx')">
-            Word 文档
+            Word 文档 (.docx)
+          </button>
+          <button v-if="currentDocType === 'lesson_plan'" class="menu-button" type="button" @click="$emit('export', 'pptx')">
+            课堂课件 (.pptx)
           </button>
           <button v-if="hasMultipleDocs" class="menu-button" type="button" @click="$emit('export-all')">
             导出全部（教案 + 学案）

@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     imports,
     knowledge,
     personal_assets,
+    questions,
     style_profile,
     tasks,
     templates,
@@ -24,3 +25,4 @@ api_v1_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowl
 api_v1_router.include_router(imports.router)
 api_v1_router.include_router(personal_assets.router)
 api_v1_router.include_router(style_profile.router)
+api_v1_router.include_router(questions.router)

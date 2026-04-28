@@ -152,6 +152,10 @@ async function exportTask(task: TaskRecord) {
             <span class="workspace-start-title">个人资料柜</span>
             <span class="workspace-start-subtitle">迁移旧讲义和 PPT，沉淀私有资料</span>
           </button>
+          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'question-bank' })">
+            <span class="workspace-start-title">语文题库</span>
+            <span class="workspace-start-subtitle">浏览重点篇目的分层题目，学案生成自动选题</span>
+          </button>
         </div>
       </div>
 

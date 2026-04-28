@@ -10,6 +10,13 @@ export async function exportDocx(documentId: string, title: string, templateId?:
   triggerDownload(blob, `${title}.docx`);
 }
 
+/** 导出单个文档为 PPTX 课件文件。 */
+export async function exportPptx(documentId: string, title: string): Promise<void> {
+  const params = new URLSearchParams({ format: 'pptx' });
+  const blob = await download(`/api/v1/documents/${documentId}/export?${params.toString()}`);
+  triggerDownload(blob, `${title}_课件.pptx`);
+}
+
 /** 依次导出多个文档。 */
 export async function exportMultipleDocx(
   items: Array<{ documentId: string; title: string }>,
