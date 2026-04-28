@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { List, ClipboardCheck, StickyNote, ArrowLeft } from 'lucide-vue-next';
 
 import EditorShellHeader from '@/features/editor/components/EditorShellHeader.vue';
 import EditorStatusBanner from '@/features/editor/components/EditorStatusBanner.vue';
@@ -44,6 +45,8 @@ const {
   teachingPackageGenerating,
   outlineCollapsed,
   isMobileViewport,
+  mobileOutlineOpen,
+  mobileInspectorOpen,
   selectedSnapshotId,
   notice,
   generationProgress,
@@ -161,20 +164,7 @@ function isRewritingSection(sectionName: string): boolean {
       </template>
     </StatePanel>
 
-    <StatePanel
-      v-else-if="isMobileViewport"
-      icon="📱"
-      eyebrow="编辑器"
-      title="请在平板或电脑上使用编辑器"
-      description="为了保证编辑体验，手机端暂不支持编辑器。"
-      tone="info"
-    >
-      <template #actions>
-        <button class="button primary" type="button" @click="router.push({ name: 'tasks' })">返回备课台</button>
-      </template>
-    </StatePanel>
-
-    <div v-else-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed }">
+    <div v-else-if="showInitialSkeleton || draftDocument" class="editor-layout" :class="{ 'outline-collapsed': outlineCollapsed, 'editor-layout--mobile': isMobileViewport }">
       <aside v-if="!outlineCollapsed" class="outline-panel">
         <div class="outline-panel-head">
           <h3>文档目录</h3>
@@ -422,6 +412,107 @@ function isRewritingSection(sectionName: string): boolean {
       @close="qualityPanelOpen = false"
       @export="exportAfterQualityCheck"
       @fix="applyQualityFix"
+    />
+
+    <!-- Mobile: bottom action bar -->
+    <div v-if="isMobileViewport && draftDocument" class="editor-mobile-bottom-bar">
+      <button
+        class="mobile-bar-btn"
+        :class="{ active: mobileOutlineOpen }"
+        type="button"
+        @click="mobileOutlineOpen = !mobileOutlineOpen; mobileInspectorOpen = false"
+      >
+        <List :size="20" />
+        <span>目录</span>
+      </button>
+      <button
+        class="mobile-bar-btn"
+        type="button"
+        @click="confirmAll"
+      >
+        <ClipboardCheck :size="20" />
+        <span>全部确认</span>
+      </button>
+      <button
+        class="mobile-bar-btn"
+        :class="{ active: mobileInspectorOpen }"
+        type="button"
+        @click="mobileInspectorOpen = !mobileInspectorOpen; mobileOutlineOpen = false"
+      >
+        <StickyNote :size="20" />
+        <span>检查</span>
+      </button>
+      <button
+        class="mobile-bar-btn"
+        type="button"
+        @click="router.push({ name: 'tasks' })"
+      >
+        <ArrowLeft :size="20" />
+        <span>返回</span>
+      </button>
+    </div>
+
+    <!-- Mobile: outline bottom sheet -->
+    <div v-if="isMobileViewport" class="outline-panel" :class="{ open: mobileOutlineOpen }">
+      <div class="outline-panel-head">
+        <h3>文档目录</h3>
+        <p class="outline-panel-copy">{{ pendingSectionCount }} 节待确认</p>
+      </div>
+      <div class="outline-list">
+        <button
+          v-for="section in sections"
+          :key="section.name"
+          class="outline-item"
+          :class="{ active: section.name === generationProgress.currentSectionName }"
+          type="button"
+          @click="scrollToSection(section.name); mobileOutlineOpen = false"
+        >
+          <span class="outline-dot" />
+          <span>{{ section.title }}</span>
+          <span v-if="section.status === 'pending'" class="outline-badge">待确认</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile: inspector bottom sheet -->
+    <div v-if="isMobileViewport && draftDocument" class="editor-inspector-panel" :class="{ open: mobileInspectorOpen }">
+      <section class="inspector-section">
+        <div class="inspector-section-head">
+          <h3>导出前体检</h3>
+          <span class="inspector-status" :class="qualityResult?.readiness ?? 'idle'">
+            {{ qualityResult?.readiness === 'ready' ? '可提交' : qualityResult?.readiness === 'blocked' ? '有阻断' : qualityResult?.readiness === 'needs_fixes' ? '需修复' : '未检查' }}
+          </span>
+        </div>
+        <button class="button secondary inspector-action" type="button" :disabled="qualityChecking" @click="() => runQualityCheck()">
+          {{ qualityChecking ? '体检中...' : '运行体检' }}
+        </button>
+        <button
+          v-if="qualityResult"
+          class="button ghost inspector-action"
+          type="button"
+          @click="qualityPanelOpen = true; mobileInspectorOpen = false"
+        >
+          查看问题与修复建议
+        </button>
+      </section>
+      <section class="inspector-section">
+        <div class="inspector-section-head">
+          <h3>导出</h3>
+        </div>
+        <button class="button secondary inspector-action" type="button" @click="handleExport('docx'); mobileInspectorOpen = false">
+          导出 Word
+        </button>
+        <button class="button ghost inspector-action" type="button" @click="handleExport('pptx'); mobileInspectorOpen = false">
+          导出 PPTX
+        </button>
+      </section>
+    </div>
+
+    <!-- Mobile: overlay backdrop -->
+    <div
+      v-if="isMobileViewport && (mobileOutlineOpen || mobileInspectorOpen)"
+      class="editor-mobile-overlay"
+      @click="mobileOutlineOpen = false; mobileInspectorOpen = false"
     />
   </div>
 </template>

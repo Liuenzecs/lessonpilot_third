@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     account,
     auth,
     calendar,
+    class_groups,
     documents,
     health,
     imports,
@@ -13,6 +14,8 @@ from app.api.v1.endpoints import (
     sharing,
     style_profile,
     tasks,
+    teaching_reflections,
+    teaching_units,
     templates,
 )
 
@@ -30,3 +33,6 @@ api_v1_router.include_router(style_profile.router)
 api_v1_router.include_router(questions.router)
 api_v1_router.include_router(sharing.router)
 api_v1_router.include_router(calendar.router)
+api_v1_router.include_router(class_groups.router)
+api_v1_router.include_router(teaching_units.router)
+api_v1_router.include_router(teaching_reflections.router)

@@ -33,6 +33,7 @@ const QuestionBankView = () => import('@/features/task/views/QuestionBankView.vu
 const SettingsView = () => import('@/features/settings/views/SettingsView.vue');
 const SharedDocumentView = () => import('@/features/sharing/views/SharedDocumentView.vue');
 const CalendarView = () => import('@/features/calendar/views/CalendarView.vue');
+const ClassGroupsView = () => import('@/features/task/views/ClassGroupsView.vue');
 const EditorView = () => import('@/features/editor/views/EditorView.vue');
 
 export function createAppRouter(pinia: Pinia, history: RouterHistory = createWebHistory()) {
@@ -190,6 +191,12 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
         path: '/calendar',
         name: 'calendar',
         component: CalendarView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/class-groups',
+        name: 'class-groups',
+        component: ClassGroupsView,
         meta: { requiresAuth: true },
       },
       {

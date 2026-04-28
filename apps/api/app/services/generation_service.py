@@ -104,6 +104,52 @@ def _merge_prompt_hints(*parts: str) -> str:
     return "\n\n".join(part.strip() for part in parts if part and part.strip())
 
 
+def _load_class_differentiation_hints(session: Session, task: Task) -> str:
+    """当 task 是班级变体时，生成差异化提示。"""
+    if not task.class_group_id:
+        return ""
+    from app.models.class_group import ClassGroup
+
+    cg = session.get(ClassGroup, task.class_group_id)
+    if not cg:
+        return ""
+
+    level_hints = {
+        "advanced": (
+            "本版本面向**重点班**。请适当：\n"
+            "- 提高教学目标的深度和思辨性要求\n"
+            "- 增加拓展探究活动的复杂度和开放度\n"
+            "- 达标测评中增加 C 级（综合运用）题目的比例\n"
+            "- 设计意图中体现对高阶思维的培养"
+        ),
+        "remedial": (
+            "本版本面向**基础班**。请适当：\n"
+            "- 降低教学目标的抽象程度，增加可操作的步骤化表述\n"
+            "- 加强教师活动的示范和引导时间\n"
+            "- 增加 A 级（识记理解）和 B 级（简单应用）题目的比例\n"
+            "- 设计意图中体现对基础知识和学习习惯的夯实"
+        ),
+        "standard": (
+            "本版本面向**普通班**。保持标准难度和节奏即可。"
+        ),
+    }
+
+    base_hint = level_hints.get(cg.level, level_hints["standard"])
+    return f"【班级差异化要求】\n班级：{cg.name}（{cg.level}）\n{base_hint}"
+
+
+def _load_reflection_context(session: Session, task: Task) -> str:
+    """检索教师的历史教学反思改进建议。"""
+    try:
+        from app.services.reflection_service import get_reflection_context
+
+        return get_reflection_context(
+            session, task.user_id, task.subject, task.grade
+        )
+    except Exception:
+        return ""
+
+
 def get_task_and_documents(
     session: Session, task_id: str, user_id: str
 ) -> tuple[Task, list[Document]]:
@@ -957,7 +1003,9 @@ async def stream_generation(
             doc = _get_or_create_document(session, task, doc_type)
             content = load_content(doc)
             prompt_hints = _load_prompt_hints(session, task.template_id, doc_type)
-            prompt_hints = _merge_prompt_hints(prompt_hints, teacher_style_ctx)
+            class_ctx = _load_class_differentiation_hints(session, task)
+            reflection_ctx = _load_reflection_context(session, task)
+            prompt_hints = _merge_prompt_hints(prompt_hints, class_ctx, reflection_ctx, teacher_style_ctx)
             specs = _get_section_specs(doc_type)
 
             for index, spec in enumerate(specs):

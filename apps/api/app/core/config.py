@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     app_base_url: str = "http://localhost:5173"
     mail_delivery_mode: Literal["console", "smtp"] = "console"
     mail_from_email: str = "hello@lessonpilot.com"

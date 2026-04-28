@@ -56,5 +56,13 @@ class LessonScheduleEntry(SQLModel, table=True):
     )
     day_of_week: int = Field(default=1, sa_column=Column(Integer, nullable=False))
     class_period: int | None = Field(default=None, sa_column=Column(Integer, nullable=True))
+    class_group_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(36), ForeignKey("class_groups.id"), nullable=True, index=True),
+    )
+    unit_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(36), ForeignKey("teaching_units.id"), nullable=True, index=True),
+    )
     notes: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     created_at: datetime = Field(default_factory=utcnow, sa_column=Column(DateTime(timezone=True), nullable=False))

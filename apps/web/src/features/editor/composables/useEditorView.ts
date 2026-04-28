@@ -66,6 +66,8 @@ export function useEditorView() {
   const selectedPersonalAssetIds = ref<string[]>([]);
   const outlineCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1100 : false);
   const isMobileViewport = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false);
+  const mobileOutlineOpen = ref(false);
+  const mobileInspectorOpen = ref(false);
   const selectedSnapshotId = ref('');
   const collapsedSections = ref<Record<string, boolean>>({});
   const activeDocTabIndex = ref(0);
@@ -508,6 +510,8 @@ export function useEditorView() {
     teachingPackageGenerating: teachingPackageMutation.isPending,
     outlineCollapsed,
     isMobileViewport,
+    mobileOutlineOpen,
+    mobileInspectorOpen,
     selectedSnapshotId,
     notice,
     generationProgress,
