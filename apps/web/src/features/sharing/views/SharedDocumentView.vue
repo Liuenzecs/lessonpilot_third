@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 
 import { usePostCommentMutation, useSharedDocument } from '@/features/sharing/composables/useSharing';
 import type { SharedDocumentView } from '@/features/sharing/types';
+import { ApiError } from '@/shared/api/client';
 import { getErrorDescription } from '@/shared/api/errors';
 import { useToast } from '@/shared/composables/useToast';
 
@@ -13,8 +14,18 @@ const toast = useToast();
 const token = computed(() => route.params.token as string);
 const enabled = computed(() => Boolean(token.value));
 
-const { data: sharedDoc, isLoading, isError } = useSharedDocument(token, enabled);
+const { data: sharedDoc, isLoading, isError, error } = useSharedDocument(token, enabled);
 const commentMutation = usePostCommentMutation(token);
+
+const errorState = computed(() => {
+  if (!isError.value || !error.value) return null;
+  if (error.value instanceof ApiError) {
+    if (error.value.status === 404) return { icon: '🔗', title: '链接不存在', description: '该分享链接可能已被删除，或地址有误。' };
+    if (error.value.status === 410) return { icon: '⏰', title: '链接已过期', description: '该分享链接已超过有效期限，请联系分享者重新分享。' };
+    if (error.value.status === 403) return { icon: '🔒', title: '分享已停用', description: '分享者已停用该链接，如需查看请联系分享者。' };
+  }
+  return { icon: '🔗', title: '无法访问', description: '分享链接不存在、已过期或已被停用。' };
+});
 
 const newCommentBody = ref('');
 const newCommentAuthor = ref('');
@@ -84,22 +95,22 @@ const sectionLabels: Record<string, string> = {
     <div v-if="isLoading" class="shared-doc-loading">加载中...</div>
 
     <StatePanel
-      v-else-if="isError || !sharedDoc"
-      icon="🔗"
-      title="无法访问"
-      description="分享链接不存在、已过期或已被停用。"
+      v-else-if="errorState"
+      :icon="errorState.icon"
+      :title="errorState.title"
+      :description="errorState.description"
       tone="error"
     />
 
     <main v-else class="shared-doc-main">
       <div class="shared-doc-meta">
-        <h1 class="shared-doc-title">{{ sharedDoc.title }}</h1>
-        <p class="shared-doc-info">{{ sharedDoc.subject }} · {{ sharedDoc.grade }}{{ sharedDoc.topic ? ` · ${sharedDoc.topic}` : '' }}</p>
+        <h1 class="shared-doc-title">{{ sharedDoc?.title }}</h1>
+        <p class="shared-doc-info">{{ sharedDoc?.subject }} · {{ sharedDoc?.grade }}{{ sharedDoc?.topic ? ` · ${sharedDoc?.topic}` : '' }}</p>
       </div>
 
       <!-- Section rendering -->
       <div class="shared-doc-sections">
-        <template v-for="(value, key) in sharedDoc.content" :key="key">
+        <template v-for="(value, key) in sharedDoc?.content" :key="key">
           <section
             v-if="!key.endsWith('_status') && !key.startsWith('section_') && key !== 'doc_type' && value != null && value !== ''"
             class="shared-section"
@@ -149,10 +160,10 @@ const sectionLabels: Record<string, string> = {
       </div>
 
       <!-- Comments section -->
-      <div v-if="canComment || sharedDoc.comments.length" class="shared-comments">
-        <h3 class="shared-comments-title">评论 ({{ sharedDoc.comments.length }})</h3>
+      <div v-if="canComment || sharedDoc?.comments.length" class="shared-comments">
+        <h3 class="shared-comments-title">评论 ({{ sharedDoc?.comments.length }})</h3>
 
-        <div v-for="comment in sharedDoc.comments" :key="comment.id" class="comment-item">
+        <div v-for="comment in sharedDoc?.comments" :key="comment.id" class="comment-item">
           <div class="comment-header">
             <span class="comment-author">{{ comment.author_name }}</span>
             <span class="comment-time">{{ new Date(comment.created_at).toLocaleString() }}</span>

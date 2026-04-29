@@ -87,6 +87,7 @@ async function handleUpdate(id: string) {
 }
 
 async function handleDelete(id: string) {
+  if (!window.confirm('确认删除该班级组吗？')) return;
   try {
     await deleteMutation.mutateAsync(id);
     toast.success('班级组已删除');
@@ -113,7 +114,8 @@ async function handleDelete(id: string) {
       v-if="isLoading"
       icon="📋"
       eyebrow="班级管理"
-      title="正在加载..."
+      title="正在加载班级数据..."
+      description="请稍候"
       tone="info"
     />
 
@@ -246,6 +248,14 @@ async function handleDelete(id: string) {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.class-group-name > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
 }
 
 .class-group-level {

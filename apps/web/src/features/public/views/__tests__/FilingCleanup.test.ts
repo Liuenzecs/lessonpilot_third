@@ -45,8 +45,8 @@ describe('filing commercial cleanup', () => {
     await router.push('/pricing');
     await router.isReady();
 
-    expect(router.currentRoute.value.name).toBe('landing');
-    expect(router.currentRoute.value.path).toBe('/');
+    expect(router.currentRoute.value.name).toBe('pricing');
+    expect(router.currentRoute.value.path).toBe('/pricing');
   });
 
   it('removes commercial wording from help and terms content', () => {

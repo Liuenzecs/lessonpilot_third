@@ -340,8 +340,9 @@ async function handleRemoveEntry(entryId: string) {
   padding-bottom: 16px;
 }
 .week-column {
-  width: 180px;
-  flex-shrink: 0;
+  flex: 1 1 140px;
+  min-width: 140px;
+  max-width: 220px;
 }
 .week-header {
   padding: 8px 6px;

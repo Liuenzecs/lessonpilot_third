@@ -15,8 +15,8 @@ const isSettingsRoute = computed(() => route.name === 'settings');
 
 <template>
   <div class="private-shell">
-    <header class="private-nav app-card">
-      <RouterLink class="public-brand" :to="{ name: 'tasks' }">LessonPilot</RouterLink>
+    <header class="private-nav">
+      <RouterLink class="public-brand" :to="{ name: 'landing' }">LessonPilot</RouterLink>
 
       <nav class="private-nav-links">
         <RouterLink :to="{ name: 'help' }">帮助中心</RouterLink>

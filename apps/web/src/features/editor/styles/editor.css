@@ -253,9 +253,12 @@
   font-size: var(--text-sm);
 }
 
-.outline-item:hover {
+.outline-item:hover,
+.outline-item:focus-visible {
   background: var(--surface-strong);
   color: var(--text);
+  outline: 2px solid var(--focus-color);
+  outline-offset: -1px;
 }
 
 .outline-item.active {
@@ -353,6 +356,8 @@
   color: var(--muted);
   font-size: 14px;
   font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .doc-tab.active {
@@ -478,7 +483,7 @@
 .section-actions {
   gap: var(--space-xs);
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 0.4;
   transition: opacity 0.15s ease;
 }
 
@@ -716,6 +721,7 @@
     right: 0;
     z-index: 40;
     max-height: 60vh;
+    min-height: 120px;
     border-radius: 16px 16px 0 0;
     border-bottom: 0;
     overflow-y: auto;
@@ -798,6 +804,12 @@
     color: var(--muted);
     font-size: 11px;
     font-weight: 700;
+    cursor: pointer;
+  }
+
+  .editor-mobile-bottom-bar .mobile-bar-btn:focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 1px;
   }
 
   .editor-mobile-bottom-bar .mobile-bar-btn.active {

@@ -282,7 +282,7 @@ function togglePersonalAsset(assetId: string) {
             type="submit"
             :disabled="!canSubmit || createTaskMutation.isPending.value"
           >
-            {{ createTaskMutation.isPending.value ? '正在创建...' : '进入文档桌' }}
+            {{ createTaskMutation.isPending.value ? '正在创建备课...' : '进入文档桌' }}
           </button>
         </div>
       </form>
@@ -293,7 +293,7 @@ function togglePersonalAsset(assetId: string) {
             <h2>学校模板</h2>
             <button class="button ghost" type="button" @click="router.push({ name: 'school-templates' })">管理</button>
           </div>
-          <p v-if="templatesLoading" class="create-helper">正在匹配可用模板...</p>
+          <p v-if="templatesLoading" class="create-helper">正在查找可用模板...</p>
           <p v-else-if="templates.length === 0" class="create-helper">选择学科后会自动匹配可用模板。</p>
           <div v-else class="template-choice-grid compact-list">
             <button
@@ -326,7 +326,7 @@ function togglePersonalAsset(assetId: string) {
           </div>
           <label class="create-checkbox-line">
             <input v-model="usePersonalAssets" type="checkbox" />
-            <span>整理初稿时参考我的资料库</span>
+            <span>参考我的资料库整理初稿</span>
           </label>
           <div v-if="usePersonalAssets" class="template-choice-grid compact-list">
             <button
@@ -342,7 +342,7 @@ function togglePersonalAsset(assetId: string) {
             </button>
           </div>
           <p v-if="usePersonalAssets && !(assetRecommendationsQuery.data.value ?? []).length" class="create-helper">
-            当前课题暂未匹配到个人资料；生成时会明确提示未命中。
+            当前课题暂未关联到个人资料库中的资料。如果未找到匹配项，系统会在生成时提示。
           </p>
         </section>
 

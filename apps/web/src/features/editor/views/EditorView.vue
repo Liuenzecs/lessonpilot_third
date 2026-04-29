@@ -333,7 +333,7 @@ function isRewritingSection(sectionName: string): boolean {
               {{ asset.title }} · {{ asset.section_title }}
             </button>
             <p v-if="!(assetRecommendationsQuery.data.value ?? []).length" class="editor-toolbar-note">
-              当前课题暂未匹配到个人资料。
+              当前课题尚未关联到个人资料库中的资料。
             </p>
             <button class="button ghost inspector-action" type="button" @click="router.push({ name: 'personal-assets' })">
               管理资料
@@ -453,7 +453,7 @@ function isRewritingSection(sectionName: string): boolean {
     </div>
 
     <!-- Mobile: outline bottom sheet -->
-    <div v-if="isMobileViewport" class="outline-panel" :class="{ open: mobileOutlineOpen }">
+    <div v-if="isMobileViewport && draftDocument" class="outline-panel" :class="{ open: mobileOutlineOpen }">
       <div class="outline-panel-head">
         <h3>文档目录</h3>
         <p class="outline-panel-copy">{{ pendingSectionCount }} 节待确认</p>

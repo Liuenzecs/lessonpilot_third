@@ -73,7 +73,7 @@ function copyUrl(url: string) {
     <div v-if="open" class="drawer-backdrop" @click.self="$emit('close')">
       <aside class="drawer share-panel app-card">
         <div class="share-panel-header">
-          <h3 class="share-panel-title">分享文档</h3>
+          <h3 class="share-panel-title">分享给教研组同事</h3>
           <button class="button ghost" type="button" @click="$emit('close')">✕</button>
         </div>
 

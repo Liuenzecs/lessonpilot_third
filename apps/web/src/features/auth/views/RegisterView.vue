@@ -98,7 +98,7 @@ async function submit() {
     </p>
 
     <div class="auth-divider">或</div>
-    <button class="auth-wechat-button" type="button" disabled>微信登录（即将支持）</button>
+    <button class="auth-wechat-button" type="button" disabled>更多登录方式即将推出</button>
 
     <div v-if="errorMessage" class="feedback">{{ errorMessage }}</div>
     <p class="subtitle">

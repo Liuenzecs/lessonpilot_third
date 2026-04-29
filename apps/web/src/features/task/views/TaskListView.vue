@@ -109,64 +109,12 @@ async function exportTask(task: TaskRecord) {
 <template>
   <section class="workspace-page">
     <template v-if="workspaceLoading">
-      <div class="workspace-hero-skeleton app-card">
-        <div class="workspace-hero-skeleton-copy">
-          <div class="workspace-skeleton-chip" />
-          <div class="workspace-skeleton-line long" />
-          <div class="workspace-skeleton-line medium" />
-        </div>
-        <div class="workspace-start-skeleton" />
-      </div>
-
       <div class="task-grid">
         <div v-for="index in 4" :key="index" class="task-card-skeleton" />
       </div>
     </template>
 
     <template v-else>
-      <div class="workspace-hero">
-        <div class="workspace-hero-copy">
-          <p class="page-eyebrow">备课队列</p>
-          <h1 class="page-title">今天要处理的备课</h1>
-          <p class="subtitle">从这里开始新备课、导入旧教案、管理学校格式，也能快速判断每份文档下一步该做什么。</p>
-        </div>
-
-        <div class="workspace-hero-actions">
-          <button class="workspace-start-card" type="button" @click="startSampleTask">
-            <span class="workspace-start-title">用样例体验</span>
-            <span class="workspace-start-subtitle">自动填好《春》第一课时，快速跑通生成、体检和导出</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-create' })">
-            <span class="workspace-start-title">从课题开始</span>
-            <span class="workspace-start-subtitle">输入自己的课题，直接进入文档桌起草</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'task-import' })">
-            <span class="workspace-start-title">导入旧教案</span>
-            <span class="workspace-start-subtitle">上传 Word，先预览结构再进入编辑器</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'batch-import' })">
-            <span class="workspace-start-title">批量导入教案</span>
-            <span class="workspace-start-subtitle">一次导入多个 Word，集中确认并归档</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'school-templates' })">
-            <span class="workspace-start-title">学校格式库</span>
-            <span class="workspace-start-subtitle">保存常用 Word 格式，导出时直接套用</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'personal-assets' })">
-            <span class="workspace-start-title">个人资料柜</span>
-            <span class="workspace-start-subtitle">迁移旧讲义和 PPT，沉淀私有资料</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'question-bank' })">
-            <span class="workspace-start-title">语文题库</span>
-            <span class="workspace-start-subtitle">浏览重点篇目的分层题目，学案生成自动选题</span>
-          </button>
-          <button class="workspace-start-card secondary" type="button" @click="router.push({ name: 'calendar' })">
-            <span class="workspace-start-title">教学日历</span>
-            <span class="workspace-start-subtitle">学期计划与每周排课，按周查看教学安排</span>
-          </button>
-        </div>
-      </div>
-
       <StatePanel
         v-if="workspaceErrorState"
         icon="📚"
@@ -186,8 +134,8 @@ async function exportTask(task: TaskRecord) {
         class="workspace-empty-state app-card"
       >
         <div class="workspace-empty-icon">📘</div>
-        <h2>你的备课台还是空的</h2>
-        <p>可以先用样例跑完整链路，也可以从自己的课题或旧教案开始。</p>
+        <h2>创建第一份教案吧</h2>
+        <p>填入课题，系统会自动生成结构完整的初稿，你只需审核和微调。</p>
         <div class="workspace-first-path">
           <span>1. 填好课题</span>
           <span>2. 生成初稿</span>
@@ -208,9 +156,14 @@ async function exportTask(task: TaskRecord) {
 
       <template v-else>
         <div class="workspace-toolbar">
-          <div>
-            <h2>最近备课队列</h2>
-            <p class="subtitle">每一行都是一份可继续处理的备课文档。</p>
+          <div class="workspace-toolbar-head">
+            <div>
+              <h2>最近备课队列</h2>
+              <p class="subtitle">每一行都是一份可继续处理的备课文档。</p>
+            </div>
+            <button class="button primary" type="button" @click="router.push({ name: 'task-create' })">
+              创建备课
+            </button>
           </div>
 
           <div class="workspace-filters">

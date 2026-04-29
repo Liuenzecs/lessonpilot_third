@@ -1620,3 +1620,48 @@
   - 前端测试：49 passed
   - `pnpm --dir apps/web type-check`：passed
 - Status: DONE（等待用户手动验收 P1，不自动进入 P2）
+
+## [Phase 18 P2] — 手机端编辑 + 同课多班 + 学期备课包 + 深度风格 + 教学反思
+- 完成日期：2026-04-29
+- 完成内容：
+  - **P2-1 手机端编辑**：移动端自适应编辑器布局 + 触控优化 + 精简工具栏
+  - **P2-2 同课多班**：一份教案生成多个班级版本，差异化调整（进度/重点/练习）
+  - **P2-3 深度风格模型**：few-shot 级老师个人风格学习，多轮对话风格校准
+  - **P2-4 教学反思**：课后反思记录 → 下次备课自动引用优化建议（数据飞轮基础）
+  - **P2-5 全学期备课包**：按学期/年级一键生成全学期教案+学案组合包
+- 关键文件：
+  - 提交：`8f3a45a feat: Phase18 P2`
+- 验证结果：
+  - 后端测试：176 passed
+  - 前端测试：49 passed
+  - `pnpm --dir apps/web type-check`：passed
+- Status: DONE（Phase 16 三阶段全部完成）
+
+## [Phase 19] — 前端体验打磨与产品文案优化
+- 完成日期：2026-04-29
+- 完成内容：
+  - **卡片截断修复**：统一所有卡片标题 2 行截断 + ellipsis，修复元数据溢出、资产/模板/班级组卡片对齐问题
+  - **导航/路由修复**：/pricing 死路由改为占位页面，分享令牌错误细化（过期/不存在/停用），VerifyEmailView 改用 useRoute()
+  - **产品文案去 AI 感**：改写 20+ 处文案，基于 ClassIn/科大讯飞/希沃竞品研究的教育行业风格
+    - "痛点共鸣"→"备课中的常见困难"，"核心工作流"→"备课流程"
+    - "正在匹配可用模板..."→"正在查找可用模板..."
+    - "暂未匹配到个人资料"→"尚未关联到个人资料库"
+    - 移除 API 端点暴露文本（QuestionBankView）
+    - 微信登录按钮改为"更多登录方式即将推出"
+    - Landing/Help/TaskCreate/SharePanel/EditorView 等全面去 AI 腔
+  - **编辑器优化**：章节操作默认可见（opacity 0.4→1 on hover）、doc-tab 过渡动画、移动端面板 v-if 守卫
+  - **加载态完善**：全局 skeleton-shimmer CSS 变量引入，骨架屏基础 class
+  - **交互打磨**：全局 focus-visible 样式、workspace/editor/public 交互元素 focus 样式、Toast 移动端避开底部导航、ClassGroups 删除确认
+  - **响应式修复**：CalendarView 周列 flex-basis 自适应、移动端面板 min-height 防止塌缩
+- 关键文件（共 18 个文件）：
+  - 新增：`ComingSoonView.vue`
+  - CSS：`main.css`, `workspace.css`, `editor.css`
+  - 路由：`router/index.ts`
+  - 视图：`LandingView.vue`, `TaskCreateView.vue`, `TaskListView.vue`, `EditorView.vue`, `HelpView.vue`, `LoginView.vue`, `RegisterView.vue`, `VerifyEmailView.vue`, `QuestionBankView.vue`, `ClassGroupsView.vue`, `CalendarView.vue`, `SharedDocumentView.vue`, `SharePanel.vue`, `EditorShellHeader.vue`
+  - 测试：`FilingCleanup.test.ts`
+  - 计划：`.claude/PRPs/plans/phase-19-frontend-polish.plan.md`
+- 验证结果：
+  - 后端测试：176 passed
+  - 前端测试：49 passed
+  - `pnpm --dir apps/web type-check`：passed
+- Status: DONE（等待用户手动验收）

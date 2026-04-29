@@ -12,6 +12,7 @@ const HelpView = () => import('@/features/public/views/HelpView.vue');
 const AboutView = () => import('@/features/public/views/AboutView.vue');
 const PrivacyView = () => import('@/features/public/views/PrivacyView.vue');
 const TermsView = () => import('@/features/public/views/TermsView.vue');
+const ComingSoonView = () => import('@/features/public/views/ComingSoonView.vue');
 const ChangelogView = () => import('@/features/public/views/ChangelogView.vue');
 const ServerErrorView = () => import('@/features/public/views/ServerErrorView.vue');
 const NetworkErrorView = () => import('@/features/public/views/NetworkErrorView.vue');
@@ -52,7 +53,7 @@ export function createAppRouter(pinia: Pinia, history: RouterHistory = createWeb
           {
             path: 'pricing',
             name: 'pricing',
-            redirect: { name: 'landing' },
+            component: ComingSoonView,
           },
           {
             path: 'help',

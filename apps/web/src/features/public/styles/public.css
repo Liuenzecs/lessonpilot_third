@@ -600,7 +600,11 @@
 }
 .private-nav-links a { font-size: var(--text-sm); font-weight: 600; }
 .private-nav-links a.active { color: var(--primary); font-weight: 700; }
-.private-main { padding-top: 28px; }
+.private-main {
+  width: min(1120px, calc(100% - 64px));
+  margin: 0 auto;
+  padding-top: 28px;
+}
 
 /* ── User Menu ── */
 .user-menu { position: relative; }

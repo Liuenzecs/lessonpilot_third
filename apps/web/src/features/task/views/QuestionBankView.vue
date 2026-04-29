@@ -78,8 +78,7 @@ function clearFilters() {
     <div v-if="loading" class="qb-loading">加载中...</div>
     <div v-else-if="error" class="qb-error">{{ error }}</div>
     <div v-else-if="questions.length === 0" class="qb-empty">
-      <p>暂无题目数据。</p>
-      <p class="qb-empty-hint">运行 POST /api/v1/questions/seed 加载种子数据。</p>
+      <p>暂无题目数据。请在服务端加载种子题库后刷新页面。</p>
     </div>
 
     <ul v-else class="qb-list">
@@ -219,6 +218,10 @@ function clearFilters() {
   font-weight: 600;
   color: var(--color-ink, #172033);
   font-size: 0.9rem;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .qb-grade {

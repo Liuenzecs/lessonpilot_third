@@ -46,7 +46,7 @@ function resolveLandingIcon(icon: string) {
 
     <section class="landing-section section-card alt-bg">
       <div class="landing-section-head">
-        <p class="page-eyebrow">痛点共鸣</p>
+        <p class="page-eyebrow">备课中的常见困难</p>
         <h2>备课，不该这么累</h2>
       </div>
       <div class="landing-pain-grid">
@@ -62,7 +62,7 @@ function resolveLandingIcon(icon: string) {
 
     <section id="features" class="landing-section">
       <div class="landing-section-head">
-        <p class="page-eyebrow">核心工作流</p>
+        <p class="page-eyebrow">备课流程</p>
         <h2>从旧资料到学校 Word，路径短一点</h2>
       </div>
 

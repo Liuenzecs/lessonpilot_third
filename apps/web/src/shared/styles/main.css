@@ -442,6 +442,50 @@ button {
   color: var(--muted);
 }
 
+/* ── Global Focus-Visible ── */
+
+:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Skeleton Loading ── */
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 0%,
+    var(--surface-strong) 50%,
+    var(--surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer-anim 1.6s linear infinite;
+}
+
+@keyframes skeleton-shimmer-anim {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--radius-pill);
+}
+
+.skeleton-line.w-2\/3 { width: 66%; }
+.skeleton-line.w-1\/2 { width: 50%; }
+.skeleton-line.w-3\/4 { width: 75%; }
+.skeleton-line.w-full { width: 100%; }
+
+.skeleton-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 10px;
+}
+
 /* ── Toast ── */
 
 .toast-viewport {
@@ -453,6 +497,14 @@ button {
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .toast-viewport {
+    bottom: 72px;
+    right: var(--space-md);
+    left: var(--space-md);
+  }
 }
 
 .toast-stack {

@@ -37,7 +37,7 @@ function getSaveLabel(
     return '保存中...';
   }
   if (saveState === 'retrying') {
-    return '正在重试...';
+    return '正在重新保存...';
   }
   if (saveState === 'dirty') {
     return '未保存的更改';

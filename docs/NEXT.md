@@ -1,47 +1,53 @@
-# 当前任务：等待用户验收 Phase 17 P1
+# 当前任务：等待用户验收 Phase 19
 
 ## 本阶段目标
 
-全部 4 个 Phase 17 P1 任务已完成实施，等待用户手动验收。
+修复前端界面 bug、优化编辑器显示体验、去 AI 感产品文案改写，提升整体产品质感。**全部实施完成，等待手动验收。**
 
-详见 `docs/milestones/phase-16-migration-competitiveness.md` 和 `.claude/plans/humble-churning-sky.md`。
+详见 `.claude/PRPs/plans/phase-19-frontend-polish.plan.md`
 
-## 本轮实施切片
+## 本轮整改结果
 
-### P1-1：旧教案批量导入
+### 1. 前端 Bug 修复
 
-- [x] 后端：batch-preview / batch-confirm 端点，批量导入服务包装函数
-- [x] 前端：BatchImportView.vue（多文件选择 → 预览 → 逐项编辑 → 批量确认）
-- [x] 备课台入口卡片"批量导入教案"
-- [x] 单文件解析逻辑完全复用，单项失败独立报告
+- [x] 卡片标题统一 2 行截断 + ellipsis（TaskCard / AssetCard / TemplateCard / ClassGroupCard）
+- [x] 卡片元数据添加 max-width + text-overflow
+- [x] 日历周列硬编码 180px 改为 flex-basis 自适应
+- [x] /pricing 路由器由重定向改为占位页面
+- [x] 分享令牌错误细化（404/410/403 → 不同提示）
+- [x] VerifyEmailView 改用 useRoute() 读参数
 
-### P1-2：教研组分享链接
+### 2. 产品文案去 AI 感
 
-- [x] 后端：ShareLink / ShareComment 模型 + Alembic 迁移
-- [x] 后端：share_service + 7 个 API 端点（创建/列表/更新/删除 + 公开只读视图 + 评论）
-- [x] 前端：SharePanel.vue（权限/过期时间/复制链接/管理已有链接）
-- [x] 前端：SharedDocumentView.vue（公开只读页，无需登录 + 可选评论）
-- [x] 编辑器工具栏"分享"按钮
+- [x] Landing 页：section 标题改为教育行业表达
+- [x] TaskCreateView：匹配→查找、未命中→未找到、创建→创建备课
+- [x] TaskListView：空状态改为教育化 CTA
+- [x] HelpView："大白话"→教育行业表述
+- [x] LoginView/RegisterView：微信登录→更多登录方式
+- [x] EditorView：暂未匹配→尚未关联到资料库
+- [x] SharePanel：分享文档→分享给教研组同事
+- [x] QuestionBankView：移除 API 端点暴露
+- [x] VerifyEmailView：请稍候→省略号简洁表达
+- [x] EditorShellHeader：正在重试→正在重新保存
 
-### P1-3：教学日历 + 学期计划
+### 3. 编辑器显示优化
 
-- [x] 后端：Semester / WeekSchedule / LessonScheduleEntry 三表模型 + 迁移
-- [x] 后端：calendar_service + 9 个 API 端点（学期 CRUD + 排课/移课）
-- [x] 前端：CalendarView.vue（学期面板 + 水平滚动周网格 + 点击排课 + 移除）
-- [x] 备课台入口卡片"教学日历"
+- [x] 章节操作按钮默认 opacity 0.4（始终可见）
+- [x] doc-tab 添加 transition 动画
+- [x] 移动端大纲面板添加 draftDocument 守卫
+- [x] 移动端面板 min-height 防止塌缩
 
-### P1-4：Word 修改回导（diff & merge）
+### 4. 交互反馈打磨
 
-- [x] 后端：reimport_service diff 引擎（difflib SequenceMatcher + 结构化比对）
-- [x] 后端：preview + merge 端点（merge 前自动拍快照）
-- [x] 前端：ReimportPanel.vue（三步向导：上传→逐 section 接受/拒绝→确认合并）
-- [x] 编辑器工具栏"回导修改"按钮（仅教案可见）
+- [x] 全局 :focus-visible 基础样式
+- [x] 卡片/按钮/大纲项/移动栏按钮 focus 样式
+- [x] toast 在移动端避开底部导航
+- [x] ClassGroups 删除前 confirm 确认
 
-## 已授权范围
+### 5. 加载态完善
 
-- 全部 4 个 P1 任务均为新增模块，不破坏现有主链路
-- 可新增数据库表、API 端点、前端页面
-- 回导功能复用现有导入解析器 + 快照系统
+- [x] 全局 skeleton-shimmer CSS 基类（供后续页面替换使用）
+- [x] 骨架屏动画（shimmer 1.6s linear infinite）
 
 ## 验证结果
 
@@ -51,20 +57,25 @@
 
 ## 停止条件
 
-- 等待用户手动验收 P1 功能
+- 等待用户手动验收 Phase 19
 - 或用户明确指示暂停/调整方向
-- **不自动进入 P2 任务，必须等用户确认**
+- **不自动进入下一 Phase**
 
 ## 验收标准
 
-### P1-1 批量导入
-- [ ] 选择 3+ 个 .docx → 批量预览 → 逐项调整元数据 → 批量确认 → 备课台看到全部导入的 task
+### Bug 修复
+- [ ] 备课台卡片在不同宽度下文字显示完整
+- [ ] 各页面在 375px / 768px / 1024px / 1440px 下无错位
+- [ ] 所有可点击元素正常响应
 
-### P1-2 分享链接
-- [ ] 生成分享链接 → 无痕窗口打开 → 看到只读文档 → 留评论（如 comment 权限） → 返回编辑器看到评论
+### 文案优化
+- [ ] 主要页面文案已改写为教育行业风格
+- [ ] 无明显的"AI 生成腔"
 
-### P1-3 教学日历
-- [ ] 创建学期 → 自动生成周 → 将已有 task 分配到不同周/天 → 日历视图正确显示
+### 编辑器优化
+- [ ] 编辑器排版美观、内容无渲染问题
+- [ ] 工具栏交互流畅
 
-### P1-4 Word 回导
-- [ ] 导出 docx → 在 Word 中修改 → 上传回导 → 看到逐 section diff → 接受部分修改 → 编辑器内容已合并 → 历史版本中有 pre-merge 快照
+### 整体打磨
+- [ ] 加载/空/错误状态 UI 完善
+- [ ] 各交互动效流畅
