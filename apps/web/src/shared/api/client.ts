@@ -12,7 +12,7 @@ export class ApiError extends Error {
 }
 
 export function getApiBaseUrl(): string {
-  return (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+  return (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 }
 
 export function buildApiUrl(path: string): string {
