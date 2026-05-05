@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
+from sqlalchemy import delete as sa_delete
 from sqlmodel import Session, select
 
 from app.core.security import hash_password, verify_password
@@ -32,6 +33,7 @@ def serialize_account(user: User) -> AccountRead:
         id=user.id,
         email=user.email,
         name=user.name,
+        role=getattr(user, "role", "teacher"),
         email_verified=user.email_verified,
         email_verified_at=user.email_verified_at,
         created_at=user.created_at,
@@ -183,29 +185,19 @@ def delete_account(session: Session, user: User, payload: AccountDeletePayload) 
             detail='Please confirm with "DELETE"',
         )
 
-    feedback_entries = session.exec(select(Feedback).where(Feedback.user_id == user.id)).all()
-    for entry in feedback_entries:
-        session.delete(entry)
+    # Bulk-delete all user data using batch DELETE statements (avoids loading records into memory)
+    uid = user.id
+    task_ids = session.exec(select(Task.id).where(Task.user_id == uid)).all()
+    if task_ids:
+        doc_ids = session.exec(select(Document.id).where(Document.task_id.in_(task_ids))).all()
+        if doc_ids:
+            session.exec(sa_delete(DocumentSnapshot).where(DocumentSnapshot.document_id.in_(doc_ids)))
+            session.exec(sa_delete(Document).where(Document.id.in_(doc_ids)))
+        session.exec(sa_delete(Task).where(Task.id.in_(task_ids)))
 
-    auth_tokens = session.exec(select(AuthToken).where(AuthToken.user_id == user.id)).all()
-    for token in auth_tokens:
-        session.delete(token)
-
-    style_profile = session.exec(select(TeacherStyleProfile).where(TeacherStyleProfile.user_id == user.id)).first()
-    if style_profile is not None:
-        session.delete(style_profile)
-
-    tasks = session.exec(select(Task).where(Task.user_id == user.id)).all()
-    for task in tasks:
-        documents = session.exec(select(Document).where(Document.task_id == task.id)).all()
-        for document in documents:
-            snapshots = session.exec(
-                select(DocumentSnapshot).where(DocumentSnapshot.document_id == document.id)
-            ).all()
-            for snapshot in snapshots:
-                session.delete(snapshot)
-            session.delete(document)
-        session.delete(task)
+    session.exec(sa_delete(Feedback).where(Feedback.user_id == uid))
+    session.exec(sa_delete(AuthToken).where(AuthToken.user_id == uid))
+    session.exec(sa_delete(TeacherStyleProfile).where(TeacherStyleProfile.user_id == uid))
 
     session.delete(user)
     session.commit()

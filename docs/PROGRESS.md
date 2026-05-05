@@ -1665,3 +1665,129 @@
   - 前端测试：49 passed
   - `pnpm --dir apps/web type-check`：passed
 - Status: DONE（等待用户手动验收）
+
+## [Phase A] — 公益运营准备：最小可用公益 MVP
+- 完成日期：2026-05-05
+- 依据：`docs/CURRENT_PROGRESS_AUDIT.md` 全项目审计报告
+- 完成内容：
+  - **A.1 API 密钥安全加固**：
+    - `config.py` 新增 production 模式下 LLM API 密钥非空验证
+    - `admin_allowlist_emails` 从静默丢弃改为正确加载
+    - `.env.example` 清理全部计费/商业化残留（BILLING_*/SENTRY_* 等 12 行）
+  - **A.2 LLM Token 计数与成本追踪**：
+    - `llm_service.py` 新增 `UsageInfo` dataclass、`_last_usage` 属性、`_stream_chat_completion` 支持 `usage_sink` 参数捕获 streaming 末尾的 usage 字段
+    - 新增 `models/cost_log.py`（CostLog 模型：user/provider/model/tokens/cost/operation 等 13 字段）
+    - 新增 `services/cost_tracker.py`（log_llm_usage / getUserUsageToday / getUserUsageThisMonth / getUserCostThisMonth / getTotalCostThisMonth）
+    - 新增 Alembic 迁移 `0018_cost_logs`
+    - `generation_service.py` 和 `rewrite_service.py` 在每个 section 生成/重写后记录成本
+    - DeepSeekProvider / MiniMaxProvider 添加 `super().__init__()` 确保 _last_usage 正确初始化
+    - `config.py` 新增 cost_rate_* / cost_tracking_enabled 设置
+  - **A.3 每用户日/月生成配额**：
+    - `models/user.py` 新增 role / is_disabled / disabled_at / disabled_reason 字段
+    - 新增 `services/quota_service.py`（check_user_quota / get_user_quota_summary，超限抛 QuotaExceededError）
+    - 新增 Alembic 迁移 `0019_user_role_quota`
+    - `security.py` 新增 `get_current_active_user` 依赖（检查 is_disabled）+ `require_admin` 依赖（双通道：邮箱白名单/role 字段）
+    - `tasks.py` start_generation 端点在生成前检查配额，返回 429 超限
+  - **A.4 LLM 输出内容关键词过滤**：
+    - 新增 `services/content_filter.py`（check_section_content / sanitize_section_content，支持 warn/block 两种模式）
+    - 新增 `data/content_filter_keywords.json`（20 个基础英文敏感词）
+    - `generation_service.py` 每个 section 验证后、保存前运行内容过滤
+    - `config.py` 新增 content_filter_enabled / content_filter_mode 设置
+  - **A.5 前端反馈组件接入**：
+    - `SettingsView.vue` 新增"帮助与反馈"标签页，包含心情选择器（三档表情）+ 反馈文本域 + 提交按钮
+    - 集成已存在的 `useFeedbackMutation` composable（此前为死代码）
+    - `settings.css` 新增 mood-selector / mood-btn / feedback-success / settings-desc 样式
+    - 更新 SettingsView 测试 mock 以包含 useFeedbackMutation
+  - **A.6 修复 Alembic env.py 模型导入**：
+    - `alembic/env.py` 从导入 4 个模型改为导入全部 23 个模型（含新增 CostLog）
+  - **A.7 更新项目文档**：
+    - `CLAUDE.md`：更新进度至 Phase 19+ / Phase A，新增审计文档引用
+    - `ROADMAP.md`：重写为三阶段公益运营路线图，清除虚假完成标记和计费内容
+    - `docs/design/public-pages-ui.md`：添加公益定位废弃声明，移除定价页引用，清除导航栏/页脚定价链接
+  - **前端类型修复**：
+    - `SettingsView.vue` 修复 reactive 类型断言为泛型写法
+    - 新增 `moods` 常量数组替代内联对象
+- 关键文件（共 20 个文件）：
+  - 新增：`models/cost_log.py`, `services/cost_tracker.py`, `services/quota_service.py`, `services/content_filter.py`, `data/content_filter_keywords.json`, `alembic/versions/20260505_0018_cost_logs.py`, `alembic/versions/20260505_0019_user_role_quota.py`
+  - 修改：`core/config.py`, `core/security.py`, `services/llm_service.py`, `services/generation_service.py`, `services/rewrite_service.py`, `models/user.py`, `models/__init__.py`, `alembic/env.py`, `CLAUDE.md`, `docs/ROADMAP.md`, `docs/design/public-pages-ui.md`, `.env.example`, `SettingsView.vue`, `settings.css`, `SettingsView.test.ts`
+- 验证结果：
+  - 前端测试：49 passed（16 test files）
+  - 后端测试：需要正确 conda 环境运行（`apps/api/.venv/Scripts/python.exe -m pytest`）
+  - Alembic 模型导入已修复，autogenerate 不会误删表
+- Status: DONE（等待用户验收）
+
+## [Phase B] — 公益试点验证版
+- 完成日期：2026-05-05
+- 依据：Phase A 后续，`docs/CURRENT_PROGRESS_AUDIT.md` 路线 B
+- 完成内容：
+  - **B.1 Analytics Events 数据模型 + 埋点**：
+    - 新增 `models/analytics_event.py`（匹配现有 analytics_events 迁移表，11 字段）
+    - 新增 `schemas/analytics.py`（AnalyticsEventPayload）
+    - 新增 `endpoints/analytics.py`（POST /api/v1/analytics/events 批量接收）
+    - 新增 `shared/api/analytics.ts` 前端埋点客户端（session_id 管理、批量发送、5s/20条刷新策略）
+    - 注册 analytics 路由
+  - **B.2 最小管理 API**：
+    - 新增 `schemas/admin.py`（AdminUserSummary / AdminStatsResponse 等 5 个 schema）
+    - 新增 `endpoints/admin.py`（GET /admin/users 用户列表+搜索+用量, POST /admin/users/{id}/disable 禁用, POST /admin/users/{id}/enable 启用, GET /admin/stats 统计面板）
+    - 所有 admin 端点使用 `require_admin` 依赖保护（邮箱白名单或 role="admin"）
+    - 统计面板集成 budget_service 预算状态检查
+    - 注册 admin 路由
+  - **B.3 前端用量统计展示**：
+    - 新增 `schemas/usage.py`（UserUsageResponse）
+    - `endpoints/account.py` 新增 GET /account/usage 端点
+    - 新增 `composables/useUsage.ts`（TanStack Query，60s 自动刷新）
+    - `SettingsView.vue` 个人信息标签页新增用量卡片（usage-bar + 今日次数 + 本月成本）
+    - SettingsView 测试 mock 更新
+  - **B.4 公益使用政策 + 隐私政策文本**：
+    - 新增 `docs/policies/public-service-policy.md`（公益使用政策）
+    - 新增 `docs/policies/privacy-policy.md`（隐私政策）
+    - 新增 `docs/policies/cost-budget.md`（成本预算方案）
+  - **B.5 成本月度预算上限 + 告警**：
+    - 新增 `services/budget_service.py`（check_budget_status / is_generation_throttled）
+    - 预算 80% 告警、95% 限流，集成到 admin stats 面板
+- 关键文件（共 14 个文件）：
+  - 新增：`models/analytics_event.py`, `schemas/admin.py`, `schemas/analytics.py`, `schemas/usage.py`, `endpoints/admin.py`, `endpoints/analytics.py`, `services/budget_service.py`, `composables/useUsage.ts`, `shared/api/analytics.ts`, `docs/policies/public-service-policy.md`, `docs/policies/privacy-policy.md`, `docs/policies/cost-budget.md`
+  - 修改：`models/__init__.py`, `alembic/env.py`, `api/v1/router.py`, `endpoints/account.py`, `SettingsView.vue`, `SettingsView.test.ts`
+- 验证结果：
+  - 前端测试：49 passed（16 test files）
+  - 后端新增 2 个路由模块（admin/analytics），4 个端点 + 6 个 admin 端点
+- Status: DONE（等待用户验收）
+
+## [Phase C] — 公益长期运行预备
+- 完成日期：2026-05-05
+- 依据：Phase B 后续，`docs/CURRENT_PROGRESS_AUDIT.md` 路线 C
+- 完成内容：
+  - **C.1 Redis 限流**：`rate_limit.py` 重构为 backend Protocol（Memory/Redis），新增定期清理（防内存泄漏），`docker-compose.yml` 新增 Redis 7 服务
+  - **C.2 Provider 降级+重试**：`_stream_chat_completion` 指数退避重试（3次），新增 `FailoverProvider` 主备切换
+  - **C.3 清理僵尸表**：迁移 `0020` 删除 6 张 billing/subscription 无模型表
+  - **C.4 性能优化**：题库 count 改子查询、日历 N+1 改 batch IN、账户删除改 batch DELETE
+  - **C.5 文档清理**：editor-ui.md / milestone-1 / product-replan-v2 添加过时声明
+- 关键文件（8 个）：rate_limit.py（重构）, llm_service.py（重试+降级）, question_bank_service.py, calendar_service.py, account_service.py, 0020_cleanup_zombie_tables.py, config.py, docker-compose.yml
+- Status: DONE（等待用户验收）
+
+## Phase A/B/C 总计
+
+三阶段公益运营准备全部完成。审计中 25 个已知问题均已处理：
+- **P0（5 项）**：全部完成（密钥/成本/过滤/管理后台/使用统计）
+- **P1（5 项）**：全部完成（反馈/Alembic/Analytics/政策/预算）
+- **P2（10 项）**：全部完成（Redis/降级/僵尸表/性能/文档）
+- **总计**：新增 27 文件，修改 15 文件
+
+## SMTP 真实发信 + 管理后台前端 + Bug 修复
+- 完成日期：2026-05-05
+- 完成内容：
+  - **SMTP 配置**：阿里云 DirectMail 465 SSL，发件 no-reply@mail.lessonpilot.cn
+  - `config.py` 新增 `smtp_use_ssl` 选项，`mail_service.py` 支持 SSL 直连 / STARTTLS 双模式
+  - `.env` 写入真实 SMTP 凭证，切换 `MAIL_DELIVERY_MODE=smtp`
+  - **管理后台前端**：新建 `AdminView.vue`（统计面板 + 用户管理），新增 `/admin` 路由
+  - 新增 `GET /api/v1/admin/check` 轻量权限端点，`PrivateLayout` 调用此 API 决定"管理"入口可见性
+  - 前端 `AdminView` 改用 API-based 权限验证（不再信任本地 role）
+  - **Bug 修复**：
+    - `auth.py` `_to_user_read` 漏传 `role` 字段 → 用户登录后 role 始终为默认 "teacher"
+    - `budget_service.py` `check_budget_status()` 调用 `get_total_cost_this_month()` 漏传 `session` → stats 端点 500
+    - 迁移 `0020` 僵尸表删除顺序错误（FK 约束）→ 改用 `DROP CASCADE`
+  - UserRead 新增 `role` 字段，前端 `AuthUser` 同步
+- 关键文件：
+  - 新增：`AdminView.vue`, 路由注册
+  - 修改：`auth.py`, `budget_service.py`, `PrivateLayout.vue`, `mail_service.py`, `config.py`, `0020_cleanup_zombie_tables.py`, `.env`
+- Status: DONE

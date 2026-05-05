@@ -46,12 +46,20 @@ def _send_smtp(payload: MailPayload) -> None:
         raise RuntimeError("SMTP host is not configured")
 
     message = _build_message(payload)
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
-        if settings.smtp_use_tls:
-            server.starttls()
-        if settings.smtp_username:
-            server.login(settings.smtp_username, settings.smtp_password)
-        server.send_message(message)
+    if settings.smtp_use_ssl:
+        # Port 465 — direct SSL/TLS connection
+        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+            if settings.smtp_username:
+                server.login(settings.smtp_username, settings.smtp_password)
+            server.send_message(message)
+    else:
+        # Port 587 — STARTTLS upgrade
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+            if settings.smtp_use_tls:
+                server.starttls()
+            if settings.smtp_username:
+                server.login(settings.smtp_username, settings.smtp_password)
+            server.send_message(message)
 
 
 def _deliver(payload: MailPayload) -> None:

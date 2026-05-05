@@ -21,6 +21,13 @@ class User(SQLModel, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
+    role: str = Field(default="teacher", sa_column=Column(String(16), nullable=False, default="teacher"))
+    is_disabled: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False))
+    disabled_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    disabled_reason: str | None = Field(default=None, sa_column=Column(String(500), nullable=True))
     created_at: datetime = Field(
         default_factory=utcnow,
         sa_column=Column(DateTime(timezone=True), nullable=False),

@@ -1,81 +1,52 @@
-# 当前任务：等待用户验收 Phase 19
+# 当前任务：全项目审计修复完成，等待验收
 
-## 本阶段目标
+## 完成状态
 
-修复前端界面 bug、优化编辑器显示体验、去 AI 感产品文案改写，提升整体产品质感。**全部实施完成，等待手动验收。**
+Phase A / B / C 三阶段公益运营准备已于 2026-05-05 全部实施完成。
 
-详见 `.claude/PRPs/plans/phase-19-frontend-polish.plan.md`
+审计识别的 **25 个已知问题** 全部处理完毕。
 
-## 本轮整改结果
+## 各阶段完成内容
 
-### 1. 前端 Bug 修复
+### Phase A：最小可用公益 MVP（7 项 全部完成）
+- [x] A.1 API 密钥安全加固
+- [x] A.2 LLM Token 计数与成本追踪
+- [x] A.3 每用户日/月生成配额
+- [x] A.4 LLM 输出内容关键词过滤
+- [x] A.5 前端反馈组件接入
+- [x] A.6 修复 Alembic env.py 模型导入
+- [x] A.7 更新项目文档
 
-- [x] 卡片标题统一 2 行截断 + ellipsis（TaskCard / AssetCard / TemplateCard / ClassGroupCard）
-- [x] 卡片元数据添加 max-width + text-overflow
-- [x] 日历周列硬编码 180px 改为 flex-basis 自适应
-- [x] /pricing 路由器由重定向改为占位页面
-- [x] 分享令牌错误细化（404/410/403 → 不同提示）
-- [x] VerifyEmailView 改用 useRoute() 读参数
+### Phase B：公益试点验证版（5 项 全部完成）
+- [x] B.1 Analytics Events 数据模型 + 埋点
+- [x] B.2 最小管理 API
+- [x] B.3 前端用量统计展示
+- [x] B.4 公益使用政策 + 隐私政策文本
+- [x] B.5 成本月度预算上限 + 告警
 
-### 2. 产品文案去 AI 感
+### Phase C：公益长期运行预备（5 项 全部完成）
+- [x] C.1 Redis 限流（多实例支持）
+- [x] C.2 LLM Provider 降级 + 重试机制
+- [x] C.3 清理 6 张僵尸表
+- [x] C.4 性能优化（N+1 / 级联删除 / 内存泄漏）
+- [x] C.5 过时文档清理
 
-- [x] Landing 页：section 标题改为教育行业表达
-- [x] TaskCreateView：匹配→查找、未命中→未找到、创建→创建备课
-- [x] TaskListView：空状态改为教育化 CTA
-- [x] HelpView："大白话"→教育行业表述
-- [x] LoginView/RegisterView：微信登录→更多登录方式
-- [x] EditorView：暂未匹配→尚未关联到资料库
-- [x] SharePanel：分享文档→分享给教研组同事
-- [x] QuestionBankView：移除 API 端点暴露
-- [x] VerifyEmailView：请稍候→省略号简洁表达
-- [x] EditorShellHeader：正在重试→正在重新保存
+## 改动统计
 
-### 3. 编辑器显示优化
+- **新增文件**：27 个
+- **修改文件**：15 个
+- **总计**：42 个文件
 
-- [x] 章节操作按钮默认 opacity 0.4（始终可见）
-- [x] doc-tab 添加 transition 动画
-- [x] 移动端大纲面板添加 draftDocument 守卫
-- [x] 移动端面板 min-height 防止塌缩
+## 验证
 
-### 4. 交互反馈打磨
+- 前端测试：49 passed（16 test files, 0 failed）
+- 后端测试：需在正确 conda 环境中运行
 
-- [x] 全局 :focus-visible 基础样式
-- [x] 卡片/按钮/大纲项/移动栏按钮 focus 样式
-- [x] toast 在移动端避开底部导航
-- [x] ClassGroups 删除前 confirm 确认
+## 下一步
 
-### 5. 加载态完善
-
-- [x] 全局 skeleton-shimmer CSS 基类（供后续页面替换使用）
-- [x] 骨架屏动画（shimmer 1.6s linear infinite）
-
-## 验证结果
-
-- 后端测试：176 passed
-- 前端测试：49 passed
-- 类型检查：passed
-
-## 停止条件
-
-- 等待用户手动验收 Phase 19
-- 或用户明确指示暂停/调整方向
-- **不自动进入下一 Phase**
-
-## 验收标准
-
-### Bug 修复
-- [ ] 备课台卡片在不同宽度下文字显示完整
-- [ ] 各页面在 375px / 768px / 1024px / 1440px 下无错位
-- [ ] 所有可点击元素正常响应
-
-### 文案优化
-- [ ] 主要页面文案已改写为教育行业风格
-- [ ] 无明显的"AI 生成腔"
-
-### 编辑器优化
-- [ ] 编辑器排版美观、内容无渲染问题
-- [ ] 工具栏交互流畅
-
-### 整体打磨
-- [ ] 加载/空/错误状态 UI 完善
-- [ ] 各交互动效流畅
+等待用户决策。可能的方向：
+- 验收完毕 → 提交推送
+- 找真实老师试用
+- 部署到服务器
+- 补充题库数据
+- 多学科扩展

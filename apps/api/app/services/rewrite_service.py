@@ -9,7 +9,9 @@ from collections.abc import AsyncIterator
 from fastapi import HTTPException, Request, status
 from sqlmodel import Session, select
 
+from app.core.config import get_settings
 from app.models import Document, Task
+from app.services.cost_tracker import log_llm_usage
 from app.schemas.content import (
     LessonPlanContent,
     StudyGuideContent,
@@ -163,6 +165,32 @@ async def stream_rewrite(
                 )
 
         raw_json = "".join(chunks)
+
+        # Track LLM usage / cost
+        settings = get_settings()
+        if settings.cost_tracking_enabled:
+            usage = provider.get_last_usage()
+            if usage and usage.total_tokens > 0:
+                try:
+                    log_llm_usage(
+                        session=session,
+                        user_id=task.user_id,
+                        provider=settings.llm_provider,
+                        model=settings.deepseek_model if settings.llm_provider == "deepseek" else settings.minimax_model,
+                        operation="rewrite_section",
+                        prompt_tokens=usage.prompt_tokens,
+                        completion_tokens=usage.completion_tokens,
+                        total_tokens=usage.total_tokens,
+                        task_id=task.id,
+                        doc_type=document.doc_type,
+                        section_name=payload.section_name,
+                    )
+                except Exception:
+                    logger.warning(
+                        "Failed to log LLM usage for rewrite section=%s",
+                        payload.section_name,
+                        exc_info=True,
+                    )
 
         # 解析并更新内容
         try:

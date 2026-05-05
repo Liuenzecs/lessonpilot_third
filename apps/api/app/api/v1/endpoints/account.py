@@ -17,6 +17,13 @@ from app.schemas.account import (
     FeedbackCreatePayload,
     FeedbackRead,
 )
+from app.schemas.usage import UserUsageResponse
+from app.services.cost_tracker import (
+    get_user_cost_this_month,
+    get_user_usage_this_month,
+    get_user_usage_today,
+)
+from app.services.quota_service import get_user_quota_summary
 from app.schemas.auth import MessageResponse
 from app.services.account_service import (
     change_account_password,
@@ -105,3 +112,19 @@ def post_feedback(
         page_path=payload.page_path,
     )
     return serialize_feedback(feedback)
+
+
+@router.get("/usage", response_model=UserUsageResponse)
+def get_usage(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> UserUsageResponse:
+    summary = get_user_quota_summary(session=session, user_id=current_user.id)
+    cost_month = get_user_cost_this_month(session=session, user_id=current_user.id)
+    return UserUsageResponse(
+        generations_today=summary["generations_today"],
+        generations_this_month=summary["generations_this_month"],
+        daily_limit=summary["daily_limit"],
+        monthly_limit=summary["monthly_limit"],
+        cost_this_month=round(cost_month, 4),
+    )

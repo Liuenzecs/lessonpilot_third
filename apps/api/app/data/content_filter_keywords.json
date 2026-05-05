@@ -1,0 +1,25 @@
+{
+  "blocked_terms": [
+    "fuck",
+    "shit",
+    "damn",
+    "porn",
+    "violence",
+    "terrorism",
+    "drug",
+    "gambling",
+    "casino",
+    "suicide",
+    "self-harm",
+    "child abuse",
+    "sexual",
+    "explicit",
+    "nude",
+    "naked",
+    "racist",
+    "hate speech",
+    "genocide",
+    "massacre"
+  ],
+  "note": "这是一个基础的关键词黑名单，用于过滤 LLM 输出中的不当内容。实际部署时应根据教学场景和合规要求扩充。"
+}

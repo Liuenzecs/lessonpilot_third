@@ -245,6 +245,42 @@
   100% { background-position: -200% 0; }
 }
 
+.settings-desc {
+  color: var(--muted);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.mood-selector {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.mood-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.mood-btn:hover { border-color: var(--primary); }
+.mood-btn.active { border-color: var(--primary); background: rgba(45, 104, 237, 0.08); }
+
+.feedback-success {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.feedback-success p { margin-bottom: 12px; color: var(--text); }
+.feedback-success p:first-child { color: var(--success); }
+
 @media (max-width: 920px) {
   .settings-layout { grid-template-columns: 1fr; }
   .settings-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); position: static; }

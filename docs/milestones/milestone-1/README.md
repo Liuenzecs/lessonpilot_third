@@ -1,8 +1,10 @@
 # Milestone 1
 
+> **⚠️ 已归档（2026-05-05）**：本目录内容已过时，仅作为历史参考保留。当前项目状态见 `CLAUDE.md`、`docs/ROADMAP.md`、`docs/CURRENT_PROGRESS_AUDIT.md`。原”可收费、可运营”定位已取消，项目现为纯公益免费。
+
 ## 定位
 
-Milestone 1 是 LessonPilot 从“工程骨架”走到“核心产品链路稳定、可收费、可运营”的第一阶段。
+Milestone 1 是 LessonPilot 从”工程骨架”走到”核心产品链路稳定”的第一阶段。
 
 - 本里程碑只归档文档，不搬动业务代码目录。
 - Phase 1-6 视为 **Milestone 1 已完成基础**。

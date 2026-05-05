@@ -2,6 +2,8 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     account,
+    admin,
+    analytics,
     auth,
     calendar,
     class_groups,
@@ -36,3 +38,5 @@ api_v1_router.include_router(calendar.router)
 api_v1_router.include_router(class_groups.router)
 api_v1_router.include_router(teaching_units.router)
 api_v1_router.include_router(teaching_reflections.router)
+api_v1_router.include_router(admin.router)
+api_v1_router.include_router(analytics.router)

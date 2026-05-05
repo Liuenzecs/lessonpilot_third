@@ -44,6 +44,7 @@ class UserRead(BaseModel):
     id: str
     email: EmailStr
     name: str
+    role: str = "teacher"
     email_verified: bool
     email_verified_at: datetime | None = None
     created_at: datetime

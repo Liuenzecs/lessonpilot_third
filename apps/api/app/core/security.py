@@ -53,6 +53,20 @@ def get_current_user(
     return user
 
 
+def get_current_active_user(
+    session: Session = Depends(get_session),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> User:
+    """获取当前用户并检查账户是否被禁用。"""
+    user = get_current_user(session=session, credentials=credentials)
+    if user.is_disabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account has been disabled. Please contact support.",
+        )
+    return user
+
+
 def get_optional_user(
     session: Session = Depends(get_session),
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
@@ -66,4 +80,20 @@ def get_optional_user(
         return session.get(User, user_id)
     except HTTPException:
         return None
+
+
+def require_admin(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """要求管理员权限。通过 ADMIN_ALLOWLIST_EMAILS 或 role='admin' 鉴权。"""
+    settings = get_settings()
+    admin_emails = [e.strip().lower() for e in settings.admin_allowlist_emails.split(",") if e.strip()]
+    if current_user.email.lower() in admin_emails:
+        return current_user
+    if current_user.role == "admin":
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin access required",
+    )
 

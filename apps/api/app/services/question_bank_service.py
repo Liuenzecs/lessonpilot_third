@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from app.models.question import Question
 
@@ -51,7 +51,7 @@ def get_questions(
         count_stmt = count_stmt.where(Question.difficulty == difficulty)
     if question_type:
         count_stmt = count_stmt.where(Question.question_type == question_type)
-    total = len(session.exec(count_stmt).all())
+    total = session.exec(select(func.count()).select_from(count_stmt.subquery())).one()
 
     questions = session.exec(stmt.order_by(Question.chapter, Question.difficulty).offset(offset).limit(limit)).all()
     return list(questions), total

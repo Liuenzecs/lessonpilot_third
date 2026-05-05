@@ -1,16 +1,32 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
-import { BookOpen, Calendar, Settings } from 'lucide-vue-next';
+import { BookOpen, Calendar, Settings, Shield } from 'lucide-vue-next';
 
+import { useAuthStore } from '@/app/stores/auth';
 import UserMenu from '@/shared/components/UserMenu.vue';
+import { request } from '@/shared/api/client';
 
 import '@/features/public/styles/public.css';
 
 const route = useRoute();
-const isTasksRoute = computed(() => route.name === 'tasks');
+const authStore = useAuthStore();
+const isAdmin = ref(false);
+const isTasksRoute = computed(() => route.name === 'tasks' || route.name?.toString().startsWith('task'));
 const isCalendarRoute = computed(() => route.name === 'calendar');
 const isSettingsRoute = computed(() => route.name === 'settings');
+const isAdminRoute = computed(() => route.name === 'admin');
+
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    try {
+      await request('/api/v1/admin/check');
+      isAdmin.value = true;
+    } catch {
+      isAdmin.value = false;
+    }
+  }
+});
 </script>
 
 <template>
@@ -21,6 +37,7 @@ const isSettingsRoute = computed(() => route.name === 'settings');
       <nav class="private-nav-links">
         <RouterLink :to="{ name: 'help' }">帮助中心</RouterLink>
         <RouterLink :class="{ active: isTasksRoute }" :to="{ name: 'tasks' }">备课台</RouterLink>
+        <RouterLink v-if="isAdmin" :class="{ active: isAdminRoute }" :to="{ name: 'admin' }" class="admin-link">管理</RouterLink>
       </nav>
 
       <UserMenu />
@@ -43,6 +60,10 @@ const isSettingsRoute = computed(() => route.name === 'settings');
       <RouterLink :class="{ active: isSettingsRoute }" :to="{ name: 'settings' }" class="mobile-tab">
         <Settings :size="20" />
         <span>设置</span>
+      </RouterLink>
+      <RouterLink v-if="isAdmin" :class="{ active: isAdminRoute }" :to="{ name: 'admin' }" class="mobile-tab">
+        <Shield :size="20" />
+        <span>管理</span>
       </RouterLink>
     </nav>
   </div>

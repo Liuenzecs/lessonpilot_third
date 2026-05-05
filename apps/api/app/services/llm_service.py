@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
@@ -18,6 +19,20 @@ import httpx
 from app.core.config import Settings, get_settings
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Usage tracking
+# ---------------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class UsageInfo:
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +133,15 @@ def _render(template: str, **kwargs: str) -> str:
 
 class LLMProvider:
     """所有 Provider 的基类。子类必须实现 generate / rewrite。"""
+
+    def __init__(self) -> None:
+        self._last_usage: UsageInfo | None = None
+
+    def get_last_usage(self) -> UsageInfo | None:
+        return self._last_usage
+
+    def clear_usage(self) -> None:
+        self._last_usage = None
 
     async def generate_lesson_plan(
         self, ctx: LessonPlanContext
@@ -482,8 +506,23 @@ async def _stream_chat_completion(
     system_prompt: str,
     user_prompt: str,
     thinking: str | None = None,
+    usage_sink: list[dict] | None = None,
+    max_retries: int = 3,
+    retry_backoff: float = 1.0,
 ) -> AsyncIterator[str]:
-    """通用的 chat completion 流式调用。"""
+    """通用的 chat completion 流式调用（支持自动重试）。
+
+    当 usage_sink 传入时，会从流式响应的最后一个 chunk 中提取 usage 字段并追加到列表中。
+    网络错误时自动重试（指数退避），达到最大重试次数后抛出。
+    """
+    import asyncio as aio
+
+    settings = get_settings()
+    if max_retries == 3:
+        max_retries = settings.llm_retry_max_attempts
+    if retry_backoff == 1.0:
+        retry_backoff = settings.llm_retry_backoff_seconds
+
     url = f"{base_url.rstrip('/')}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -496,24 +535,52 @@ async def _stream_chat_completion(
         thinking=thinking,
     )
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
-        async with client.stream("POST", url, json=payload, headers=headers) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                line = line.strip()
-                if not line or not line.startswith("data: "):
-                    continue
-                data = line[6:]  # strip "data: "
-                if data == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                    delta = chunk.get("choices", [{}])[0].get("delta", {})
-                    content = delta.get("content", "")
-                    if content:
-                        yield content
-                except json.JSONDecodeError:
-                    continue
+    last_exc: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
+                async with client.stream("POST", url, json=payload, headers=headers) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        line = line.strip()
+                        if not line or not line.startswith("data: "):
+                            continue
+                        data = line[6:]
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                            delta = chunk.get("choices", [{}])[0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield content
+                            if usage_sink is not None:
+                                usage = chunk.get("usage")
+                                if usage and usage.get("total_tokens"):
+                                    usage_sink.append({
+                                        "prompt_tokens": usage.get("prompt_tokens", 0),
+                                        "completion_tokens": usage.get("completion_tokens", 0),
+                                        "total_tokens": usage.get("total_tokens", 0),
+                                    })
+                        except json.JSONDecodeError:
+                            continue
+            return
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code >= 500 and attempt < max_retries:
+                logger.warning("LLM API 5xx (attempt %d/%d): %s", attempt + 1, max_retries + 1, e)
+                await aio.sleep(retry_backoff * (2 ** attempt))
+                last_exc = e
+                continue
+            raise
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError) as e:
+            if attempt < max_retries:
+                logger.warning("LLM API connection error (attempt %d/%d): %s", attempt + 1, max_retries + 1, e)
+                await aio.sleep(retry_backoff * (2 ** attempt))
+                last_exc = e
+                continue
+            raise
+
+    raise last_exc or RuntimeError("LLM API call failed after retries")
 
 
 def _build_chat_completion_payload(
@@ -547,6 +614,7 @@ def _build_chat_completion_payload(
 
 class DeepSeekProvider(LLMProvider):
     def __init__(self, settings: Settings | None = None) -> None:
+        super().__init__()
         s = settings or get_settings()
         self._base_url = s.deepseek_base_url
         self._api_key = s.deepseek_api_key
@@ -607,6 +675,7 @@ class DeepSeekProvider(LLMProvider):
     async def rewrite_section(
         self, ctx: RewriteSectionContext
     ) -> AsyncIterator[str]:
+        self.clear_usage()
         template = _load_prompt("section_rewrite_prompt.md")
         user_prompt = _render(
             template,
@@ -618,6 +687,7 @@ class DeepSeekProvider(LLMProvider):
             action=ctx.action,
             instruction=ctx.instruction or "无额外指示",
         )
+        usage_sink: list[dict] = []
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
             api_key=self._api_key,
@@ -625,12 +695,21 @@ class DeepSeekProvider(LLMProvider):
             system_prompt="你是 LessonPilot 的教案/学案内容重写引擎。请输出重写后的 JSON 片段，不要输出其他内容。",
             user_prompt=user_prompt,
             thinking=self._thinking,
+            usage_sink=usage_sink,
         ):
             yield chunk
+        if usage_sink:
+            usage = usage_sink[0]
+            self._last_usage = UsageInfo(
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
+                total_tokens=usage["total_tokens"],
+            )
 
     async def generate_document_section(
         self, ctx: SectionGenerationContext
     ) -> AsyncIterator[str]:
+        self.clear_usage()
         template = _load_prompt("section_generation_prompt.md")
         user_prompt = _render(
             template,
@@ -651,6 +730,7 @@ class DeepSeekProvider(LLMProvider):
             existing_sections=ctx.existing_sections or "暂无已完成内容",
             section_rules=ctx.section_rules or "保证内容具体、可直接给老师使用。",
         )
+        usage_sink: list[dict] = []
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
             api_key=self._api_key,
@@ -658,8 +738,17 @@ class DeepSeekProvider(LLMProvider):
             system_prompt="你是 LessonPilot 的 section 生成引擎。只输出当前 section 的 JSON 值，不要输出额外说明。",
             user_prompt=user_prompt,
             thinking=self._thinking,
+            usage_sink=usage_sink,
         ):
             yield chunk
+        if usage_sink:
+            usage = usage_sink[0]
+            self._last_usage = UsageInfo(
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
+                total_tokens=usage["total_tokens"],
+            )
+            logger.debug("Section generation usage: %s", self._last_usage)
 
 
 # ---------------------------------------------------------------------------
@@ -669,6 +758,7 @@ class DeepSeekProvider(LLMProvider):
 
 class MiniMaxProvider(LLMProvider):
     def __init__(self, settings: Settings | None = None) -> None:
+        super().__init__()
         s = settings or get_settings()
         self._base_url = s.minimax_base_url
         self._api_key = s.minimax_api_key
@@ -726,6 +816,7 @@ class MiniMaxProvider(LLMProvider):
     async def rewrite_section(
         self, ctx: RewriteSectionContext
     ) -> AsyncIterator[str]:
+        self.clear_usage()
         template = _load_prompt("section_rewrite_prompt.md")
         user_prompt = _render(
             template,
@@ -737,18 +828,28 @@ class MiniMaxProvider(LLMProvider):
             action=ctx.action,
             instruction=ctx.instruction or "无额外指示",
         )
+        usage_sink: list[dict] = []
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
             api_key=self._api_key,
             model=self._model,
             system_prompt="你是 LessonPilot 的教案/学案内容重写引擎。请输出重写后的 JSON 片段，不要输出其他内容。",
             user_prompt=user_prompt,
+            usage_sink=usage_sink,
         ):
             yield chunk
+        if usage_sink:
+            usage = usage_sink[0]
+            self._last_usage = UsageInfo(
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
+                total_tokens=usage["total_tokens"],
+            )
 
     async def generate_document_section(
         self, ctx: SectionGenerationContext
     ) -> AsyncIterator[str]:
+        self.clear_usage()
         template = _load_prompt("section_generation_prompt.md")
         user_prompt = _render(
             template,
@@ -769,14 +870,24 @@ class MiniMaxProvider(LLMProvider):
             existing_sections=ctx.existing_sections or "暂无已完成内容",
             section_rules=ctx.section_rules or "保证内容具体、可直接给老师使用。",
         )
+        usage_sink: list[dict] = []
         async for chunk in _stream_chat_completion(
             base_url=self._base_url,
             api_key=self._api_key,
             model=self._model,
             system_prompt="你是 LessonPilot 的 section 生成引擎。只输出当前 section 的 JSON 值，不要输出额外说明。",
             user_prompt=user_prompt,
+            usage_sink=usage_sink,
         ):
             yield chunk
+        if usage_sink:
+            usage = usage_sink[0]
+            self._last_usage = UsageInfo(
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
+                total_tokens=usage["total_tokens"],
+            )
+            logger.debug("Section generation usage: %s", self._last_usage)
 
 
 # ---------------------------------------------------------------------------
@@ -785,10 +896,60 @@ class MiniMaxProvider(LLMProvider):
 
 
 def get_provider() -> LLMProvider:
-    """根据配置返回对应的 LLM Provider 实例。"""
+    """根据配置返回对应的 LLM Provider 实例。支持 failover 降级。"""
     settings = get_settings()
+    provider: LLMProvider
     if settings.llm_provider == "deepseek":
-        return DeepSeekProvider(settings)
-    if settings.llm_provider == "minimax":
-        return MiniMaxProvider(settings)
-    return FakeProvider()
+        provider = DeepSeekProvider(settings)
+    elif settings.llm_provider == "minimax":
+        provider = MiniMaxProvider(settings)
+    else:
+        return FakeProvider()
+
+    if settings.llm_failover_enabled and settings.llm_failover_provider != settings.llm_provider:
+        fallback = (
+            MiniMaxProvider(settings)
+            if settings.llm_failover_provider == "minimax"
+            else DeepSeekProvider(settings)
+        )
+        return FailoverProvider(primary=provider, fallback=fallback)
+    return provider
+
+
+class FailoverProvider(LLMProvider):
+    """Provider 降级包装器：主 provider 故障时自动切换备用。"""
+
+    def __init__(self, primary: LLMProvider, fallback: LLMProvider) -> None:
+        super().__init__()
+        self._primary = primary
+        self._fallback = fallback
+
+    async def generate_document_section(self, ctx: SectionGenerationContext) -> AsyncIterator[str]:
+        try:
+            async for chunk in self._primary.generate_document_section(ctx):
+                yield chunk
+            self._last_usage = self._primary._last_usage
+        except Exception:
+            logger.warning("Primary provider failed, switching to fallback")
+            async for chunk in self._fallback.generate_document_section(ctx):
+                yield chunk
+            self._last_usage = self._fallback._last_usage
+
+    async def rewrite_section(self, ctx: RewriteSectionContext) -> AsyncIterator[str]:
+        try:
+            async for chunk in self._primary.rewrite_section(ctx):
+                yield chunk
+            self._last_usage = self._primary._last_usage
+        except Exception:
+            logger.warning("Primary provider failed on rewrite, switching to fallback")
+            async for chunk in self._fallback.rewrite_section(ctx):
+                yield chunk
+            self._last_usage = self._fallback._last_usage
+
+    async def generate_lesson_plan(self, ctx: LessonPlanContext) -> AsyncIterator[str]:
+        async for chunk in self._primary.generate_lesson_plan(ctx):
+            yield chunk
+
+    async def generate_study_guide(self, ctx: StudyGuideContext) -> AsyncIterator[str]:
+        async for chunk in self._primary.generate_study_guide(ctx):
+            yield chunk

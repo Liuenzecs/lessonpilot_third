@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
     feedback_notify_email: str = "feedback@lessonpilot.com"
     verify_email_token_expire_hours: int = 48
     reset_password_token_expire_minutes: int = 30
@@ -67,6 +68,34 @@ class Settings(BaseSettings):
     rag_max_knowledge_tokens: int = 3000
     rag_top_k: int = 8
 
+    # 公益运营 - 配额与成本
+    quota_enabled: bool = True
+    daily_generation_limit: int = 20
+    monthly_generation_limit: int = 300
+    cost_tracking_enabled: bool = True
+    cost_rate_deepseek_prompt_per_1k: float = 0.001
+    cost_rate_deepseek_completion_per_1k: float = 0.002
+    cost_rate_minimax_prompt_per_1k: float = 0.0015
+    cost_rate_minimax_completion_per_1k: float = 0.003
+    cost_monthly_budget_cny: float = 500.0
+
+    # 公益运营 - 管理员
+    admin_allowlist_emails: str = ""
+
+    # 公益运营 - 内容安全
+    content_filter_enabled: bool = True
+    content_filter_mode: Literal["warn", "block"] = "warn"
+
+    # 限流后端
+    rate_limit_backend: Literal["memory", "redis"] = "memory"
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Provider 降级与重试
+    llm_failover_enabled: bool = False
+    llm_failover_provider: Literal["deepseek", "minimax"] = "minimax"
+    llm_retry_max_attempts: int = 3
+    llm_retry_backoff_seconds: float = 1.0
+
     model_config = SettingsConfigDict(
         env_file=_resolve_env_files(),
         case_sensitive=False,
@@ -84,6 +113,12 @@ class Settings(BaseSettings):
             }
             if normalized_secret in insecure_defaults or len(normalized_secret) < 32:
                 raise ValueError("JWT_SECRET must be replaced with a strong secret before production startup")
+
+            if self.llm_provider != "fake":
+                if self.llm_provider == "deepseek" and not self.deepseek_api_key:
+                    raise ValueError("DEEPSEEK_API_KEY is required when llm_provider=deepseek in production")
+                if self.llm_provider == "minimax" and not self.minimax_api_key:
+                    raise ValueError("MINIMAX_API_KEY is required when llm_provider=minimax in production")
         return self
 
     @property

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session
 
 from app.core.db import get_session
-from app.core.security import get_current_user
+from app.core.security import get_current_active_user, get_current_user
 from app.models import User
+from app.services.quota_service import QuotaExceededError, check_user_quota
 from app.schemas.task import (
     GenerationStartPayload,
     GenerationStartResponse,
@@ -123,9 +124,13 @@ def start_generation(
     task_id: str,
     payload: GenerationStartPayload,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ) -> GenerationStartResponse:
     get_owned_task(session, task_id, current_user.id)
+    try:
+        check_user_quota(session=session, user_id=current_user.id)
+    except QuotaExceededError as e:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
     personal_asset_ids = [item for item in payload.personal_asset_ids if item]
     validate_personal_asset_ids(session, current_user.id, personal_asset_ids)
     query = urlencode(

@@ -13,6 +13,8 @@ from sqlmodel import Session, select
 
 from app.core.config import get_settings
 from app.models import Document, Task
+from app.services.content_filter import check_section_content
+from app.services.cost_tracker import log_llm_usage
 from app.models.template import TemplateSection
 from app.schemas.content import (
     AssessmentItem,
@@ -1061,6 +1063,27 @@ async def stream_generation(
                         },
                     )
 
+                # Track LLM usage / cost
+                if settings.cost_tracking_enabled:
+                    usage = provider.get_last_usage()
+                    if usage and usage.total_tokens > 0:
+                        try:
+                            log_llm_usage(
+                                session=session,
+                                user_id=task.user_id,
+                                provider=settings.llm_provider,
+                                model=settings.deepseek_model if settings.llm_provider == "deepseek" else settings.minimax_model,
+                                operation="generate_section",
+                                prompt_tokens=usage.prompt_tokens,
+                                completion_tokens=usage.completion_tokens,
+                                total_tokens=usage.total_tokens,
+                                task_id=task.id,
+                                doc_type=doc_type,
+                                section_name=spec["name"],
+                            )
+                        except Exception:
+                            logger.warning("Failed to log LLM usage for section %s", spec["name"], exc_info=True)
+
                 raw_value = "".join(raw_parts)
                 references: list[CitationReference] = []
                 try:
@@ -1089,6 +1112,33 @@ async def stream_generation(
                             "message": f"{spec['title']}解析异常，已使用空内容回退。",
                         },
                     )
+
+                # Content safety filter
+                if settings.content_filter_enabled:
+                    try:
+                        filter_result = check_section_content(spec["name"], validated_value)
+                        if not filter_result.passed:
+                            if settings.content_filter_mode == "block":
+                                validated_value = spec["fallback"]
+                                yield format_sse(
+                                    "warning",
+                                    {
+                                        "doc_type": doc_type,
+                                        "section_name": spec["name"],
+                                        "message": f"{spec['title']}内容包含不适合课堂的内容，已重置。",
+                                    },
+                                )
+                            else:
+                                yield format_sse(
+                                    "warning",
+                                    {
+                                        "doc_type": doc_type,
+                                        "section_name": spec["name"],
+                                        "message": f"{spec['title']}内容可能包含敏感词汇，请复核。",
+                                    },
+                                )
+                    except Exception:
+                        logger.warning("Content filter check failed for section=%s", spec["name"], exc_info=True)
 
                 content = _set_section_value(content, spec["name"], validated_value, references)
                 doc = save_document(

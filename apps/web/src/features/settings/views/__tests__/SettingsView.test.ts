@@ -61,6 +61,23 @@ vi.mock('@/features/settings/composables/useAccount', () => ({
     mutateAsync: styleUpdate,
     isPending: ref(false),
   }),
+  useFeedbackMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: ref(false),
+  }),
+}));
+
+vi.mock('@/features/settings/composables/useUsage', () => ({
+  useUsage: () => ({
+    data: ref({
+      generations_today: 3,
+      generations_this_month: 12,
+      daily_limit: 20,
+      monthly_limit: 300,
+      cost_this_month: 0.15,
+    }),
+    isLoading: ref(false),
+  }),
 }));
 
 vi.mock('@/shared/composables/useToast', () => ({

@@ -9,6 +9,7 @@ import {
   useChangePasswordMutation,
   useDeleteAccountMutation,
   useExportAccountMutation,
+  useFeedbackMutation,
   useStyleProfile,
   useUpdateAccountMutation,
   useUpdateStyleProfileMutation,
@@ -16,6 +17,7 @@ import {
 import { getAppErrorState, getErrorDescription } from '@/shared/api/errors';
 import StatePanel from '@/shared/components/StatePanel.vue';
 import { useToast } from '@/shared/composables/useToast';
+import { useUsage } from '@/features/settings/composables/useUsage';
 
 import '@/features/settings/styles/settings.css';
 
@@ -31,7 +33,7 @@ const styleProfileQuery = useStyleProfile();
 const updateStyleProfileMutation = useUpdateStyleProfileMutation();
 const resendVerificationMutation = useResendVerificationMutation();
 
-const activeTab = ref<'profile' | 'style' | 'password' | 'data'>('profile');
+const activeTab = ref<'profile' | 'style' | 'password' | 'data' | 'feedback'>('profile');
 const profileForm = reactive({ name: '', email: '' });
 const styleForm = reactive({
   enabled: true,
@@ -49,6 +51,20 @@ const passwordForm = reactive({
 const deleteDialogOpen = ref(false);
 const deleteConfirmText = ref('');
 const deleteError = ref('');
+
+const usageQuery = useUsage();
+const feedbackMutation = useFeedbackMutation();
+const moods = [
+  { value: 'happy' as const, emoji: '😊', label: '满意' },
+  { value: 'neutral' as const, emoji: '😐', label: '一般' },
+  { value: 'sad' as const, emoji: '😞', label: '不满意' },
+];
+const feedbackForm = reactive<{ mood: 'happy' | 'neutral' | 'sad'; message: string }>({
+  mood: 'happy',
+  message: '',
+});
+const feedbackSubmitted = ref(false);
+const canSubmitFeedback = computed(() => feedbackForm.message.trim().length > 0);
 
 watch(
   () => accountQuery.data.value,
@@ -183,6 +199,22 @@ async function confirmDeleteAccount() {
     toast.error('删除账户失败', '请确认你已经输入 DELETE。');
   }
 }
+
+async function submitFeedback() {
+  if (!canSubmitFeedback.value) return;
+  try {
+    await feedbackMutation.mutateAsync({
+      mood: feedbackForm.mood,
+      message: feedbackForm.message,
+      page_path: router.currentRoute.value.fullPath,
+    });
+    feedbackSubmitted.value = true;
+    feedbackForm.message = '';
+    toast.success('感谢你的反馈！');
+  } catch (error) {
+    toast.error('提交失败', getErrorDescription(error, '请稍后重试。'));
+  }
+}
 </script>
 
 <template>
@@ -199,6 +231,7 @@ async function confirmDeleteAccount() {
         <button :class="{ active: activeTab === 'style' }" type="button" @click="activeTab = 'style'">风格记忆</button>
         <button :class="{ active: activeTab === 'password' }" type="button" @click="activeTab = 'password'">密码安全</button>
         <button :class="{ active: activeTab === 'data' }" type="button" @click="activeTab = 'data'">数据管理</button>
+        <button :class="{ active: activeTab === 'feedback' }" type="button" @click="activeTab = 'feedback'">帮助与反馈</button>
       </aside>
 
       <div class="settings-content">
@@ -250,6 +283,21 @@ async function confirmDeleteAccount() {
           <button class="button primary" type="button" :disabled="updateAccountMutation.isPending.value" @click="saveProfile">
             {{ updateAccountMutation.isPending.value ? '保存中...' : '保存个人信息' }}
           </button>
+
+          <div v-if="usageQuery.data.value" class="usage-summary">
+            <h3>今日用量</h3>
+            <div class="usage-bar">
+              <div
+                class="usage-bar-fill"
+                :style="{ width: `${Math.min((usageQuery.data.value.generations_today / usageQuery.data.value.daily_limit) * 100, 100)}%` }"
+              />
+            </div>
+            <p class="usage-text">
+              {{ usageQuery.data.value.generations_today }} / {{ usageQuery.data.value.daily_limit }} 次生成
+              &nbsp;|&nbsp;
+              本月成本: ¥{{ usageQuery.data.value.cost_this_month.toFixed(2) }}
+            </p>
+          </div>
         </section>
 
         <section v-else-if="activeTab === 'style'" class="settings-panel app-card">
@@ -341,6 +389,55 @@ async function confirmDeleteAccount() {
           >
             {{ changePasswordMutation.isPending.value ? '提交中...' : '修改密码' }}
           </button>
+        </section>
+
+        <section v-else-if="activeTab === 'feedback'" class="settings-panel app-card">
+          <h2>帮助与反馈</h2>
+          <p class="settings-desc">我们非常想知道你的使用感受和建议，帮助我们改进 LessonPilot。</p>
+
+          <div v-if="feedbackSubmitted" class="feedback-success">
+            <p><strong>感谢你的反馈！</strong></p>
+            <p>你的建议会帮助我们让 LessonPilot 变得更好。</p>
+            <button class="button ghost" type="button" @click="feedbackSubmitted = false">继续提交新反馈</button>
+          </div>
+
+          <template v-else>
+            <label class="field">
+              <span>你的心情</span>
+              <div class="mood-selector">
+                <button
+                  v-for="m in moods"
+                  :key="m.value"
+                  type="button"
+                  class="mood-btn"
+                  :class="{ active: feedbackForm.mood === m.value }"
+                  @click="feedbackForm.mood = m.value"
+                >
+                  {{ m.emoji }} {{ m.label }}
+                </button>
+              </div>
+            </label>
+
+            <label class="field">
+              <span>反馈内容</span>
+              <textarea
+                v-model.trim="feedbackForm.message"
+                rows="5"
+                maxlength="2000"
+                placeholder="请告诉我们你的使用体验、遇到的问题或功能建议..."
+              />
+              <small>{{ feedbackForm.message.length }}/2000</small>
+            </label>
+
+            <button
+              class="button primary"
+              type="button"
+              :disabled="!canSubmitFeedback || feedbackMutation.isPending.value"
+              @click="submitFeedback"
+            >
+              {{ feedbackMutation.isPending.value ? '提交中...' : '提交反馈' }}
+            </button>
+          </template>
         </section>
 
         <section v-else class="settings-panel app-card">

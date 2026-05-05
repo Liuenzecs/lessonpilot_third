@@ -7,7 +7,32 @@ from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
 from app.core.config import get_settings
-from app.models import Document, DocumentSnapshot, Task, User  # noqa: F401
+from app.models import (  # noqa: F401
+    AnalyticsEvent,
+    AuthToken,
+    ClassGroup,
+    CostLog,
+    Document,
+    DocumentSnapshot,
+    Feedback,
+    KnowledgeChunk,
+    LessonScheduleEntry,
+    PersonalAsset,
+    Question,
+    Semester,
+    ShareComment,
+    ShareLink,
+    StyleSample,
+    Task,
+    TeacherStyleProfile,
+    TeachingPackage,
+    TeachingReflection,
+    TeachingUnit,
+    Template,
+    TemplateSection,
+    User,
+    WeekSchedule,
+)
 
 config = context.config
 

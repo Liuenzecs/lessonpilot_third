@@ -38,6 +38,7 @@ def _to_user_read(user: User) -> UserRead:
         id=user.id,
         email=user.email,
         name=user.name,
+        role=getattr(user, "role", "teacher"),
         email_verified=user.email_verified,
         email_verified_at=user.email_verified_at,
         created_at=user.created_at,

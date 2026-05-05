@@ -94,26 +94,40 @@ def get_semester_detail(session: Session, semester_id: str, user_id: str) -> Sem
         .order_by(WeekSchedule.week_number)
     ).all()
 
+    # Batch-load all entries for all weeks in one query
+    week_ids = [w.id for w in weeks]
+    all_entries = session.exec(
+        select(LessonScheduleEntry).where(LessonScheduleEntry.week_schedule_id.in_(week_ids))
+    ).all()
+    entries_by_week: dict[str, list[LessonScheduleEntry]] = {}
+    for e in all_entries:
+        entries_by_week.setdefault(e.week_schedule_id, []).append(e)
+
+    # Batch-load all referenced tasks in one query
+    task_ids = list({e.task_id for e in all_entries})
+    tasks_by_id: dict[str, Task] = {}
+    if task_ids:
+        tasks = session.exec(select(Task).where(Task.id.in_(task_ids))).all()
+        tasks_by_id = {t.id: t for t in tasks}
+
     week_reads = []
     for week in weeks:
-        entries = session.exec(
-            select(LessonScheduleEntry).where(LessonScheduleEntry.week_schedule_id == week.id)
-        ).all()
-        entry_reads = []
-        for e in entries:
-            task = session.get(Task, e.task_id)
-            entry_reads.append(LessonScheduleEntryRead(
+        entries = entries_by_week.get(week.id, [])
+        entry_reads = [
+            LessonScheduleEntryRead(
                 id=e.id,
                 week_schedule_id=e.week_schedule_id,
                 task_id=e.task_id,
                 day_of_week=e.day_of_week,
                 class_period=e.class_period,
                 notes=e.notes,
-                task_title=task.title if task else "",
-                task_subject=task.subject if task else "",
-                task_grade=task.grade if task else "",
+                task_title=tasks_by_id[e.task_id].title if e.task_id in tasks_by_id else "",
+                task_subject=tasks_by_id[e.task_id].subject if e.task_id in tasks_by_id else "",
+                task_grade=tasks_by_id[e.task_id].grade if e.task_id in tasks_by_id else "",
                 created_at=e.created_at,
-            ))
+            )
+            for e in entries
+        ]
         week_reads.append(WeekScheduleRead(
             id=week.id,
             semester_id=week.semester_id,
