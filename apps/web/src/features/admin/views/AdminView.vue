@@ -42,6 +42,17 @@ const search = ref('');
 const loading = ref(false);
 const errorMsg = ref('');
 const activeTab = ref<'stats' | 'users'>('stats');
+const confirmUserId = ref<string | null>(null);
+
+function promptDisable(userId: string) {
+  confirmUserId.value = userId;
+}
+
+async function confirmDisable() {
+  if (!confirmUserId.value) return;
+  await disableUser(confirmUserId.value);
+  confirmUserId.value = null;
+}
 
 async function checkAccess() {
   try {
@@ -226,7 +237,7 @@ function onSearch() {
                   <button
                     v-else
                     class="button danger small"
-                    @click="disableUser(u.id)"
+                    @click="promptDisable(u.id)"
                   >禁用</button>
                 </td>
               </tr>
@@ -244,6 +255,18 @@ function onSearch() {
         </div>
       </template>
     </template>
+
+    <!-- Confirm disable modal -->
+    <div v-if="confirmUserId" class="admin-modal-backdrop" @click.self="confirmUserId = null">
+      <div class="admin-modal">
+        <h3>确认禁用</h3>
+        <p>禁用后该用户将无法使用任何功能。确定要禁用此账户吗？</p>
+        <div class="button-row">
+          <button class="button ghost" @click="confirmUserId = null">取消</button>
+          <button class="button danger" @click="confirmDisable">确认禁用</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -291,4 +314,18 @@ function onSearch() {
 .button.small { padding: 4px 12px; font-size: 12px; }
 
 .admin-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 16px; }
+
+/* Confirm modal */
+.admin-modal-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.4);
+}
+.admin-modal {
+  background: var(--surface); padding: 28px; border-radius: 12px;
+  max-width: 400px; width: 90%;
+}
+.admin-modal h3 { margin-bottom: 8px; }
+.admin-modal p { color: var(--muted); margin-bottom: 20px; }
+.admin-modal .button-row { display: flex; gap: 12px; justify-content: flex-end; }
 </style>

@@ -103,6 +103,9 @@ def disable_user(
     if user is None:
         from fastapi import HTTPException as HTTPE
         raise HTTPE(status_code=404, detail="User not found")
+    if user.id == _admin.id:
+        from fastapi import HTTPException as HTTPE
+        raise HTTPE(status_code=400, detail="不能禁用自己")
     user.is_disabled = True
     user.disabled_at = datetime.now(UTC)
     user.disabled_reason = payload.reason or None
